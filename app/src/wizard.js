@@ -17,6 +17,11 @@
       this.ev = evenement;
       this.ctx = ctx || {};
       this.S = this.ctx.reglages || {};
+      this.machines = (this.ctx.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
+      if (!this.ev.machineNom && !this.ev.machineId && this.machines.length === 1) {
+        this.ev.machineId = this.machines[0].id || '';
+        this.ev.machineNom = this.machines[0].designation || '';
+      }
       /* Réouverture : on revient directement sur l'annotation si le domaine est déjà
          choisi (c'est ce qu'on corrige le plus souvent) ; « ← Retour » ramène au domaine. */
       this.etape = evenement.domaine ? 2 : 1;
@@ -99,6 +104,21 @@
         }
       });
 
+      overlay.addEventListener('change', (e) => {
+        if (e.target.id === 'evMachine') {
+          const val = e.target.value;
+          const mach = this.machines.find(m => (m.id && m.id === val) || m.designation === val);
+          if (mach) {
+            this.ev.machineId = mach.id || '';
+            this.ev.machineNom = mach.designation || '';
+          } else {
+            this.ev.machineId = '';
+            this.ev.machineNom = '';
+          }
+          this.maj();
+        }
+      });
+
       this.rendre();
     }
 
@@ -171,8 +191,21 @@
     etapeAnnotation() {
       const ev = this.ev;
       const dispo = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      const machSelect = (this.machines.length > 0) ? `
+        <div class="field" style="margin-bottom:12px">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569)">Machine concernée</label>
+          <select id="evMachine" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--bord,#cbd5e1);background:var(--card,#ffffff);font-size:0.95rem">
+            <option value="">— Non rattaché / Toute l'installation —</option>
+            ${this.machines.map(m => {
+              const sel = (ev.machineId && m.id === ev.machineId) || (ev.machineNom && m.designation === ev.machineNom);
+              const label = [m.designation || 'Machine', m.modele ? '(' + m.modele + ')' : ''].filter(Boolean).join(' ');
+              return `<option value="${esc(m.id || m.designation)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
+            }).join('')}
+          </select>
+        </div>` : '';
       return `<p class="assistant-question">Que constatez-vous ?</p>
         <p class="assistant-note">Écrivez, ou dictez à voix haute : le texte est ajouté automatiquement.</p>
+        ${machSelect}
         <textarea id="evTexte" class="ev-texte" rows="7" placeholder="Ex. Courroie d'entraînement détendue : flèche mesurée 12 mm pour 8 mm maximum. Traces de patinage et gomme sur la poulie. Bruit caractéristique au démarrage.">${esc(ev.texte || '')}</textarea>
         <div class="btnrow" style="margin-top:10px">
           <button class="btn ${this.ecoute ? 'or' : 'ghost'}" data-a="dictee">${this.ecoute ? '⏹️ Arrêter la dictée' : '🎤 Dicter'}</button>
@@ -218,6 +251,7 @@
         </div>
         <div class="ev-recap">
           <div class="ev-recap-ligne"><span>Domaine</span><strong>${esc(this.libelleDomaine())}</strong></div>
+          ${this.ev.machineNom ? `<div class="ev-recap-ligne"><span>Machine</span><strong>${esc(this.ev.machineNom)}</strong></div>` : ''}
           <div class="ev-recap-ligne"><span>Annotation</span><strong>${this.ev.texte ? this.ev.texte.length + ' caractère(s)' : 'vide'}</strong></div>
           <div class="ev-recap-ligne"><span>Photos</span><strong>${(this.ev.photos || []).length}</strong></div>
         </div>`;
@@ -335,8 +369,18 @@
 
   global.Assistant = {
     ouvrir: function (evenement, ctx) { return new Assistant(evenement, ctx); },
-    nouvelEvenement: function () {
-      return { id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6), domaine: '', texte: '', photos: [], categorie: '', heure: new Date().toISOString() };
+    nouvelEvenement: function (opts) {
+      opts = opts || {};
+      return {
+        id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6),
+        domaine: opts.domaine || '',
+        texte: opts.texte || '',
+        photos: opts.photos || [],
+        categorie: opts.categorie || '',
+        heure: new Date().toISOString(),
+        machineId: opts.machineId || '',
+        machineNom: opts.machineNom || ''
+      };
     }
   };
 })(window);

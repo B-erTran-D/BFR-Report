@@ -20,6 +20,12 @@
     const parts = p.split('.'); let c = o;
     for (let i = 0; i < parts.length - 1; i++) { if (c[parts[i]] == null) c[parts[i]] = {}; c = c[parts[i]]; }
     c[parts[parts.length - 1]] = v;
+    if (typeof R !== 'undefined' && o === R) {
+      if (p === 'machine.designation' && R.machines && R.machines[0]) R.machines[0].designation = v;
+      if (p === 'machine.modele' && R.machines && R.machines[0]) R.machines[0].modele = v;
+      if (p === 'machine.serie' && R.machines && R.machines[0]) R.machines[0].serie = v;
+      if (p === 'technicien' && R.techniciens && R.techniciens[0]) R.techniciens[0].nom = v;
+    }
   }
 
   const Store = (function () {
@@ -118,9 +124,17 @@
          activé = deux rapports (français + langue choisie). */
       langue: { active: false, code: '' },
       machine: { designation: '', marque: '', modele: '', serie: '', compteur: '', parc: '' },
+      machines: [
+        { id: uid('m'), designation: '', modele: '', serie: '' }
+      ],
       objet: '', technicien: Report.nomComplet(S.technicien),
+      techniciens: [
+        { id: uid('t'), nom: Report.nomComplet(S.technicien), fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV', principal: true }
+      ],
       chrono: { debut: null, fin: null, pauses: [], enPause: false, debutPause: null },
-      evenements: [], photosLibres: [],
+      multiJours: false,
+      jours: [],
+      evenements: [], photosLibres: [], pieces: [],
       actions: '', aPrevoir: '', resumeTechnicien: '', noteInterne: '',
       travauxTermines: '', faitLe: todayISO(),
       signatureClient: { nom: '', fonction: '', dataUrl: '', date: '', heure: '' }
@@ -129,12 +143,54 @@
 
   let R = fusion(nouvelleIntervention(), Store.get(K.rapport, null) || {});
   if (!R.evenements) R.evenements = [];
+  if (!Array.isArray(R.pieces)) R.pieces = [];
   /* Rapports enregistrés avant l'option de traduction : valeurs par défaut. */
   if (!R.langue || typeof R.langue !== 'object') R.langue = { active: false, code: '' };
   if (R.client && R.client.langue == null) R.client.langue = '';
 
+  if (!Array.isArray(R.machines) || R.machines.length === 0) {
+    R.machines = [{
+      id: uid('m'),
+      designation: (R.machine && R.machine.designation) || '',
+      modele: (R.machine && R.machine.modele) || '',
+      serie: (R.machine && R.machine.serie) || ''
+    }];
+  }
+  if (!Array.isArray(R.techniciens) || R.techniciens.length === 0) {
+    R.techniciens = [{
+      id: uid('t'),
+      nom: R.technicien || Report.nomComplet(S.technicien) || '',
+      fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV',
+      principal: true
+    }];
+  }
+  if (!Array.isArray(R.jours)) R.jours = [];
+  if (typeof R.multiJours !== 'boolean') R.multiJours = (R.jours.length > 0);
+
+  function synchroniserEntites() {
+    if (!Array.isArray(R.machines) || R.machines.length === 0) {
+      R.machines = [{ id: uid('m'), designation: '', modele: '', serie: '' }];
+    }
+    if (R.machine) {
+      if (R.machine.designation && !R.machines[0].designation) R.machines[0].designation = R.machine.designation;
+      if (R.machine.modele && !R.machines[0].modele) R.machines[0].modele = R.machine.modele;
+      if (R.machine.serie && !R.machines[0].serie) R.machines[0].serie = R.machine.serie;
+
+      R.machine.designation = R.machines[0].designation || '';
+      R.machine.modele = R.machines[0].modele || '';
+      R.machine.serie = R.machines[0].serie || '';
+    }
+    if (!Array.isArray(R.techniciens) || R.techniciens.length === 0) {
+      R.techniciens = [{ id: uid('t'), nom: R.technicien || Report.nomComplet(S.technicien) || '', fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV', principal: true }];
+    } else {
+      if (R.technicien && !R.techniciens[0].nom) R.techniciens[0].nom = R.technicien;
+      R.technicien = R.techniciens[0].nom || '';
+    }
+  }
+
   let dirty = false, saveTimer;
   function sauver(silencieux) {
+    synchroniserEntites();
     R.maj = new Date().toISOString();
     const ok = Store.set(K.rapport, R);
     const liste = Store.get(K.rapports, []);
@@ -154,7 +210,9 @@
 
   /* ===================== Chronomètre ================================== */
   let tic = null;
-  function duree() { return Report.dureeMs(R.chrono); }
+  function duree() {
+    return Report.dureeTotale ? Report.dureeTotale(R) : Report.dureeMs(R.chrono);
+  }
   function dureeTexte() {
     const ms = duree();
     const s = Math.floor(ms / 1000);
@@ -190,6 +248,16 @@
   function rendreChrono() {
     const barre = $('#chronoBarre');
     if (!barre) return;
+    if (R.multiJours && Array.isArray(R.jours) && R.jours.length > 0) {
+      const tot = duree();
+      barre.innerHTML = `<div class="chrono-encours">
+        <div class="chrono-temps"><span class="chrono-label">Heures cumulées (${R.jours.length} jour(s))</span>
+          <strong id="chronoTemps">${Report.formatDuree(tot) || '0 min'}</strong></div>
+        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">✏️ Relevé jours</button></div></div>
+        <p class="chrono-note">${R.jours.map(j => (Report.frDate(j.date) || j.date) + ' (' + (j.dureeHeures || 0) + ' h)').join(' • ')} • ${Report.dureeDecimale(tot)} h</p>`;
+      clearInterval(tic);
+      return;
+    }
     const c = R.chrono;
     if (!c.debut) {
       barre.innerHTML = `<button class="btn chrono-demarrer" data-a="chrono-demarrer" style="width:100%">
@@ -240,8 +308,20 @@
   function rendreEntete() {
     const zone = $('#zoneEntete');
     if (!zone) return;
+    synchroniserEntites();
     const c = R.client, m = R.machine;
-    const renseigne = c.nom || m.designation;
+    const machinesValides = (R.machines || []).filter(x => x && (x.designation || x.modele || x.serie));
+    const renseigne = c.nom || m.designation || machinesValides.length > 0;
+    const recapMachines = machinesValides.length > 1
+      ? `<div><span>Machines</span><strong>${machinesValides.length} machines (${esc(machinesValides.map(x => x.designation || 'Machine').join(', '))})</strong></div>`
+      : `<div><span>Machine</span><strong>${esc([m.designation, m.modele].filter(Boolean).join(' — ') || '—')}</strong></div>
+         <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>`;
+
+    const techsValides = (R.techniciens || []).filter(t => t && t.nom);
+    const recapTechs = techsValides.length > 1
+      ? `<div><span>Techniciens</span><strong>${esc(techsValides.map(t => t.nom + (t.fonction ? ' (' + t.fonction + ')' : '')).join(' · '))}</strong></div>`
+      : '';
+
     zone.innerHTML = `
       <div class="card">
         <h2>Intervention <button class="btn sm grey" data-a="editer-client">✏️ ${renseigne ? 'Modifier' : 'Renseigner'}</button></h2>
@@ -249,9 +329,9 @@
           ? `<div class="recap">
               <div><span>Client</span><strong>${esc(c.nom || '—')}</strong></div>
               <div><span>Lieu</span><strong>${esc(c.lieu || c.adresse || '—')}</strong></div>
-              <div><span>Machine</span><strong>${esc([m.designation, m.modele].filter(Boolean).join(' — ') || '—')}</strong></div>
-              <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>
+              ${recapMachines}
               <div><span>Contact</span><strong>${esc(c.contact || '—')}</strong></div>
+              ${recapTechs}
               <div><span>Objet</span><strong>${esc(R.objet || '—')}</strong></div>
               <div><span>Langue du rapport</span><strong>${R.langue.active && R.langue.code
                 ? 'français + ' + esc(I18N.natif(R.langue.code))
@@ -268,6 +348,7 @@
     return `<div class="ev-carte" data-ev="${ev.id}" style="--c:${cat.couleur};--f:${cat.fond}">
       <div class="ev-tete">
         <span class="ev-dom">${esc(dom.icone)} ${esc(dom.libelle)}</span>
+        ${ev.machineNom ? `<span class="pill" style="background:#e0f2fe;color:#0369a1;font-weight:600">⚙️ ${esc(ev.machineNom)}</span>` : ''}
         <span class="ev-cat">${esc(cat.icone)} ${esc(cat.libelle)}</span>
         <span class="ev-heure">${esc(Report.heureFr(ev.heure))}</span>
       </div>
@@ -320,6 +401,17 @@
         </div>
       </div>
 
+      <div class="card" id="cardPieces">
+        <h2>Pièces de rechange
+          ${(R.pieces && R.pieces.length) ? `<span class="pill">${R.pieces.length} pièce${R.pieces.length > 1 ? 's' : ''}</span>` : ''}
+        </h2>
+        <p class="hint">Pièces échangées ou laissées dans le stock du client sur place. La signature du client vaudra pour acceptation du devis final.</p>
+        ${rendreTableauPieces()}
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn wide ghost" data-a="ajouter-piece">➕ Ajouter pièce de rechange</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Point client & signature</h2>
         ${signe
@@ -352,13 +444,98 @@
       ${options.map(o => `<option value="${esc(o)}"${v === o ? ' selected' : ''}>${esc(o || '— choisir —')}</option>`).join('')}</select></div>`;
   }
 
+  /* ===================== Pièces de rechange ============================ */
+  function rendreTableauPieces() {
+    const pcs = R.pieces || [];
+    if (!pcs.length) {
+      return '<p class="small" style="font-style:italic;color:var(--gris);padding:4px 0">Aucune pièce de rechange enregistrée pour cette intervention.</p>';
+    }
+    return `<div style="overflow-x:auto;margin:6px 0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--bord);border-radius:8px;overflow:hidden">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1.5px solid var(--bord);text-align:left;color:var(--gris)">
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Dénomination</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Référence</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:center">Qté</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pcs.map((p, idx) => `
+            <tr style="border-bottom:1px solid var(--bord);background:${idx % 2 === 1 ? '#fcfdff' : '#fff'}">
+              <td style="padding:7px 9px"><strong>${esc(p.denomination || '—')}</strong></td>
+              <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569">${esc(p.reference || '—')}</td>
+              <td style="padding:7px 9px;text-align:center"><strong>${esc(p.quantite || 1)}</strong></td>
+              <td style="padding:7px 9px;text-align:right;white-space:nowrap">
+                <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">✏️</button>
+                <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">🗑️</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  function feuillePiece(pieceExistante) {
+    const edit = !!pieceExistante;
+    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1 };
+    const panneau = Ouvrir.ouvrir(null, `<div class="panel">
+      <div class="grab"></div><h3>${edit ? 'Modifier la pièce' : 'Ajouter une pièce de rechange'}</h3>
+      <p class="sub">Pièce neuve de remplacement utilisée ou laissée dans le stock du client.</p>
+
+      <div class="field"><label>Dénomination / désignation</label>
+        <input type="text" id="pcDenom" value="${esc(p.denomination || '')}" placeholder="Ex. Roulement SKF 6205, Courroie SPZ 1250, Vérin…"></div>
+
+      <div class="field"><label>Référence BFR / fabricant</label>
+        <input type="text" id="pcRef" value="${esc(p.reference || '')}" placeholder="Ex. 734-9021-A, BFR-8820…"></div>
+
+      <div class="field"><label>Quantité</label>
+        <input type="number" id="pcQte" min="1" step="1" value="${esc(p.quantite || 1)}"></div>
+
+      <div class="btnrow"><button class="btn grey" data-a="fermer">Annuler</button>
+        <button class="btn" data-a="sauvegarder-piece">${edit ? 'Enregistrer' : 'Ajouter la pièce'}</button></div></div>`, (pEl) => {
+      setTimeout(() => { const el = $('#pcDenom', pEl); if (el) el.focus(); }, 80);
+      pEl.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-a="sauvegarder-piece"]')) return;
+        const denom = ($('#pcDenom', pEl).value || '').trim();
+        const ref = ($('#pcRef', pEl).value || '').trim();
+        const qteVal = parseInt($('#pcQte', pEl).value, 10);
+        const qte = (!isNaN(qteVal) && qteVal > 0) ? qteVal : 1;
+        if (!denom && !ref) {
+          toast('Veuillez renseigner au moins la dénomination ou la référence');
+          return;
+        }
+        if (edit) {
+          p.denomination = denom;
+          p.reference = ref;
+          p.quantite = qte;
+        } else {
+          if (!Array.isArray(R.pieces)) R.pieces = [];
+          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte });
+        }
+        planifier();
+        rendreTout();
+        pEl.closest('.sheet').remove();
+        toast(edit ? 'Pièce modifiée ✔' : 'Pièce ajoutée ✔');
+      });
+    });
+    return panneau;
+  }
+
   /* ===================== Évènements =================================== */
   function ajouterEvenement() {
-    const ev = Assistant.nouvelEvenement();
+    synchroniserEntites();
+    const machinesValides = (R.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
+    const ev = Assistant.nouvelEvenement({
+      machineId: (machinesValides.length === 1) ? machinesValides[0].id : '',
+      machineNom: (machinesValides.length === 1) ? machinesValides[0].designation : ''
+    });
     R.evenements.push(ev);
     planifier();
     Assistant.ouvrir(ev, {
       reglages: S,
+      machines: machinesValides,
       toast: toast,
       onMaj: () => { planifier(); rendreTout(); },
       onSupprimer: (x) => {
@@ -375,10 +552,14 @@
   }
 
   function editerEvenement(id) {
+    synchroniserEntites();
     const ev = R.evenements.find(e => e.id === id);
     if (!ev) return;
+    const machinesValides = (R.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
     Assistant.ouvrir(ev, {
-      reglages: S, toast: toast,
+      reglages: S,
+      machines: machinesValides,
+      toast: toast,
       onMaj: () => { planifier(); rendreTout(); },
       onSupprimer: (x) => { R.evenements = R.evenements.filter(e => e.id !== x.id); planifier(); rendreTout(); },
       onFermer: () => { planifier(); rendreTout(); }
@@ -387,20 +568,23 @@
 
   /* ===================== Client & machine ============================= */
   function feuilleClient() {
+    synchroniserEntites();
     const f = (k, label, opt) => {
       opt = opt || {};
       const val = getPath(R, k) || '';
       return `<div class="field"><label>${esc(label)}</label><input type="${opt.type || 'text'}" data-fk="${k}" value="${esc(val)}" placeholder="${esc(opt.ph || '')}"${opt.list ? ' list="' + opt.list + '"' : ''}></div>`;
     };
-    const dl = (id, arr) => `<datalist id="${id}">${[...new Set(arr.filter(Boolean))].slice(-30).map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
+    const dl = (id, arr) => `<datalist id="${id}">${[...new Set((arr || []).filter(Boolean))].slice(-30).map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
     const histo = Store.get(K.rapports, []);
     const nbClients = Clients.liste().length;
+    const techsBFR = (Clients.listeTechniciens ? Clients.listeTechniciens() : (window.TECHNICIENS_BFR || [])).map(t => t.nom);
 
     const ouvrir = (e) => Ouvrir.ouvrir(e, `<div class="panel">
       <div class="grab"></div><h3>Client & machine</h3>
       <p class="sub">Ces informations figurent en tête du rapport.</p>
       ${dl('dlLieux', histo.map(r => r.client && r.client.lieu))}
       ${dl('dlMachines', histo.map(r => r.machine && r.machine.designation))}
+      ${dl('dlTechsBFR', techsBFR)}
       <div class="card"><h2>Client</h2>
         <div class="field"><label>Client</label>
           <input type="text" id="cliRecherche" autocomplete="off" value="${esc(R.client.nom || '')}"
@@ -419,10 +603,32 @@
         ${R.client.logo ? '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">'
                         : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>'}
       </div>
-      <div class="card"><h2>Machine</h2>
-        ${f('machine.designation', 'Machine / équipement', { list: 'dlMachines', ph: 'Ex. Presse hydraulique 120 T' })}
-        <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
-        <p class="small">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
+      <div class="card" id="cardMachines">
+        <h2>${(R.machines && R.machines.length > 1) ? 'Machines visitées' : 'Machine'}</h2>
+        <div id="listeMachinesForm">
+          <div class="machine-item" data-mach-idx="0">
+            ${(R.machines && R.machines.length > 1) ? '<div style="font-weight:600;font-size:0.9rem;margin-bottom:6px;color:var(--bleu,#0369a1)">Machine 1 (principale)</div>' : ''}
+            ${f('machine.designation', 'Machine / équipement', { list: 'dlMachines', ph: 'Ex. Presse hydraulique 120 T' })}
+            <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
+          </div>
+          <div id="zoneMachinesSub">
+            ${(R.machines || []).slice(1).map((m, idx) => `
+              <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
+                  <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                </div>
+                <div class="field"><label>Machine / équipement</label>
+                  <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
+                <div class="grid2">
+                  <div class="field"><label>Modèle</label><input type="text" data-m-k="modele" data-m-i="${idx + 1}" value="${esc(m.modele || '')}" placeholder="Ex. FP-400"></div>
+                  <div class="field"><label>N° de série</label><input type="text" data-m-k="serie" data-m-i="${idx + 1}" value="${esc(m.serie || '')}" placeholder="Ex. FP400-2020-001"></div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <button type="button" class="btn sm grey" id="btnAjouterMachine" style="margin-top:10px">+ Ajouter une autre machine</button>
+        <p class="small" style="margin-top:8px">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
       </div>
       <div class="card"><h2>Langue du client</h2>
         <div class="agreement"><input type="checkbox" id="langActive" ${R.langue.active ? 'checked' : ''}>
@@ -441,8 +647,25 @@
       </div>
       <div class="card"><h2>Intervention</h2>
         <div class="grid2">${f('numero', 'N° de rapport')}<div class="field"><label>Date</label><input type="date" data-fk="date" value="${esc(R.date)}"></div></div>
-        ${f('technicien', 'Technicien', { ph: Report.nomComplet(S.technicien) })}
+        ${f('technicien', 'Technicien principal (signataire)', { ph: Report.nomComplet(S.technicien) })}
         ${Report.contactTech(S.technicien) ? '<p class="small">Vos coordonnées (' + esc(Report.contactTech(S.technicien)) + ') apparaissent dans les blocs de signature — modifiables dans ☰ → Mes informations.</p>' : ''}
+        <div id="listeColleguesForm" style="margin-top:12px">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569);display:block;margin-bottom:6px">Collègue(s) / Technicien(s) sur site</label>
+          <div id="zoneColleguesSub">
+            ${(R.techniciens || []).slice(1).map((t, idx) => `
+              <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
+                  <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                </div>
+                <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
+                  <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
+                <div class="field"><label>Fonction / Spécialité</label>
+                  <input type="text" data-t-k="fonction" data-t-i="${idx + 1}" value="${esc(t.fonction || 'Technicien SAV')}" placeholder="Ex. Automaticien, Mécanicien..."></div>
+              </div>`).join('')}
+          </div>
+          <button type="button" class="btn sm grey" id="btnAjouterTechnicien">+ Ajouter un collègue sur site</button>
+        </div>
         ${f('objet', 'Objet / demande du client', { ph: 'Ex. Audit mécanique suite à des bruits anormaux' })}
       </div>
       <div class="btnrow"><button class="btn grey" data-a="fermer">Fermer</button>
@@ -450,6 +673,99 @@
     </div>`, (panneau) => {
       $$('[data-fk]', panneau).forEach(el => {
         el.addEventListener('input', () => { setPath(R, el.dataset.fk, el.value); planifier(); rendreEntete(); rendreTout(); });
+      });
+
+      function rafraichirMachinesSub() {
+        const zone = $('#zoneMachinesSub', panneau);
+        if (!zone) return;
+        zone.innerHTML = (R.machines || []).slice(1).map((m, idx) => `
+          <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
+              <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+            </div>
+            <div class="field"><label>Machine / équipement</label>
+              <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
+            <div class="grid2">
+              <div class="field"><label>Modèle</label><input type="text" data-m-k="modele" data-m-i="${idx + 1}" value="${esc(m.modele || '')}" placeholder="Ex. FP-400"></div>
+              <div class="field"><label>N° de série</label><input type="text" data-m-k="serie" data-m-i="${idx + 1}" value="${esc(m.serie || '')}" placeholder="Ex. FP400-2020-001"></div>
+            </div>
+          </div>`).join('');
+      }
+
+      function rafraichirColleguesSub() {
+        const zone = $('#zoneColleguesSub', panneau);
+        if (!zone) return;
+        zone.innerHTML = (R.techniciens || []).slice(1).map((t, idx) => `
+          <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
+              <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+            </div>
+            <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
+              <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
+            <div class="field"><label>Fonction / Spécialité</label>
+              <input type="text" data-t-k="fonction" data-t-i="${idx + 1}" value="${esc(t.fonction || 'Technicien SAV')}" placeholder="Ex. Automaticien, Mécanicien..."></div>
+          </div>`).join('');
+      }
+
+      panneau.addEventListener('input', (ev) => {
+        const mk = ev.target.dataset.mK, mi = ev.target.dataset.mI;
+        if (mk && mi !== undefined) {
+          const idx = parseInt(mi, 10);
+          if (R.machines && R.machines[idx]) {
+            R.machines[idx][mk] = ev.target.value;
+            planifier(); rendreEntete();
+          }
+        }
+        const tk = ev.target.dataset.tK, ti = ev.target.dataset.tI;
+        if (tk && ti !== undefined) {
+          const idx = parseInt(ti, 10);
+          if (R.techniciens && R.techniciens[idx]) {
+            R.techniciens[idx][tk] = ev.target.value;
+            planifier(); rendreEntete();
+          }
+        }
+      });
+
+      panneau.addEventListener('click', (ev) => {
+        const btnM = ev.target.closest('#btnAjouterMachine');
+        if (btnM) {
+          if (!Array.isArray(R.machines)) R.machines = [];
+          R.machines.push({ id: uid('m'), designation: '', modele: '', serie: '' });
+          planifier(); rendreEntete();
+          rafraichirMachinesSub();
+          return;
+        }
+        const rmM = ev.target.closest('[data-rm-machine]');
+        if (rmM) {
+          const idx = parseInt(rmM.dataset.rmMachine, 10);
+          if (R.machines && R.machines.length > idx) {
+            R.machines.splice(idx, 1);
+            planifier(); rendreEntete();
+            rafraichirMachinesSub();
+          }
+          return;
+        }
+        const btnT = ev.target.closest('#btnAjouterTechnicien');
+        if (btnT) {
+          if (!Array.isArray(R.techniciens)) R.techniciens = [];
+          R.techniciens.push({ id: uid('t'), nom: '', fonction: 'Technicien SAV', principal: false });
+          planifier(); rendreEntete();
+          rafraichirColleguesSub();
+          return;
+        }
+        const rmT = ev.target.closest('[data-rm-technicien]');
+        if (rmT) {
+          const idx = parseInt(rmT.dataset.rmTechnicien, 10);
+          if (R.techniciens && R.techniciens.length > idx) {
+            R.techniciens.splice(idx, 1);
+            planifier(); rendreEntete();
+            rafraichirColleguesSub();
+          }
+          return;
+        }
+        if (ev.target.closest('[data-a="ok"], [data-a="fermer"]')) Clients.retenir(R.client);
       });
 
       /* ---------- Rapport bilingue (langue du client) ------------------- */
@@ -638,8 +954,10 @@
         </div>
         <div class="agreement"><input type="checkbox" id="sigAccord">
           <label for="sigAccord">${esc(S.impression.mentionClient)}</label></div>
-        <div class="sigwrap"><canvas id="sigCanvas"></canvas>
-          <div class="ph" id="sigPh">✍️ Le client signe ici, du doigt</div></div>
+        <div class="sigwrap" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important;">
+          <canvas id="sigCanvas" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important; touch-action:none;"></canvas>
+          <div class="ph" id="sigPh" style="color:#64748b; font-weight:600;">✍️ Le client signe ici, du doigt</div>
+        </div>
         <div class="btnrow" style="margin-top:8px">
           <button class="btn grey" data-a="effacer">Effacer</button>
           <button class="btn grey" data-a="horodater">Horodater</button>
@@ -679,59 +997,212 @@
 
   class Pad {
     constructor(canvas, onChange) {
-      this.canvas = canvas; this.onChange = onChange;
-      this.drawing = false; this.hasInk = false;
+      this.canvas = canvas;
+      this.onChange = onChange;
+      this.drawing = false;
+      this.hasInk = false;
+      this.points = [];
+      this.couleurEncre = '#0f172a'; // Bleu-nuit / noir d'encre stylo très foncé et net
       this.ctx = canvas.getContext('2d');
       this.resize();
       window.addEventListener('resize', () => this.resize(true));
-      canvas.addEventListener('pointerdown', e => this.down(e));
-      canvas.addEventListener('pointermove', e => this.move(e));
-      canvas.addEventListener('pointerup', e => this.up(e));
-      canvas.addEventListener('pointercancel', e => this.up(e));
-      canvas.addEventListener('pointerleave', e => this.up(e));
+
+      canvas.addEventListener('pointerdown', (e) => this.down(e));
+      canvas.addEventListener('pointermove', (e) => this.move(e));
+      canvas.addEventListener('pointerup', (e) => this.up(e));
+      canvas.addEventListener('pointercancel', (e) => this.up(e));
+      canvas.addEventListener('pointerleave', (e) => this.up(e));
+
+      // Empêche le défilement tactile ou le geste de recul pendant la signature
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
     }
+
+    remplirFondBlanc() {
+      if (!this.ctx) return;
+      this.ctx.save();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.restore();
+    }
+
+    appliquerStyle() {
+      if (!this.ctx) return;
+      const dpr = this.dpr || 1;
+      this.lineWidth = 2.4 * dpr;
+      this.ctx.lineWidth = this.lineWidth;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = this.couleurEncre;
+      this.ctx.fillStyle = this.couleurEncre;
+    }
+
     resize(redessiner) {
-      const data = redessiner && this.hasInk ? this.canvas.toDataURL() : null;
+      const data = redessiner && this.hasInk ? this.canvas.toDataURL('image/png') : null;
       const r = this.canvas.getBoundingClientRect();
       const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+      this.dpr = dpr;
       this.canvas.width = Math.max(300, Math.round((r.width || 300) * dpr));
-      this.canvas.height = Math.max(150, Math.round((r.height || 190) * dpr));
+      this.canvas.height = Math.max(150, Math.round((r.height || 210) * dpr));
       this.ctx = this.canvas.getContext('2d');
-      this.ctx.lineWidth = 2.4 * dpr; this.ctx.lineCap = 'round'; this.ctx.lineJoin = 'round';
-      this.ctx.strokeStyle = '#111827';
-      if (data) { const self = this; const img = new Image(); img.onload = () => self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height); img.src = data; }
+      this.remplirFondBlanc();
+      this.appliquerStyle();
+      if (data) {
+        const self = this;
+        const img = new Image();
+        img.onload = () => {
+          self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height);
+        };
+        img.src = data;
+      }
     }
+
     pt(e) {
       const r = this.canvas.getBoundingClientRect();
-      return { x: (e.clientX - r.left) * (this.canvas.width / (r.width || 1)), y: (e.clientY - r.top) * (this.canvas.height / (r.height || 1)) };
+      const scaleX = this.canvas.width / (r.width || 1);
+      const scaleY = this.canvas.height / (r.height || 1);
+      return {
+        x: (e.clientX - r.left) * scaleX,
+        y: (e.clientY - r.top) * scaleY
+      };
     }
+
     down(e) {
+      if (e.button != null && e.button !== 0) return;
       e.preventDefault();
-      if (this.canvas.setPointerCapture && e.pointerId != null) { try { this.canvas.setPointerCapture(e.pointerId); } catch (err) {} }
+      if (this.canvas.setPointerCapture && e.pointerId != null) {
+        try { this.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      }
       this.drawing = true;
-      const p = this.pt(e); this.last = p;
-      this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); this.ctx.lineTo(p.x + 0.1, p.y + 0.1); this.ctx.stroke();
+      const p = this.pt(e);
+      this.points = [p];
+      this.appliquerStyle();
+
+      // Dessine un point rond au premier contact (ex. point sur un i ou accent)
+      this.ctx.beginPath();
+      if (typeof this.ctx.arc === 'function') {
+        this.ctx.arc(p.x, p.y, this.lineWidth / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+      } else {
+        this.ctx.moveTo(p.x, p.y);
+        this.ctx.lineTo(p.x + 0.1, p.y + 0.1);
+        this.ctx.stroke();
+      }
       this.marquer();
     }
+
     move(e) {
       if (!this.drawing) return;
       e.preventDefault();
-      const p = this.pt(e);
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.last.x, this.last.y);
-      this.ctx.quadraticCurveTo(this.last.x, this.last.y, (this.last.x + p.x) / 2, (this.last.y + p.y) / 2);
-      this.ctx.stroke();
-      this.last = p; this.marquer();
+
+      // Prise en charge des micro-points interpolés par l'écran tactile (120 Hz / 240 Hz)
+      const evs = (typeof e.getCoalescedEvents === 'function' && e.getCoalescedEvents().length)
+        ? e.getCoalescedEvents()
+        : [e];
+
+      for (let i = 0; i < evs.length; i++) {
+        const p = this.pt(evs[i]);
+        const prev = this.points[this.points.length - 1];
+        if (prev) {
+          const dx = p.x - prev.x, dy = p.y - prev.y;
+          // Filtre les micro-tremblements imperceptibles (< 0.8px) pour lisser le tracé
+          if (dx * dx + dy * dy < 0.64) continue;
+        }
+
+        this.points.push(p);
+        const len = this.points.length;
+
+        if (len === 2) {
+          // Début de trait : ligne continue entre le point initial et le premier milieu
+          const p0 = this.points[0], p1 = this.points[1];
+          const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+          this.ctx.beginPath();
+          this.ctx.moveTo(p0.x, p0.y);
+          this.ctx.lineTo(midX, midY);
+          this.ctx.stroke();
+        } else if (len > 2) {
+          // Courbe de Bézier quadratique continue C1 :
+          // démarre EXACTEMENT au milieu précédent et s'arrête au milieu courant
+          // en utilisant le point précédent comme point de contrôle.
+          // Aucune discontinuité, aucun espace vide entre les segments.
+          const pPrev2 = this.points[len - 3];
+          const pPrev1 = this.points[len - 2];
+          const pCurr  = this.points[len - 1];
+
+          const startX = (pPrev2.x + pPrev1.x) / 2;
+          const startY = (pPrev2.y + pPrev1.y) / 2;
+          const endX   = (pPrev1.x + pCurr.x) / 2;
+          const endY   = (pPrev1.y + pCurr.y) / 2;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(startX, startY);
+          this.ctx.quadraticCurveTo(pPrev1.x, pPrev1.y, endX, endY);
+          this.ctx.stroke();
+        }
+      }
+      this.marquer();
     }
+
     up(e) {
       if (!this.drawing) return;
       this.drawing = false;
-      if (e && e.pointerId != null && this.canvas.releasePointerCapture) { try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) {} }
+      if (e && e.pointerId != null && this.canvas.releasePointerCapture) {
+        try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+
+      const len = this.points.length;
+      if (len > 2) {
+        // Raccorde le dernier milieu au point final pour terminer la courbe proprement
+        const pPrev = this.points[len - 2];
+        const pLast = this.points[len - 1];
+        const startX = (pPrev.x + pLast.x) / 2;
+        const startY = (pPrev.y + pLast.y) / 2;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(pLast.x, pLast.y);
+        this.ctx.stroke();
+      } else if (len === 2) {
+        const p0 = this.points[0], p1 = this.points[1];
+        this.ctx.beginPath();
+        this.ctx.moveTo(p0.x, p0.y);
+        this.ctx.lineTo(p1.x, p1.y);
+        this.ctx.stroke();
+      }
+      this.points = [];
     }
-    marquer() { if (!this.hasInk) { this.hasInk = true; if (this.onChange) this.onChange(true); } }
-    dataUrl() { return this.canvas.toDataURL('image/png'); }
-    load(d) { const self = this, img = new Image(); img.onload = function () { self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height); self.hasInk = true; if (self.onChange) self.onChange(true); }; img.src = d; }
-    clear() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.hasInk = false; if (this.onChange) this.onChange(false); }
+
+    marquer() {
+      if (!this.hasInk) {
+        this.hasInk = true;
+        if (this.onChange) this.onChange(true);
+      }
+    }
+
+    dataUrl() {
+      return this.canvas.toDataURL('image/png');
+    }
+
+    load(d) {
+      if (!d) return;
+      const self = this;
+      const img = new Image();
+      img.onload = function () {
+        self.remplirFondBlanc();
+        self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height);
+        self.hasInk = true;
+        if (self.onChange) self.onChange(true);
+      };
+      img.src = d;
+    }
+
+    clear() {
+      this.remplirFondBlanc();
+      this.appliquerStyle();
+      this.hasInk = false;
+      this.points = [];
+      if (this.onChange) this.onChange(false);
+    }
   }
 
   /* ===================== Génération & envoi =========================== */
@@ -1161,7 +1632,7 @@
       </div>
 
       <div class="card"><h2>Canevas du rapport (avancé)</h2>
-        <p class="small">Le canevas décrit l'ordre des sections du rapport. Types acceptés : <code>synthese</code>, <code>evenements</code> (avec <code>categories</code>), <code>texte</code> (avec <code>champ</code> : actions, aPrevoir, resumeTechnicien, objet), <code>photos</code>, <code>signature</code>.</p>
+        <p class="small">Le canevas décrit l'ordre des sections du rapport. Types acceptés : <code>synthese</code>, <code>evenements</code> (avec <code>categories</code>), <code>texte</code> (avec <code>champ</code> : actions, aPrevoir, resumeTechnicien, objet), <code>pieces</code>, <code>photos</code>, <code>signature</code>.</p>
         <textarea id="setCanevas" rows="12" style="width:100%;font-family:ui-monospace,monospace;font-size:12px">${esc(JSON.stringify(S.canevas, null, 1))}</textarea>
       </div>
 
@@ -1373,6 +1844,21 @@
       else if (a === 'chrono-ajuster') feuilleAjusterChrono();
       else if (a === 'ajouter-ev') ajouterEvenement();
       else if (a === 'editer-client') feuilleClient();
+      else if (a === 'ajouter-piece') feuillePiece();
+      else if (a === 'editer-piece') {
+        const id = b.dataset.id;
+        const pc = (R.pieces || []).find(p => p.id === id);
+        if (pc) feuillePiece(pc);
+      }
+      else if (a === 'supprimer-piece') {
+        const id = b.dataset.id;
+        const idx = (R.pieces || []).findIndex(p => p.id === id);
+        if (idx >= 0 && confirm('Supprimer cette pièce de rechange ?')) {
+          R.pieces.splice(idx, 1);
+          planifier(); rendreTout();
+          toast('Pièce supprimée');
+        }
+      }
       else if (a === 'signer') signerClient();
       else if (a === 'effacer-signature') {
         if (!confirm('Effacer la signature du client ?')) return;
@@ -1398,24 +1884,187 @@
   }
 
   function feuilleAjusterChrono() {
+    synchroniserEntites();
     const c = R.chrono;
     const val = (iso) => iso ? new Date(iso).toISOString().slice(0, 16) : '';
+    if (!Array.isArray(R.jours)) R.jours = [];
+
+    function recalculerJour(j) {
+      if (j.debut && j.fin) {
+        const [hd, md] = (j.debut || '0:0').split(':').map(Number);
+        const [hf, mf] = (j.fin || '0:0').split(':').map(Number);
+        const min = (hf * 60 + mf) - (hd * 60 + md) - (Number(j.pauseMinutes) || 0);
+        j.dureeHeures = Math.max(0, Math.round(min * 100 / 60) / 100);
+        j.dureeMs = Math.max(0, min * 60000);
+      } else {
+        j.dureeHeures = 0;
+        j.dureeMs = 0;
+      }
+    }
+
+    function rafraichirJoursDOM(pEl) {
+      const zone = $('#listeJours', pEl);
+      if (!zone) return;
+      zone.innerHTML = (R.jours || []).map((j, idx) => {
+        recalculerJour(j);
+        const dh = j.dureeHeures || 0;
+        const durLabel = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '0 min';
+        return `
+        <div class="card" style="margin:0;padding:12px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:0.95rem">Journée ${idx + 1}</strong>
+            <button type="button" class="btn sm danger" data-rm-jour="${idx}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+          </div>
+          <div class="field" style="margin-bottom:8px"><label>Date</label>
+            <input type="date" data-j-k="date" data-j-i="${idx}" value="${esc(j.date || todayISO())}"></div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Début</label><input type="time" data-j-k="debut" data-j-i="${idx}" value="${esc(j.debut || '08:00')}"></div>
+            <div class="field"><label>Fin</label><input type="time" data-j-k="fin" data-j-i="${idx}" value="${esc(j.fin || '17:00')}"></div>
+          </div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Pause (min)</label><input type="number" min="0" step="5" data-j-k="pauseMinutes" data-j-i="${idx}" value="${esc(j.pauseMinutes != null ? j.pauseMinutes : 60)}"></div>
+            <div class="field"><label>Durée calculée</label><input type="text" readonly value="${esc(durLabel)}" style="background:#f1f5f9;font-weight:600"></div>
+          </div>
+          <div class="field"><label>Activité / Travaux réalisés</label>
+            <input type="text" data-j-k="description" data-j-i="${idx}" value="${esc(j.description || '')}" placeholder="Ex. Démontage, expertise et remplacement réducteur"></div>
+        </div>`;
+      }).join('') || '<p class="small">Aucune journée enregistrée pour le moment. Cliquez sur « Ajouter une journée » ci-dessous.</p>';
+
+      const totTxt = $('#totJoursTxt', pEl);
+      if (totTxt) {
+        const tot = duree();
+        totTxt.textContent = (Report.formatDuree(tot) || '0 min') + ' (' + Report.dureeDecimale(tot) + ' h)';
+      }
+    }
+
+    const multi = !!R.multiJours;
+
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Ajuster les heures</h3>
-      <p class="sub">Utile si vous avez oublié de démarrer ou d'arrêter le chrono.</p>
-      <div class="field"><label>Début sur site</label><input type="datetime-local" id="ajDebut" value="${val(c.debut)}"></div>
-      <div class="field"><label>Fin sur site</label><input type="datetime-local" id="ajFin" value="${val(c.fin)}"></div>
-      <p class="small">${(c.pauses || []).length} pause(s) enregistrée(s), déduites du temps sur site.</p>
-      <div class="btnrow"><button class="btn grey" data-a="fermer">Annuler</button>
+      <p class="sub">Relevé quotidien ou chrono de l'intervention.</p>
+      <div class="agreement" style="margin-bottom:14px;padding:10px;background:var(--fond-alt,#f1f5f9);border-radius:8px">
+        <input type="checkbox" id="ajMultiJours" ${multi ? 'checked' : ''}>
+        <label for="ajMultiJours"><strong>Intervention sur plusieurs jours (multi-jours)</strong></label>
+      </div>
+      <div id="blocChronoUnique" ${multi ? 'hidden' : ''}>
+        <div class="field"><label>Début sur site</label><input type="datetime-local" id="ajDebut" value="${val(c.debut)}"></div>
+        <div class="field"><label>Fin sur site</label><input type="datetime-local" id="ajFin" value="${val(c.fin)}"></div>
+        <p class="small">${(c.pauses || []).length} pause(s) enregistrée(s), déduites du temps sur site.</p>
+      </div>
+      <div id="blocMultiJours" ${multi ? '' : 'hidden'}>
+        <p class="small">Saisissez les horaires et temps de pause pour chaque journée. Les heures cumulées sont calculées automatiquement.</p>
+        <div id="listeJours" style="display:flex;flex-direction:column;gap:12px;margin:12px 0"></div>
+        <button type="button" class="btn sm grey" id="btnAjouterJour">+ Ajouter une journée</button>
+        <div style="margin-top:14px;padding:10px 12px;background:#e0f2fe;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;color:#0369a1">Total cumulé :</span>
+          <strong style="font-size:1.1rem;color:#0284c7" id="totJoursTxt">${Report.formatDuree(duree()) || '0 min'} (${Report.dureeDecimale(duree())} h)</strong>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:16px"><button class="btn grey" data-a="fermer">Annuler</button>
         <button class="btn" data-a="ok-ajust">Enregistrer</button></div></div>`, (panneau) => {
+
+      rafraichirJoursDOM(panneau);
+
+      const caseMulti = $('#ajMultiJours', panneau);
+      const blocMulti = $('#blocMultiJours', panneau);
+      const blocChrono = $('#blocChronoUnique', panneau);
+
+      if (caseMulti) {
+        caseMulti.addEventListener('change', () => {
+          R.multiJours = !!caseMulti.checked;
+          if (R.multiJours && R.jours.length === 0) {
+            const j1 = {
+              id: uid('j'),
+              date: R.date || todayISO(),
+              debut: (R.chrono && R.chrono.debut) ? Report.heureFr(R.chrono.debut) : '08:00',
+              fin: (R.chrono && R.chrono.fin) ? Report.heureFr(R.chrono.fin) : '17:00',
+              pauseMinutes: 60,
+              description: ''
+            };
+            recalculerJour(j1);
+            R.jours.push(j1);
+          }
+          if (blocMulti) blocMulti.hidden = !R.multiJours;
+          if (blocChrono) blocChrono.hidden = !!R.multiJours;
+          rafraichirJoursDOM(panneau);
+          planifier();
+        });
+      }
+
+      panneau.addEventListener('input', (e) => {
+        const jk = e.target.dataset.jK, ji = e.target.dataset.jI;
+        if (jk && ji !== undefined) {
+          const idx = parseInt(ji, 10);
+          if (R.jours && R.jours[idx]) {
+            R.jours[idx][jk] = (jk === 'pauseMinutes') ? (parseFloat(e.target.value) || 0) : e.target.value;
+            recalculerJour(R.jours[idx]);
+            const carteJour = e.target.closest('.card');
+            if (carteJour) {
+              const inDuree = carteJour.querySelector('input[readonly]');
+              if (inDuree) {
+                const dh = R.jours[idx].dureeHeures || 0;
+                inDuree.value = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '0 min';
+              }
+            }
+            const totTxt = $('#totJoursTxt', panneau);
+            if (totTxt) {
+              const tot = duree();
+              totTxt.textContent = (Report.formatDuree(tot) || '0 min') + ' (' + Report.dureeDecimale(tot) + ' h)';
+            }
+            planifier();
+          }
+        }
+      });
+
       panneau.addEventListener('click', (e) => {
-        if (!e.target.closest('[data-a="ok-ajust"]')) return;
-        const d = $('#ajDebut', panneau).value, f = $('#ajFin', panneau).value;
-        R.chrono.debut = d ? new Date(d).toISOString() : null;
-        R.chrono.fin = f ? new Date(f).toISOString() : null;
-        planifier(); rendreTout();
-        e.target.closest('.sheet').remove();
-        toast('Heures mises à jour');
+        const btnJ = e.target.closest('#btnAjouterJour');
+        if (btnJ) {
+          if (!Array.isArray(R.jours)) R.jours = [];
+          const derDate = R.jours.length ? R.jours[R.jours.length - 1].date : R.date;
+          let prochDate = derDate || todayISO();
+          try {
+            const dObj = new Date(derDate || todayISO());
+            dObj.setDate(dObj.getDate() + 1);
+            prochDate = dObj.toISOString().slice(0, 10);
+          } catch (err) {}
+          const nouvJour = {
+            id: uid('j'),
+            date: prochDate,
+            debut: '08:00',
+            fin: '17:00',
+            pauseMinutes: 60,
+            description: ''
+          };
+          recalculerJour(nouvJour);
+          R.jours.push(nouvJour);
+          rafraichirJoursDOM(panneau);
+          planifier();
+          return;
+        }
+
+        const rmJ = e.target.closest('[data-rm-jour]');
+        if (rmJ) {
+          const idx = parseInt(rmJ.dataset.rmJour, 10);
+          if (R.jours && R.jours.length > idx) {
+            R.jours.splice(idx, 1);
+            rafraichirJoursDOM(panneau);
+            planifier();
+          }
+          return;
+        }
+
+        if (e.target.closest('[data-a="ok-ajust"]')) {
+          if (!R.multiJours) {
+            const d = $('#ajDebut', panneau).value, f = $('#ajFin', panneau).value;
+            R.chrono.debut = d ? new Date(d).toISOString() : null;
+            R.chrono.fin = f ? new Date(f).toISOString() : null;
+          } else {
+            R.jours.forEach(recalculerJour);
+          }
+          planifier(); rendreTout();
+          e.target.closest('.sheet').remove();
+          toast('Heures mises à jour');
+        }
       });
     });
   }

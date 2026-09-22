@@ -48,6 +48,7 @@
     return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 34) || 'client';
   }
+  function pad2(n) { return ('0' + (n || 0)).slice(-2); }
   function frDate(iso) {
     if (!iso) return '';
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
@@ -81,6 +82,27 @@
     return valeur(i && i.technicien).trim() || nomComplet(s && s.technicien);
   }
 
+  function listeMachines(i) {
+    if (i && Array.isArray(i.machines) && i.machines.length > 0) {
+      const valides = i.machines.filter(m => m && (valeur(m.designation) || valeur(m.modele) || valeur(m.serie)));
+      if (valides.length > 0) return valides;
+    }
+    if (i && i.machine && (valeur(i.machine.designation) || valeur(i.machine.modele) || valeur(i.machine.serie))) {
+      return [i.machine];
+    }
+    return [];
+  }
+
+  function listeTechniciens(i, s) {
+    if (i && Array.isArray(i.techniciens) && i.techniciens.length > 0) {
+      const valides = i.techniciens.filter(t => t && valeur(t.nom));
+      if (valides.length > 0) return valides;
+    }
+    const nom = nomTechnicien(i, s);
+    const fonction = (s && s.technicien && s.technicien.fonction) || 'Technicien SAV';
+    return [{ nom: nom, fonction: fonction, principal: true }];
+  }
+
   /** Durée cumulée du chrono (pauses déduites), en millisecondes. */
   function dureeMs(chrono, maintenant) {
     if (!chrono || !chrono.debut) return 0;
@@ -94,6 +116,30 @@
     });
     return Math.max(0, total);
   }
+
+  function dureeTotale(i, maintenant) {
+    if (!i) return 0;
+    if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+      let totalMs = 0;
+      i.jours.forEach(function (j) {
+        if (typeof j.dureeMs === 'number') {
+          totalMs += j.dureeMs;
+        } else if (typeof j.dureeHeures === 'number') {
+          totalMs += Math.round(j.dureeHeures * 3600000);
+        } else if (typeof j.duree === 'number') {
+          totalMs += Math.round(j.duree * 3600000);
+        } else if (j.debut && j.fin) {
+          const p1 = j.debut.split(':').map(Number);
+          const p2 = j.fin.split(':').map(Number);
+          const min = (p2[0] * 60 + p2[1]) - (p1[0] * 60 + p1[1]) - (Number(j.pauseMinutes) || 0);
+          if (min > 0) totalMs += min * 60000;
+        }
+      });
+      return totalMs;
+    }
+    return dureeMs(i.chrono, maintenant);
+  }
+
   function formatDuree(ms) {
     const min = Math.round(ms / 60000);
     if (!min) return '';
@@ -134,8 +180,9 @@
         { id: 'info', type: 'evenements', titre: '5. Informations complémentaires', categories: ['INFO'] },
         { id: 'actions', type: 'texte', titre: '6. Travaux réalisés', champ: 'actions' },
         { id: 'prevoir', type: 'texte', titre: '7. Travaux à prévoir', champ: 'aPrevoir' },
-        { id: 'photos', type: 'photos', titre: '8. Photos complémentaires' },
-        { id: 'signature', type: 'signature', titre: '9. Validation' }
+        { id: 'pieces', type: 'pieces', titre: '8. Pièces de rechange' },
+        { id: 'photos', type: 'photos', titre: '9. Photos complémentaires' },
+        { id: 'signature', type: 'signature', titre: '10. Validation' }
       ]
     };
   }
@@ -160,7 +207,7 @@
       parCategorie[e.categorie || 'INFO'] = (parCategorie[e.categorie || 'INFO'] || 0) + 1;
       parDomaine[e.domaine] = (parDomaine[e.domaine] || 0) + 1;
     });
-    const duree = dureeMs(intervention.chrono);
+    const duree = dureeTotale(intervention);
     const nbPhotos = evs.reduce(function (a, e) { return a + (e.photos || []).length; }, 0) +
       (intervention.photosLibres || []).length;
     return {
@@ -274,6 +321,15 @@
         p.text(Pdf.trunc(String(l), self.CW, 10), self.M, yt, { size: 10, color: self.C.texte });
         yt += 14;
       });
+      const colleguesP1 = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
+        : [];
+      if (colleguesP1.length > 0) {
+        yt += 6;
+        p.text(Pdf.trunc(this.L('Accompagné de') + ' : ' + colleguesP1.map(c => c.nom + (c.fonction ? ' (' + self.L(c.fonction) + ')' : '')).join(', '), self.CW, 9.5),
+          self.M, yt, { size: 9.5, font: 'F2', color: self.C.texte });
+        yt += 14;
+      }
       p.y = yt + 20;
     }
 
@@ -453,7 +509,8 @@
           p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
           p.rect(this.M, p.y, 3, 15, { fill: couleur });
           const libDom = this.L(dom.libelle);
-          p.text(dom.icone ? dom.icone + ' ' + libDom : libDom, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
+          const libMach = ev.machineNom ? ' — ⚙️ ' + ev.machineNom : '';
+          p.text((dom.icone ? dom.icone + ' ' + libDom : libDom) + libMach, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
           p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
           p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
           p.y += 15;
@@ -503,18 +560,167 @@
       if (valeur(i.objet)) this.blocTexte('Objet / demande du client', i.objet);
     }
 
+    async blocPieces(pcs) {
+      const p = this.pdf, C = this.C;
+      if (!pcs || !pcs.length) return;
+      const colDenomW = this.CW * 0.54;
+      const colRefW = this.CW * 0.30;
+      const colQteW = this.CW * 0.16;
+      const hLigne = 18;
+      const hEntete = 18;
+
+      this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
+      let y = p.y;
+
+      // En-tête du tableau
+      p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+      p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+
+      p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
+      p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
+
+      y += hEntete;
+
+      for (let idx = 0; idx < pcs.length; idx++) {
+        const item = pcs[idx];
+        if (y + hLigne > p.H - this.M - 35) {
+          p.newPage();
+          this.enteteSuite();
+          y = p.y + 4;
+          p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+          p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+          p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+          p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+          p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
+          p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
+          y += hEntete;
+        }
+
+        const fond = (idx % 2 === 1) ? [0.97, 0.98, 0.99] : [1, 1, 1];
+        p.rect(this.M, y, this.CW, hLigne, { fill: fond, stroke: C.bord, lineWidth: 0.4 });
+
+        const denom = valeur(item.denomination || item.designation) || '—';
+        const ref = valeur(item.reference) || '—';
+        const qte = String(valeur(item.quantite) || 1);
+
+        p.text(Pdf.trunc(denom, colDenomW - 12, 8.5, false), this.M + 6, y + 12, { size: 8.5, color: C.texte });
+        p.text(Pdf.trunc(ref, colRefW - 12, 8.5, false), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.texte });
+        p.text(qte, this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.texte, align: 'center' });
+
+        p.line(this.M + colDenomW, y, this.M + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
+        p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
+
+        y += hLigne;
+      }
+
+      p.y = y + 4;
+      const mentionPcs = this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.');
+      p.paragraph(mentionPcs, this.M + 4, p.y, this.CW - 8, { size: 7.4, font: 'F1', color: C.gris });
+      p.y += 12;
+    }
+
+    async blocJours(jours) {
+      const p = this.pdf, C = this.C;
+      if (!jours || !jours.length) return;
+      const colDateW = this.CW * 0.18;
+      const colHorairesW = this.CW * 0.22;
+      const colPauseW = this.CW * 0.14;
+      const colDureeW = this.CW * 0.18;
+      const colDescW = this.CW * 0.28;
+      const hLigne = 18;
+      const hEntete = 18;
+
+      this.saut(hEntete + hLigne * Math.min(jours.length + 1, 3) + 20);
+      let y = p.y;
+
+      const dessinerEntete = () => {
+        p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+        p.text(this.L('Date'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Horaires sur site'), this.M + colDateW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Pause'), this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Durée sur site'), this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Activité / Travaux'), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+
+        let cx = this.M + colDateW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colHorairesW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colPauseW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colDureeW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        y += hEntete;
+      };
+
+      dessinerEntete();
+
+      let totalH = 0;
+      for (let idx = 0; idx < jours.length; idx++) {
+        const item = jours[idx];
+        if (y + hLigne > p.H - this.M - 35) {
+          p.newPage();
+          this.enteteSuite();
+          y = p.y + 4;
+          dessinerEntete();
+        }
+
+        const fond = (idx % 2 === 1) ? [0.97, 0.98, 0.99] : [1, 1, 1];
+        p.rect(this.M, y, this.CW, hLigne, { fill: fond, stroke: C.bord, lineWidth: 0.4 });
+
+        const dt = frDate(item.date) || '—';
+        const hor = (item.debut && item.fin) ? (item.debut + ' - ' + item.fin) : (item.debut || item.fin || '—');
+        const pauseTxt = item.pauseMinutes ? (item.pauseMinutes + ' min') : '—';
+        const dh = typeof item.dureeHeures === 'number' ? item.dureeHeures : (typeof item.duree === 'number' ? item.duree : 0);
+        totalH += dh;
+        const durTxt = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '—';
+        const desc = valeur(item.description || item.activite) || '—';
+
+        p.text(Pdf.trunc(dt, colDateW - 8, 8.2, false), this.M + 6, y + 12, { size: 8.2, color: C.texte });
+        p.text(Pdf.trunc(hor, colHorairesW - 8, 8.2, false), this.M + colDateW + 6, y + 12, { size: 8.2, color: C.texte });
+        p.text(pauseTxt, this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.2, color: C.texte, align: 'center' });
+        p.text(durTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.2, font: 'F2', color: C.texte, align: 'center' });
+        p.text(Pdf.trunc(desc, colDescW - 8, 8.2, false), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.2, color: C.texte });
+
+        let cx = this.M + colDateW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colHorairesW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colPauseW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colDureeW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+
+        y += hLigne;
+      }
+
+      // Ligne total cumulé
+      p.rect(this.M, y, this.CW, hLigne, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+      p.text(this.L('Total cumulé'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      const totTxt = totalH > 0 ? (Math.floor(totalH) + ' h ' + pad2(Math.round((totalH % 1) * 60)) + ' (' + totalH.toFixed(2).replace('.', ',') + ' h)') : '—';
+      p.text(totTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+      y += hLigne + 8;
+      p.y = y;
+    }
+
     async blocSignatures(titre) {
       const p = this.pdf, C = this.C, i = this.i, s = this.s;
       const sigClient = await toJpeg((i.signatureClient || {}).dataUrl, 900, 0.9);
       const sigTech = await toJpeg(s.technicien && s.technicien.signature, 900, 0.9);
-      const mention = valeur((s.impression && s.impression.mentionClient)) ||
+      const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+      let mention = valeur((s.impression && s.impression.mentionClient)) ||
         "Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.";
-      const hT = Pdf.wrap(mention, this.CW - 14, 8).length * 10.6 + 9;
+      if (pcs.length > 0) {
+        mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
+      }
+      const mentionTraduite = this.L(mention);
+      const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 8).length * 10.6 + 9;
       const hBloc = 118;
       this.saut(hT + hBloc + 26);
       const y0 = p.y;
       p.rect(this.M, y0, this.CW, hT, { fill: [1, 0.976, 0.929], stroke: [0.99, 0.9, 0.6], lineWidth: 0.5 });
-      p.paragraph(mention, this.M + 7, y0 + 2, this.CW - 14, { size: 8, color: [0.42, 0.29, 0.05] });
+      p.paragraph(mentionTraduite, this.M + 7, y0 + 2, this.CW - 14, { size: 8, color: [0.42, 0.29, 0.05] });
       const y = y0 + hT + 10;
       const colW = (this.CW - 10) / 2;
       [0, 1].forEach(function (k) {
@@ -540,7 +746,17 @@
           p.text('Signature non recueillie', x + colW / 2, y + 74, { size: 8, color: C.gris, align: 'center' });
         }
       }, this);
-      p.y = y + hBloc + 10;
+
+      const collegues = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(t => t && !t.principal && valeur(t.nom))
+        : [];
+      if (collegues.length > 0) {
+        const txtCol = this.L('Accompagné de') + ' : ' + collegues.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ');
+        p.text(Pdf.trunc(txtCol, this.CW - 14, 7.8, false), this.M + 4, y + hBloc + 7, { size: 7.8, color: C.gris });
+        p.y = y + hBloc + 18;
+      } else {
+        p.y = y + hBloc + 10;
+      }
     }
 
     /* --- génération --- */
@@ -569,23 +785,65 @@
 
       /* ---- Corps du compte rendu (sections du canevas) ---- */
       this.titre('Intervention', valeur(i.numero) ? 'N° ' + valeur(i.numero) : null, 60);
-      this.kv([
-        ['Machine / équipement', valeur(i.machine && i.machine.designation) || '—', true],
-        ['Modèle', [valeur(i.machine && i.machine.marque), valeur(i.machine && i.machine.modele)].filter(Boolean).join(' ') || '—'],
-        ['N° de série', valeur(i.machine && i.machine.serie) || '—'],
-        /* Compteur et n° de parc ne sont plus demandés : affichés seulement
-           s'ils ont été saisis (rapports importés ou anciens brouillons). */
-        [valeur(i.machine && i.machine.compteur) ? 'Compteur' : '', [valeur(i.machine && i.machine.compteur), valeur(i.machine && i.machine.parc)].filter(Boolean).join(' — ')],
-        ['Objet / demande', valeur(i.objet) || '—', true],
-        ['Lieu', valeur(i.client && i.client.lieu) || '—'],
-        ['Contact sur site', [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—'],
-        ['Téléphone / e-mail client', [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—'],
-        ['Date d\'intervention', frDate(i.date)],
-        ['Horaires sur site', [heureFr(i.chrono && i.chrono.debut) || '—', heureFr(i.chrono && i.chrono.fin) || 'en cours'].join(' - ')],
-        ['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—'],
-        ['Technicien', nomTechnicien(i, s) || '—']
-      ]);
 
+      const machines = listeMachines(i);
+      const techniciens = listeTechniciens(i, s);
+      const kvLignes = [];
+
+      if (machines.length <= 1) {
+        const m = machines[0] || i.machine || {};
+        kvLignes.push(['Machine / équipement', valeur(m.designation) || '—', true]);
+        kvLignes.push(['Modèle', [valeur(m.marque), valeur(m.modele)].filter(Boolean).join(' ') || '—']);
+        kvLignes.push(['N° de série', valeur(m.serie) || '—']);
+      } else {
+        machines.forEach((m, idx) => {
+          const tit = (this.L('Machine') + ' ' + (idx + 1)) + (valeur(m.designation) ? ' : ' + valeur(m.designation) : '');
+          const det = [
+            valeur(m.modele) ? this.L('Modèle') + ' : ' + valeur(m.modele) : '',
+            valeur(m.serie) ? this.L('N° de série') + ' : ' + valeur(m.serie) : ''
+          ].filter(Boolean).join('  |  ');
+          kvLignes.push([tit, det || '—', true]);
+        });
+      }
+
+      /* Compteur et n° de parc ne sont plus demandés : affichés seulement
+         s'ils ont été saisis (rapports importés ou anciens brouillons). */
+      if (valeur(i.machine && (i.machine.compteur || i.machine.parc))) {
+        kvLignes.push([valeur(i.machine.compteur) ? 'Compteur' : '', [valeur(i.machine.compteur), valeur(i.machine.parc)].filter(Boolean).join(' — ')]);
+      }
+
+      kvLignes.push(['Objet / demande', valeur(i.objet) || '—', true]);
+      kvLignes.push(['Lieu', valeur(i.client && i.client.lieu) || '—']);
+      kvLignes.push(['Contact sur site', [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—']);
+      kvLignes.push(['Téléphone / e-mail client', [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—']);
+
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        const datesJ = i.jours.map(j => frDate(j.date)).filter(Boolean);
+        const plageDate = (datesJ.length > 1) ? (datesJ[0] + ' au ' + datesJ[datesJ.length - 1]) : (datesJ[0] || frDate(i.date));
+        kvLignes.push(['Date d\'intervention', plageDate]);
+        kvLignes.push(['Horaires sur site', i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée')]);
+      } else {
+        kvLignes.push(['Date d\'intervention', frDate(i.date)]);
+        kvLignes.push(['Horaires sur site', [heureFr(i.chrono && i.chrono.debut) || '—', heureFr(i.chrono && i.chrono.fin) || 'en cours'].join(' - ')]);
+      }
+
+      kvLignes.push(['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—']);
+
+      if (techniciens.length <= 1) {
+        kvLignes.push(['Technicien', nomTechnicien(i, s) || '—']);
+      } else {
+        const txtTechs = techniciens.map(t => t.nom + (t.fonction ? ' (' + this.L(t.fonction) + ')' : '') + (t.principal ? ' [' + this.L('Technicien principal') + ']' : '')).join(' · ');
+        kvLignes.push(['Technicien(s) sur site', txtTechs, true]);
+      }
+
+      this.kv(kvLignes);
+
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        this.titre('Relevé des journées d\'intervention', i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée'), 90);
+        await this.blocJours(i.jours);
+      }
+
+      let piecesRendues = false;
       // Sections du canevas
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
@@ -602,12 +860,26 @@
           if (!contenu) continue;
           this.titre(section.titre || 'Texte');
           this.blocTexte(null, contenu);
+        } else if (section.type === 'pieces') {
+          piecesRendues = true;
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (!pcs.length) continue;
+          this.titre(section.titre || 'Pièces de rechange', pcs.length + ' pièce(s)', 120);
+          await this.blocPieces(pcs);
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
           this.titre(section.titre || 'Photos', libres.length + ' photo(s)', 220);
           await this.photos(libres.map(ph => ({ dataUrl: ph.dataUrl, legende: valeur(ph.legende) })), true);
         } else if (section.type === 'signature') {
+          if (!piecesRendues) {
+            const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+            if (pcs.length) {
+              this.titre('Pièces de rechange', pcs.length + ' pièce(s)', 120);
+              await this.blocPieces(pcs);
+              piecesRendues = true;
+            }
+          }
           this.titre(section.titre || 'Validation', null, 170);
           await this.blocSignatures();
         }
@@ -642,8 +914,9 @@
      que le client et le SAV s'y retrouvent dans la pièce jointe. */
   function nomFichier(i, ext, langue) {
     const d = (i.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+    const machNom = (i.machine && i.machine.designation) || (i.machines && i.machines[0] && i.machines[0].designation) || '';
     const morceaux = ['Rapport', d, i.numero ? slug(i.numero) : '', slug(i.client && i.client.nom),
-      slug(i.machine && i.machine.designation)];
+      slug(machNom)];
     if (langue) morceaux.push(String(langue).toUpperCase());
     return morceaux.filter(Boolean).join('_') + '.' + ext;
   }
@@ -707,10 +980,18 @@
       d.para('', { taille: 6, apres: 200 });
 
       /* « Votre contact : » + bloc technicien */
-      d.para('Votre contact :', { taille: 10, couleur: '58595B', apres: 40 });
+      d.para(this.L('Votre contact :'), { taille: 10, couleur: '58595B', apres: 40 });
       d.para([{ t: Report.nomComplet(s.technicien) || '—', gras: true, taille: 11.5 }], { apres: 20 });
       [(s.technicien || {}).fonction, (s.technicien || {}).email, (s.technicien || {}).tel ? 'Tél. ' + s.technicien.tel : '']
         .filter(Boolean).forEach(function (l) { d.para(l, { taille: 10, couleur: '58595B', apres: 0 }); });
+
+      const colleguesP1Word = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
+        : [];
+      if (colleguesP1Word.length > 0) {
+        d.para([{ t: this.L('Accompagné de') + ' : ', gras: true }, { t: colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }],
+          { taille: 9.5, couleur: '58595B', avant: 20, apres: 20 });
+      }
 
       /* Page 2 du modèle : destinataire, lieu et date, « À l'attention de » */
       d.sautDePage();
@@ -723,32 +1004,109 @@
         { taille: 10, couleur: '58595B', apres: 60 });
       d.para("À l'attention de " + valeur(cli.contact) + ',', { taille: 10, couleur: '58595B', apres: 200 });
 
+      const machinesWord = listeMachines(i);
+      const techniciensWord = listeTechniciens(i, s);
+      const machPrincipalWord = machinesWord[0] || i.machine || {};
+      const machLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.designation).filter(Boolean).join(' ; ')
+        : (valeur(machPrincipalWord.designation) || '—');
+      const modLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.modele).filter(Boolean).join(' ; ')
+        : ([valeur(machPrincipalWord.marque), valeur(machPrincipalWord.modele)].filter(Boolean).join(' ') || '—');
+      const numSerieLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.serie).filter(Boolean).join(' ; ')
+        : (valeur(machPrincipalWord.serie) || '—');
+
+      const techLabelWord = techniciensWord.length > 1
+        ? techniciensWord.map(t => t.nom + (t.fonction ? ' (' + this.L(t.fonction) + ')' : '')).join(' · ')
+        : (nomTechnicien(i, s) || '—');
+
+      let horLabelWord = (heureFr(i.chrono && i.chrono.debut) || '—') + ' - ' + (heureFr(i.chrono && i.chrono.fin) || 'en cours');
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        horLabelWord = i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée');
+      }
+
       d.bandeau('Intervention');
       d.tableau([
-        [{ texte: 'Client', gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
-         { texte: 'Machine', gras: true }, { texte: valeur(i.machine && i.machine.designation) || '—' }],
-        [{ texte: 'Lieu', gras: true }, { texte: valeur(i.client && i.client.lieu) || '—' },
-         { texte: 'Modèle', gras: true }, { texte: [valeur(i.machine && i.machine.marque), valeur(i.machine && i.machine.modele)].filter(Boolean).join(' ') || '—' }],
-        [{ texte: 'Adresse client', gras: true }, { texte: valeur(i.client && i.client.adresse) || '—' },
-         { texte: 'N° de série', gras: true }, { texte: valeur(i.machine && i.machine.serie) || '—' }],
-        [{ texte: 'Contact sur site', gras: true },
+        [{ texte: this.L('Client'), gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
+         { texte: this.L('Machine'), gras: true }, { texte: machLabelWord }],
+        [{ texte: this.L('Lieu'), gras: true }, { texte: valeur(i.client && i.client.lieu) || '—' },
+         { texte: this.L('Modèle'), gras: true }, { texte: modLabelWord }],
+        [{ texte: this.L('Adresse client'), gras: true }, { texte: valeur(i.client && i.client.adresse) || '—' },
+         { texte: this.L('N° de série'), gras: true }, { texte: numSerieLabelWord }],
+        [{ texte: this.L('Contact sur site'), gras: true },
          { texte: [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—' },
-         { texte: 'Technicien', gras: true }, { texte: nomTechnicien(i, s) || '—' }],
-        [{ texte: 'Téléphone / e-mail', gras: true },
+         { texte: this.L(techniciensWord.length > 1 ? 'Techniciens sur site' : 'Technicien'), gras: true }, { texte: techLabelWord }],
+        [{ texte: this.L('Téléphone / e-mail'), gras: true },
          { texte: [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—' },
-         { texte: 'Horaires sur site', gras: true },
-         { texte: (heureFr(i.chrono && i.chrono.debut) || '—') + ' - ' + (heureFr(i.chrono && i.chrono.fin) || 'en cours') }]
+         { texte: this.L('Horaires sur site'), gras: true },
+         { texte: horLabelWord }]
       ].concat(
         /* Compteur / n° de parc : plus demandés, imprimés seulement s'ils existent. */
         valeur(i.machine && (i.machine.compteur || i.machine.parc))
           ? [[{ texte: 'Compteur / N° de parc', gras: true },
               { texte: [valeur(i.machine.compteur), valeur(i.machine.parc)].filter(Boolean).join(' — ') },
-              { texte: 'Durée sur site', gras: true },
+              { texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }]]
-          : [[{ texte: 'Durée sur site', gras: true },
+          : [[{ texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }, { texte: '' }, { texte: '' }]]
       ), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
 
+      // Si plusieurs machines, tableau récapitulatif détaillé des machines
+      if (machinesWord.length > 1) {
+        d.bandeau(this.L('Machines visitées'));
+        const enteteMach = [
+          { texte: this.L('Machine'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Modèle'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('N° de série'), gras: true, fond: 'E8EFFA' }
+        ];
+        const lignesMach = machinesWord.map(m => [
+          { texte: m.designation || '—' },
+          { texte: m.modele || '—' },
+          { texte: m.serie || '—' }
+        ]);
+        d.tableau([enteteMach].concat(lignesMach), { largeurs: [40, 30, 30] });
+      }
+
+      // Si intervention multi-jours, tableau récapitulatif des journées
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        d.bandeau(this.L('Relevé des journées d\'intervention'));
+        const enteteJours = [
+          { texte: this.L('Date'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Horaires sur site'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Pause'), gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: this.L('Durée sur site'), gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: this.L('Activité / Travaux'), gras: true, fond: 'E8EFFA' }
+        ];
+        let totH = 0;
+        const lignesJours = i.jours.map(item => {
+          const dt = frDate(item.date) || '—';
+          const hor = (item.debut && item.fin) ? (item.debut + ' - ' + item.fin) : (item.debut || item.fin || '—');
+          const pauseTxt = item.pauseMinutes ? (item.pauseMinutes + ' min') : '—';
+          const dh = typeof item.dureeHeures === 'number' ? item.dureeHeures : (typeof item.duree === 'number' ? item.duree : 0);
+          totH += dh;
+          const durTxt = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '—';
+          const desc = valeur(item.description || item.activite) || '—';
+          return [
+            { texte: dt },
+            { texte: hor },
+            { texte: pauseTxt, align: 'center' },
+            { texte: durTxt, gras: true, align: 'center' },
+            { texte: desc }
+          ];
+        });
+        const durTotTxt = totH > 0 ? (Math.floor(totH) + ' h ' + pad2(Math.round((totH % 1) * 60)) + ' (' + totH.toFixed(2).replace('.', ',') + ' h)') : '—';
+        lignesJours.push([
+          { texte: this.L('Total cumulé'), gras: true, fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' },
+          { texte: durTotTxt, gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' }
+        ]);
+        d.tableau([enteteJours].concat(lignesJours), { largeurs: [18, 20, 14, 18, 30] });
+      }
+
+      let piecesRendues = false;
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
           d.bandeau(section.titre || 'Synthèse');
@@ -773,11 +1131,17 @@
           for (const ev of evs) {
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
-            d.para([
-              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' },
+            const morc = [
+              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' }
+            ];
+            if (ev.machineNom) {
+              morc.push({ t: '   [⚙️ ' + ev.machineNom + ']', gras: true, taille: 10, couleur: '0284C7' });
+            }
+            morc.push(
               { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
               { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
-            ], { avant: 160, apres: 40 });
+            );
+            d.para(morc, { avant: 160, apres: 40 });
             d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 60, encadre: true });
             for (const ph of (ev.photos || []).filter(x => x.dataUrl)) {
               this.numeroPhoto++;
@@ -789,24 +1153,68 @@
           if (!contenu) continue;
           d.bandeau(section.titre || 'Texte');
           d.para(contenu, { taille: 10, apres: 120 });
+        } else if (section.type === 'pieces') {
+          piecesRendues = true;
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (!pcs.length) continue;
+          d.bandeau(section.titre || 'Pièces de rechange');
+          const enteteTab = [
+            { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+          ];
+          const lignesTab = pcs.map(p => [
+            { texte: p.denomination || p.designation || '—' },
+            { texte: p.reference || '—' },
+            { texte: String(p.quantite || 1), align: 'center' }
+          ]);
+          d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+          d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
           d.bandeau(section.titre || 'Photos');
           libres.forEach(function (ph, k) { d.image(ph.dataUrl, 13, { legende: valeur(ph.legende) || ('Photo ' + (k + 1)) }); });
         } else if (section.type === 'signature') {
+          if (!piecesRendues) {
+            const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+            if (pcs.length) {
+              d.bandeau('Pièces de rechange');
+              const enteteTab = [
+                { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+              ];
+              const lignesTab = pcs.map(p => [
+                { texte: p.denomination || p.designation || '—' },
+                { texte: p.reference || '—' },
+                { texte: String(p.quantite || 1), align: 'center' }
+              ]);
+              d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+              d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
+              piecesRendues = true;
+            }
+          }
           d.bandeau(section.titre || 'Validation');
-          d.para(valeur(this.s.impression && this.s.impression.mentionClient) ||
-            "Le client reconnaît avoir pris connaissance du présent rapport et accepte les constats et travaux décrits.",
-            { taille: 9.5, apres: 160, encadre: true });
+          let mention = valeur(this.s.impression && this.s.impression.mentionClient) ||
+            "Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.";
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (pcs.length > 0) {
+            mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
+          }
+          d.para(this.L(mention), { taille: 9.5, apres: 160, encadre: true });
           const cli = i.signatureClient || {};
+          const ligAccompagne = (colleguesP1Word.length > 0)
+            ? [[{ texte: '' }, { texte: this.L('Accompagné de') + ' : ' + colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }]]
+            : [];
           d.tableau([
-            [{ texte: 'Le client (bon pour accord)', gras: true, fond: 'E8EFFA' }, { texte: 'Le technicien', gras: true, fond: 'E8EFFA' }],
+            [{ texte: this.L('Le client (bon pour accord)'), gras: true, fond: 'E8EFFA' }, { texte: this.L('Le technicien'), gras: true, fond: 'E8EFFA' }],
             [{ texte: valeur(cli.nom) || '—' }, { texte: valeur(i.technicien) || valeur(s.technicien && s.technicien.nom) || '—' }],
-            [{ texte: valeur(cli.fonction) || '' }, { texte: [valeur(s.technicien && s.technicien.fonction), contactTech(s.technicien)].filter(Boolean).join(' — ') }],
+            [{ texte: valeur(cli.fonction) || '' }, { texte: [valeur(s.technicien && s.technicien.fonction), contactTech(s.technicien)].filter(Boolean).join(' — ') }]
+          ].concat(ligAccompagne).concat([
             [{ texte: 'Date : ' + frDate(cli.date || i.date) + (cli.heure ? ' à ' + cli.heure : '') },
              { texte: 'Date : ' + frDate(i.date) + (heureFr(i.chrono && i.chrono.fin) ? ' à ' + heureFr(i.chrono && i.chrono.fin) : '') }]
-          ], { largeurs: [50, 50] });
+          ]), { largeurs: [50, 50] });
           if (cli.dataUrl) d.image(cli.dataUrl, 6, { hauteurMaxCm: 3 });
         }
       }
@@ -844,7 +1252,12 @@
       client: valeur(i.client && i.client.nom), contact: valeur(i.client && i.client.contact),
       lieu: valeur(i.client && (i.client.lieu || i.client.adresse)),
       date: frDate(i.date),
-      machine: valeur(i.machine && i.machine.designation),
+      machine: (function () {
+        const ms = listeMachines(i);
+        return ms.length > 1
+          ? ms.map(m => m.designation).filter(Boolean).join(' ; ')
+          : (valeur(i.machine && i.machine.designation) || '');
+      })(),
       serie: valeur(i.machine && i.machine.serie),
       technicien: nomTechnicien(i, reglages),
       societe: valeur(reglages.societe && reglages.societe.nom),
@@ -913,8 +1326,9 @@
     },
     genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
-    etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, formatDuree: formatDuree,
+    etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, dureeTotale: dureeTotale, formatDuree: formatDuree,
     dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
+    listeMachines: listeMachines, listeTechniciens: listeTechniciens,
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };

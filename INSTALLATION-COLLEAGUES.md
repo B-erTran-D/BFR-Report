@@ -47,9 +47,23 @@ liste importée si nécessaire.
 
 - **Démarrer / arrêter** le chrono à l'arrivée et au départ : les heures sur site se calculent
   toutes seules (pauses comprises).
+- **Intervention sur plusieurs jours (multi-jours)** : appuyer sur **« ✏️ Ajuster »** ou le chrono,
+  cocher **« Intervention sur plusieurs jours (multi-jours) »** et renseigner les horaires, temps de
+  pause et travaux réalisés pour chaque journée. Les heures cumulées se calculent automatiquement
+  et sont détaillées dans un tableau dédié du rapport.
+- **Intervention sur plusieurs machines** : dans la fiche *Client & machine*, appuyer sur
+  **« ➕ Ajouter une autre machine »** (machine, modèle, n° de série). Lors de l'ajout d'un
+  évènement, un sélecteur permet de rattacher le constat / la photo à la machine concernée.
+- **Intervention en équipe (binôme / collègues sur site)** : dans la fiche client, appuyer sur
+  **« ➕ Ajouter un collègue sur site »** (autocomplétion des techniciens BFR et spécialité :
+  automaticien, mécanicien...). Le technicien principal reste le signataire et interlocuteur,
+  et les collègues accompagnants sont mentionnés dans les contacts et signatures du rapport.
 - **Ajouter un évènement** : domaine (mécanique / électrique / automatisme) → texte **ou dictée
   vocale** → photo (annotation au doigt) → catégorie (Sécurité, Urgent, Priorité haute, Basse,
   Informatif). Chaque évènement reste **modifiable à tout moment**.
+- **Pièces de rechange** : bouton **« ➕ Ajouter pièce de rechange »** (dénomination, référence, quantité)
+  pour les pièces neuves remplacées ou laissées dans le stock client. Elles figurent dans un tableau
+  dédié du rapport et la signature du client vaut acceptation du devis final.
 - **Fin d'intervention** : point avec le client, explication de vive voix, puis **signature du
   client** au doigt sur l'écran.
 - **Client étranger** : dans *Client & machine*, cocher **« Traduire le rapport dans la langue

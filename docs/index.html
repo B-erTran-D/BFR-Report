@@ -5,6 +5,7 @@
 <title>Rapport d'intervention — BFR Systems</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b3d91">
+<meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rapport SAV">
 <link rel="manifest" href="manifest.json">
@@ -14,6 +15,7 @@
 <!-- Site destiné à l'équipe : hors des moteurs de recherche. -->
 <meta name="robots" content="noindex, nofollow">
 <style>:root {
+  color-scheme: light;
   --bleu: #0b3d91;
   --bleu-fonce: #072a66;
   --bleu-clair: #e8effa;
@@ -265,11 +267,39 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #93c5fd; border-c
 }
 
 /* ---------- Signature ---------- */
-.sig-client-corps { flex: 1; overflow-y: auto; padding: 14px 12px 20px; max-width: 760px; width: 100%; margin: 0 auto; }
-.sigwrap { border: 1.5px dashed var(--bord); border-radius: 12px; background: #fff; position: relative; overflow: hidden; touch-action: none; }
-.sigwrap canvas { display: block; width: 100%; height: 210px; touch-action: none; }
-.sigwrap .ph { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #a8b3c2; font-size: 14px; }
-.sigwrap.signed { border-style: solid; border-color: var(--ok); }
+.sig-client-corps {
+  flex: 1; overflow-y: auto; padding: 14px 12px 20px; max-width: 760px; width: 100%; margin: 0 auto;
+  color-scheme: light !important;
+}
+.sigwrap {
+  border: 2px dashed #94a3b8 !important;
+  border-radius: 12px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color-scheme: light !important;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.04);
+}
+.sigwrap canvas, #sigCanvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color-scheme: light !important;
+  touch-action: none;
+  cursor: crosshair;
+}
+.sigwrap .ph {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  color: #64748b; font-size: 14.5px; font-weight: 500; background: transparent; user-select: none;
+}
+.sigwrap.signed {
+  border-style: solid !important;
+  border-color: var(--ok) !important;
+}
 .agreement {
   display: flex; gap: 10px; align-items: flex-start; background: var(--gris-clair); border: 1px solid var(--bord);
   border-radius: 11px; padding: 10px; margin-bottom: 10px; font-size: 13.5px;
@@ -516,6 +546,89 @@ ul.liste li { margin-bottom: 6px; }
       es: 'Dirección del cliente', it: 'Indirizzo cliente', pt: 'Endereço do cliente'
     },
 
+    /* Multi-machines */
+    'Machines visitées': {
+      en: 'Inspected machines', de: 'Besichtigte Maschinen', nl: 'Bezochte machines',
+      es: 'Máquinas inspeccionadas', it: 'Macchine ispezionate', pt: 'Máquinas inspecionadas'
+    },
+    'Machine concernée': {
+      en: 'Concerned machine', de: 'Betroffene Maschine', nl: 'Betrokken machine',
+      es: 'Máquina concernida', it: 'Macchina interessata', pt: 'Máquina em causa'
+    },
+    'Machine 1': { en: 'Machine 1', de: 'Maschine 1', nl: 'Machine 1', es: 'Máquina 1', it: 'Macchina 1', pt: 'Máquina 1' },
+    'Machine 2': { en: 'Machine 2', de: 'Maschine 2', nl: 'Machine 2', es: 'Máquina 2', it: 'Macchina 2', pt: 'Máquina 2' },
+    'Machine 3': { en: 'Machine 3', de: 'Maschine 3', nl: 'Machine 3', es: 'Máquina 3', it: 'Macchina 3', pt: 'Máquina 3' },
+    'Machine 4': { en: 'Machine 4', de: 'Maschine 4', nl: 'Machine 4', es: 'Máquina 4', it: 'Macchina 4', pt: 'Máquina 4' },
+    'Machine 5': { en: 'Machine 5', de: 'Maschine 5', nl: 'Machine 5', es: 'Máquina 5', it: 'Macchina 5', pt: 'Máquina 5' },
+    "Non rattaché / Toute l'installation": {
+      en: 'Unassigned / Entire line', de: 'Nicht zugeordnet / Gesamte Anlage', nl: 'Niet toegewezen / Volledige lijn',
+      es: 'No asignado / Línea completa', it: 'Non assegnato / Tutta la linea', pt: 'Não atribuído / Toda a linha'
+    },
+
+    /* Multi-jours */
+    "Relevé des journées d'intervention": {
+      en: 'Service days breakdown', de: 'Übersicht der Einsatztage', nl: 'Overzicht van de interventiedagen',
+      es: 'Detalle de las jornadas de intervención', it: 'Riepilogo delle giornate di intervento', pt: 'Registo dos dias de intervenção'
+    },
+    "Journées d'intervention": {
+      en: 'Service days', de: 'Einsatztage', nl: 'Interventiedagen',
+      es: 'Jornadas de intervención', it: 'Giornate di intervento', pt: 'Dias de intervenção'
+    },
+    'Journée': { en: 'Day', de: 'Tag', nl: 'Dag', es: 'Jornada', it: 'Giornata', pt: 'Dia' },
+    'Date': { en: 'Date', de: 'Datum', nl: 'Datum', es: 'Fecha', it: 'Data', pt: 'Data' },
+    'Pause': { en: 'Break', de: 'Pause', nl: 'Pauze', es: 'Pausa', it: 'Pausa', pt: 'Pausa' },
+    'Activité / Travaux': {
+      en: 'Activity / Work', de: 'Tätigkeit / Arbeiten', nl: 'Activiteit / Werkzaamheden',
+      es: 'Actividad / Trabajos', it: 'Attività / Lavori', pt: 'Atividade / Trabalhos'
+    },
+    'Total': { en: 'Total', de: 'Gesamt', nl: 'Totaal', es: 'Total', it: 'Totale', pt: 'Total' },
+    'Total cumulé': {
+      en: 'Cumulative total', de: 'Gesamtsumme', nl: 'Cumulatief totaal',
+      es: 'Total acumulado', it: 'Totale cumulativo', pt: 'Total acumulado'
+    },
+
+    /* Multi-techniciens */
+    'Techniciens sur site': {
+      en: 'On-site technicians', de: 'Techniker vor Ort', nl: 'Technici ter plaatse',
+      es: 'Técnicos en planta', it: 'Tecnici in loco', pt: 'Técnicos no local'
+    },
+    'Technicien(s) sur site': {
+      en: 'On-site technician(s)', de: 'Techniker vor Ort', nl: 'Technicus/technici ter plaatse',
+      es: 'Técnico(s) en planta', it: 'Tecnico/i in loco', pt: 'Técnico(s) no local'
+    },
+    'Équipe technique': {
+      en: 'Technical team', de: 'Serviceteam', nl: 'Technisch team',
+      es: 'Equipo técnico', it: 'Team tecnico', pt: 'Equipa técnica'
+    },
+    'Technicien principal': {
+      en: 'Lead technician', de: 'Leitender Techniker', nl: 'Hoofdtechnicus',
+      es: 'Técnico principal', it: 'Tecnico principale', pt: 'Técnico principal'
+    },
+    'Accompagné de': {
+      en: 'Accompanied by', de: 'In Begleitung von', nl: 'Vergezeld door',
+      es: 'Acompañado de', it: 'Accompagnato da', pt: 'Acompanhado por'
+    },
+    'Automaticien': {
+      en: 'Automation engineer', de: 'Automatisierungstechniker', nl: 'Automatiseringsspecialist',
+      es: 'Especialista en automatización', it: 'Specialista automazione', pt: 'Especialista em automação'
+    },
+    'Mécanicien': {
+      en: 'Mechanic', de: 'Mechaniker', nl: 'Monteur mechanica',
+      es: 'Mecánico', it: 'Meccanico', pt: 'Mecânico'
+    },
+    'Électrotechnicien': {
+      en: 'Electrical technician', de: 'Elektrotechniker', nl: 'Elektrotechnicus',
+      es: 'Electrotécnico', it: 'Elettrotecnico', pt: 'Eletrotécnico'
+    },
+    'Chef de projet SAV': {
+      en: 'Service project manager', de: 'Kundendienst-Projektleiter', nl: 'Projectleider klantenservice',
+      es: 'Jefe de proyecto posventa', it: 'Responsabile progetto post-vendita', pt: 'Gestor de projeto pós-venda'
+    },
+    'Support SAV': {
+      en: 'Service support', de: 'Kundendienst-Support', nl: 'Ondersteuning klantenservice',
+      es: 'Soporte posventa', it: 'Supporto post-vendita', pt: 'Suporte pós-venda'
+    },
+
     /* Sections du canevas */
     'Synthèse': { en: 'Summary', de: 'Zusammenfassung', nl: 'Samenvatting', es: 'Resumen', it: 'Sintesi', pt: 'Resumo' },
     'Synthèse du technicien': {
@@ -527,6 +640,22 @@ ul.liste li { margin-bottom: 6px; }
     'Texte': { en: 'Text', de: 'Text', nl: 'Tekst', es: 'Texto', it: 'Testo', pt: 'Texto' },
     'Photos': { en: 'Photos', de: 'Fotos', nl: "Foto's", es: 'Fotos', it: 'Foto', pt: 'Fotos' },
     'Validation': { en: 'Validation', de: 'Bestätigung', nl: 'Validatie', es: 'Validación', it: 'Convalida', pt: 'Validação' },
+    'Pièces de rechange': {
+      en: 'Spare parts', de: 'Ersatzteile', nl: 'Reserveonderdelen',
+      es: 'Piezas de repuesto', it: 'Pezzi di ricambio', pt: 'Peças sobressalentes'
+    },
+    'Dénomination': {
+      en: 'Description', de: 'Bezeichnung', nl: 'Benaming',
+      es: 'Denominación', it: 'Denominazione', pt: 'Denominação'
+    },
+    'Référence': {
+      en: 'Part number', de: 'Artikelnummer', nl: 'Referentie',
+      es: 'Referencia', it: 'Codice', pt: 'Referência'
+    },
+    'Quantité': {
+      en: 'Quantity', de: 'Menge', nl: 'Aantal',
+      es: 'Cantidad', it: 'Quantità', pt: 'Quantidade'
+    },
     'Catégorie': { en: 'Category', de: 'Kategorie', nl: 'Categorie', es: 'Categoría', it: 'Categoria', pt: 'Categoria' },
     'Nombre': { en: 'Number', de: 'Anzahl', nl: 'Aantal', es: 'Número', it: 'Numero', pt: 'Número' },
     'Photos jointes': {
@@ -567,13 +696,25 @@ ul.liste li { margin-bottom: 6px; }
       en: '7. Work to be planned', de: '7. Geplante Arbeiten', nl: '7. Gepland werk',
       es: '7. Trabajos a prever', it: '7. Lavori da prevedere', pt: '7. Trabalhos a prever'
     },
+    '8. Pièces de rechange': {
+      en: '8. Spare parts', de: '8. Ersatzteile', nl: '8. Reserveonderdelen',
+      es: '8. Piezas de repuesto', it: '8. Pezzi di ricambio', pt: '8. Peças sobressalentes'
+    },
     '8. Photos complémentaires': {
       en: '8. Additional photos', de: '8. Zusätzliche Fotos', nl: "8. Aanvullende foto's",
       es: '8. Fotos complementarias', it: '8. Foto aggiuntive', pt: '8. Fotos complementares'
     },
+    '9. Photos complémentaires': {
+      en: '9. Additional photos', de: '9. Zusätzliche Fotos', nl: "9. Aanvullende foto's",
+      es: '9. Fotos complementarias', it: '9. Foto aggiuntive', pt: '9. Fotos complementares'
+    },
     '9. Validation': {
       en: '9. Validation', de: '9. Bestätigung', nl: '9. Validatie',
       es: '9. Validación', it: '9. Convalida', pt: '9. Validação'
+    },
+    '10. Validation': {
+      en: '10. Validation', de: '10. Bestätigung', nl: '10. Validatie',
+      es: '10. Validación', it: '10. Convalida', pt: '10. Validação'
     },
 
     /* Domaines et catégories par défaut */
@@ -623,6 +764,22 @@ ul.liste li { margin-bottom: 6px; }
       es: 'El cliente reconoce haber leído el presente informe, haber recibido las explicaciones del técnico y acepta las observaciones y los trabajos descritos.',
       it: "Il cliente dichiara di aver preso visione del presente rapporto, di aver ricevuto le spiegazioni del tecnico e accetta le constatazioni e i lavori descritti.",
       pt: 'O cliente reconhece ter tomado conhecimento do presente relatório, ter recebido as explicações do técnico e aceita os factos e os trabalhos descritos.'
+    },
+    'La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.': {
+      en: "The customer's signature constitutes acceptance of the final quote and validation of the spare parts listed above.",
+      de: 'Die Unterschrift des Kunden gilt als Annahme des endgültigen Kostenvoranschlags und Genehmigung der oben aufgeführten Ersatzteile.',
+      nl: 'De handtekening van de klant geldt als aanvaarding van de definitieve offerte en goedkeuring van bovenstaande reserveonderdelen.',
+      es: 'La firma del cliente supone la aceptación del presupuesto final y la validación de las piezas de repuesto arriba indicadas.',
+      it: 'La firma del cliente costituisce accettazione del preventivo finale e convalida dei pezzi di ricambio sopra elencati.',
+      pt: 'A assinatura do cliente constitui a aceitação do orçamento final e a validação das peças sobressalentes acima indicadas.'
+    },
+    'Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits. La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.': {
+      en: "The customer acknowledges having read this report, having received the technician's explanations, and accepts the findings and the work described. The customer's signature constitutes acceptance of the final quote and validation of the spare parts listed above.",
+      de: 'Der Kunde bestätigt, diesen Bericht zur Kenntnis genommen, die Erläuterungen des Technikers erhalten zu haben und die beschriebenen Feststellungen und Arbeiten zu akzeptieren. Die Unterschrift des Kunden gilt als Annahme des endgültigen Kostenvoranschlags und Genehmigung der oben aufgeführten Ersatzteile.',
+      nl: 'De klant verklaart kennis te hebben genomen van dit verslag, de uitleg van de technicus te hebben ontvangen en de beschreven vaststellingen en werkzaamheden te aanvaarden. De handtekening van de klant geldt als aanvaarding van de definitieve offerte en goedkeuring van bovenstaande reserveonderdelen.',
+      es: 'El cliente reconoce haber leído el presente informe, haber recibido las explicaciones del técnico y acepta las observaciones y los trabajos descritos. La firma del cliente supone la aceptación del presupuesto final y la validación de las piezas de repuesto arriba indicadas.',
+      it: 'Il cliente dichiara di aver preso visione del presente rapporto, di aver ricevuto le spiegazioni del tecnico e accetta le constatazioni e i lavori descritti. La firma del cliente costituisce accettazione del preventivo finale e convalida dei pezzi di ricambio sopra elencati.',
+      pt: 'O cliente reconhece ter tomado conhecimento do presente relatório, ter recebido as explicações do técnico e aceita os factos e os trabalhos descritos. A assinatura do cliente constitui a aceitação do orçamento final e a validação das peças sobressalentes acima indicadas.'
     },
     'Le client reconnaît avoir pris connaissance du présent rapport et accepte les constats et travaux décrits.': {
       en: 'The customer acknowledges having read this report and accepts the findings and the work described.',
@@ -680,7 +837,9 @@ ul.liste li { margin-bottom: 6px; }
   const PREFIXABLES = [
     'mécanique', 'électrique', 'automatisme', 'sécurité', 'urgent', 'priorité haute',
     'basse', 'informatif', 'catégorie', 'nombre', 'photos', 'date', 'client', 'technicien',
-    'machine', 'modèle', 'lieu', 'intervention'
+    'machine', 'modèle', 'lieu', 'intervention', 'pièces de rechange', 'dénomination', 'quantité',
+    'machines visitées', 'machine concernée', 'techniciens sur site', 'technicien(s) sur site',
+    'relevé des journées d\'intervention', 'journées d\'intervention', 'total cumulé', 'activité / travaux'
   ];
 
   /* --- Règles de traduction des libellés composés ----------------------- */
@@ -694,6 +853,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Generated on $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Page $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 event(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 spare part(s)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 machine(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 day(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 technician(s)'],
       [/^(\d+) photo\(s\)$/, '$1 photo(s)'],
       [/^Photo (\d+)$/, 'Photo $1'],
       [/^À l'attention de (.*),$/, 'For the attention of $1,'],
@@ -712,6 +875,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Erstellt am $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Seite $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 Ereignis(se)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 Ersatzteil(e)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 Maschine(n)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 Tag(e)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 Techniker'],
       [/^(\d+) photo\(s\)$/, '$1 Foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'z. Hd. $1,'],
@@ -728,6 +895,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Aangemaakt op $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 gebeurtenis(sen)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 reserveonderde(e)l(en)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 machine(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 dag(en)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 technicus/technici'],
       [/^(\d+) photo\(s\)$/, "$1 foto('s)"],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'Ter attentie van $1,'],
@@ -744,6 +915,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Emitido el $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 pieza(s) de repuesto'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 máquina(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 jornada(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 técnico(s)'],
       [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'A la atención de $1,'],
@@ -760,6 +935,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Creato il $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento/i'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 pezzo/i di ricambio'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 macchina/e'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 giorno/i'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 tecnico/i'],
       [/^(\d+) photo\(s\)$/, '$1 foto'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, "All'attenzione di $1,"],
@@ -776,6 +955,10 @@ ul.liste li { margin-bottom: 6px; }
       [/^Édité le (.*)$/, 'Emitido em $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 peça(s) sobressalente(s)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 máquina(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 dia(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 técnico(s)'],
       [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'À atenção de $1,'],
@@ -1047,6 +1230,13 @@ ul.liste li { margin-bottom: 6px; }
         (ev.photos || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
       });
       (i.photosLibres || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
+      (i.pieces || []).forEach(function (p, k) {
+        if (p.denomination) ajouter(p, 'denomination', 'Pièce ' + (k + 1));
+      });
+      (i.jours || []).forEach(function (j, k) {
+        if (j.description) ajouter(j, 'description', 'Journée ' + (k + 1));
+        else if (j.activite) ajouter(j, 'activite', 'Journée ' + (k + 1));
+      });
       return taches;
     },
 
@@ -1062,7 +1252,11 @@ ul.liste li { margin-bottom: 6px; }
         evenements: (i.evenements || []).map(function (ev) {
           return Object.assign({}, ev, { photos: (ev.photos || []).map(function (ph) { return Object.assign({}, ph); }) });
         }),
-        photosLibres: (i.photosLibres || []).map(function (ph) { return Object.assign({}, ph); })
+        photosLibres: (i.photosLibres || []).map(function (ph) { return Object.assign({}, ph); }),
+        pieces: (i.pieces || []).map(function (p) { return Object.assign({}, p); }),
+        machines: (i.machines || []).map(function (m) { return Object.assign({}, m); }),
+        techniciens: (i.techniciens || []).map(function (t) { return Object.assign({}, t); }),
+        jours: (i.jours || []).map(function (j) { return Object.assign({}, j); })
       });
       /* on retraduit les mêmes champs sur la copie */
       const copieTaches = this.champs(copie);
@@ -2193,6 +2387,7 @@ ul.liste li { margin-bottom: 6px; }
     return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 34) || 'client';
   }
+  function pad2(n) { return ('0' + (n || 0)).slice(-2); }
   function frDate(iso) {
     if (!iso) return '';
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
@@ -2226,6 +2421,27 @@ ul.liste li { margin-bottom: 6px; }
     return valeur(i && i.technicien).trim() || nomComplet(s && s.technicien);
   }
 
+  function listeMachines(i) {
+    if (i && Array.isArray(i.machines) && i.machines.length > 0) {
+      const valides = i.machines.filter(m => m && (valeur(m.designation) || valeur(m.modele) || valeur(m.serie)));
+      if (valides.length > 0) return valides;
+    }
+    if (i && i.machine && (valeur(i.machine.designation) || valeur(i.machine.modele) || valeur(i.machine.serie))) {
+      return [i.machine];
+    }
+    return [];
+  }
+
+  function listeTechniciens(i, s) {
+    if (i && Array.isArray(i.techniciens) && i.techniciens.length > 0) {
+      const valides = i.techniciens.filter(t => t && valeur(t.nom));
+      if (valides.length > 0) return valides;
+    }
+    const nom = nomTechnicien(i, s);
+    const fonction = (s && s.technicien && s.technicien.fonction) || 'Technicien SAV';
+    return [{ nom: nom, fonction: fonction, principal: true }];
+  }
+
   /** Durée cumulée du chrono (pauses déduites), en millisecondes. */
   function dureeMs(chrono, maintenant) {
     if (!chrono || !chrono.debut) return 0;
@@ -2239,6 +2455,30 @@ ul.liste li { margin-bottom: 6px; }
     });
     return Math.max(0, total);
   }
+
+  function dureeTotale(i, maintenant) {
+    if (!i) return 0;
+    if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+      let totalMs = 0;
+      i.jours.forEach(function (j) {
+        if (typeof j.dureeMs === 'number') {
+          totalMs += j.dureeMs;
+        } else if (typeof j.dureeHeures === 'number') {
+          totalMs += Math.round(j.dureeHeures * 3600000);
+        } else if (typeof j.duree === 'number') {
+          totalMs += Math.round(j.duree * 3600000);
+        } else if (j.debut && j.fin) {
+          const p1 = j.debut.split(':').map(Number);
+          const p2 = j.fin.split(':').map(Number);
+          const min = (p2[0] * 60 + p2[1]) - (p1[0] * 60 + p1[1]) - (Number(j.pauseMinutes) || 0);
+          if (min > 0) totalMs += min * 60000;
+        }
+      });
+      return totalMs;
+    }
+    return dureeMs(i.chrono, maintenant);
+  }
+
   function formatDuree(ms) {
     const min = Math.round(ms / 60000);
     if (!min) return '';
@@ -2279,8 +2519,9 @@ ul.liste li { margin-bottom: 6px; }
         { id: 'info', type: 'evenements', titre: '5. Informations complémentaires', categories: ['INFO'] },
         { id: 'actions', type: 'texte', titre: '6. Travaux réalisés', champ: 'actions' },
         { id: 'prevoir', type: 'texte', titre: '7. Travaux à prévoir', champ: 'aPrevoir' },
-        { id: 'photos', type: 'photos', titre: '8. Photos complémentaires' },
-        { id: 'signature', type: 'signature', titre: '9. Validation' }
+        { id: 'pieces', type: 'pieces', titre: '8. Pièces de rechange' },
+        { id: 'photos', type: 'photos', titre: '9. Photos complémentaires' },
+        { id: 'signature', type: 'signature', titre: '10. Validation' }
       ]
     };
   }
@@ -2305,7 +2546,7 @@ ul.liste li { margin-bottom: 6px; }
       parCategorie[e.categorie || 'INFO'] = (parCategorie[e.categorie || 'INFO'] || 0) + 1;
       parDomaine[e.domaine] = (parDomaine[e.domaine] || 0) + 1;
     });
-    const duree = dureeMs(intervention.chrono);
+    const duree = dureeTotale(intervention);
     const nbPhotos = evs.reduce(function (a, e) { return a + (e.photos || []).length; }, 0) +
       (intervention.photosLibres || []).length;
     return {
@@ -2419,6 +2660,15 @@ ul.liste li { margin-bottom: 6px; }
         p.text(Pdf.trunc(String(l), self.CW, 10), self.M, yt, { size: 10, color: self.C.texte });
         yt += 14;
       });
+      const colleguesP1 = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
+        : [];
+      if (colleguesP1.length > 0) {
+        yt += 6;
+        p.text(Pdf.trunc(this.L('Accompagné de') + ' : ' + colleguesP1.map(c => c.nom + (c.fonction ? ' (' + self.L(c.fonction) + ')' : '')).join(', '), self.CW, 9.5),
+          self.M, yt, { size: 9.5, font: 'F2', color: self.C.texte });
+        yt += 14;
+      }
       p.y = yt + 20;
     }
 
@@ -2598,7 +2848,8 @@ ul.liste li { margin-bottom: 6px; }
           p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
           p.rect(this.M, p.y, 3, 15, { fill: couleur });
           const libDom = this.L(dom.libelle);
-          p.text(dom.icone ? dom.icone + ' ' + libDom : libDom, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
+          const libMach = ev.machineNom ? ' — ⚙️ ' + ev.machineNom : '';
+          p.text((dom.icone ? dom.icone + ' ' + libDom : libDom) + libMach, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
           p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
           p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
           p.y += 15;
@@ -2648,18 +2899,167 @@ ul.liste li { margin-bottom: 6px; }
       if (valeur(i.objet)) this.blocTexte('Objet / demande du client', i.objet);
     }
 
+    async blocPieces(pcs) {
+      const p = this.pdf, C = this.C;
+      if (!pcs || !pcs.length) return;
+      const colDenomW = this.CW * 0.54;
+      const colRefW = this.CW * 0.30;
+      const colQteW = this.CW * 0.16;
+      const hLigne = 18;
+      const hEntete = 18;
+
+      this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
+      let y = p.y;
+
+      // En-tête du tableau
+      p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+      p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+
+      p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
+      p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
+
+      y += hEntete;
+
+      for (let idx = 0; idx < pcs.length; idx++) {
+        const item = pcs[idx];
+        if (y + hLigne > p.H - this.M - 35) {
+          p.newPage();
+          this.enteteSuite();
+          y = p.y + 4;
+          p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+          p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+          p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+          p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+          p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
+          p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
+          y += hEntete;
+        }
+
+        const fond = (idx % 2 === 1) ? [0.97, 0.98, 0.99] : [1, 1, 1];
+        p.rect(this.M, y, this.CW, hLigne, { fill: fond, stroke: C.bord, lineWidth: 0.4 });
+
+        const denom = valeur(item.denomination || item.designation) || '—';
+        const ref = valeur(item.reference) || '—';
+        const qte = String(valeur(item.quantite) || 1);
+
+        p.text(Pdf.trunc(denom, colDenomW - 12, 8.5, false), this.M + 6, y + 12, { size: 8.5, color: C.texte });
+        p.text(Pdf.trunc(ref, colRefW - 12, 8.5, false), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.texte });
+        p.text(qte, this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.texte, align: 'center' });
+
+        p.line(this.M + colDenomW, y, this.M + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
+        p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
+
+        y += hLigne;
+      }
+
+      p.y = y + 4;
+      const mentionPcs = this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.');
+      p.paragraph(mentionPcs, this.M + 4, p.y, this.CW - 8, { size: 7.4, font: 'F1', color: C.gris });
+      p.y += 12;
+    }
+
+    async blocJours(jours) {
+      const p = this.pdf, C = this.C;
+      if (!jours || !jours.length) return;
+      const colDateW = this.CW * 0.18;
+      const colHorairesW = this.CW * 0.22;
+      const colPauseW = this.CW * 0.14;
+      const colDureeW = this.CW * 0.18;
+      const colDescW = this.CW * 0.28;
+      const hLigne = 18;
+      const hEntete = 18;
+
+      this.saut(hEntete + hLigne * Math.min(jours.length + 1, 3) + 20);
+      let y = p.y;
+
+      const dessinerEntete = () => {
+        p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+        p.text(this.L('Date'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Horaires sur site'), this.M + colDateW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Pause'), this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Durée sur site'), this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Activité / Travaux'), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+
+        let cx = this.M + colDateW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colHorairesW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colPauseW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        cx += colDureeW;
+        p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
+        y += hEntete;
+      };
+
+      dessinerEntete();
+
+      let totalH = 0;
+      for (let idx = 0; idx < jours.length; idx++) {
+        const item = jours[idx];
+        if (y + hLigne > p.H - this.M - 35) {
+          p.newPage();
+          this.enteteSuite();
+          y = p.y + 4;
+          dessinerEntete();
+        }
+
+        const fond = (idx % 2 === 1) ? [0.97, 0.98, 0.99] : [1, 1, 1];
+        p.rect(this.M, y, this.CW, hLigne, { fill: fond, stroke: C.bord, lineWidth: 0.4 });
+
+        const dt = frDate(item.date) || '—';
+        const hor = (item.debut && item.fin) ? (item.debut + ' - ' + item.fin) : (item.debut || item.fin || '—');
+        const pauseTxt = item.pauseMinutes ? (item.pauseMinutes + ' min') : '—';
+        const dh = typeof item.dureeHeures === 'number' ? item.dureeHeures : (typeof item.duree === 'number' ? item.duree : 0);
+        totalH += dh;
+        const durTxt = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '—';
+        const desc = valeur(item.description || item.activite) || '—';
+
+        p.text(Pdf.trunc(dt, colDateW - 8, 8.2, false), this.M + 6, y + 12, { size: 8.2, color: C.texte });
+        p.text(Pdf.trunc(hor, colHorairesW - 8, 8.2, false), this.M + colDateW + 6, y + 12, { size: 8.2, color: C.texte });
+        p.text(pauseTxt, this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.2, color: C.texte, align: 'center' });
+        p.text(durTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.2, font: 'F2', color: C.texte, align: 'center' });
+        p.text(Pdf.trunc(desc, colDescW - 8, 8.2, false), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.2, color: C.texte });
+
+        let cx = this.M + colDateW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colHorairesW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colPauseW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+        cx += colDureeW;
+        p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
+
+        y += hLigne;
+      }
+
+      // Ligne total cumulé
+      p.rect(this.M, y, this.CW, hLigne, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+      p.text(this.L('Total cumulé'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      const totTxt = totalH > 0 ? (Math.floor(totalH) + ' h ' + pad2(Math.round((totalH % 1) * 60)) + ' (' + totalH.toFixed(2).replace('.', ',') + ' h)') : '—';
+      p.text(totTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+      y += hLigne + 8;
+      p.y = y;
+    }
+
     async blocSignatures(titre) {
       const p = this.pdf, C = this.C, i = this.i, s = this.s;
       const sigClient = await toJpeg((i.signatureClient || {}).dataUrl, 900, 0.9);
       const sigTech = await toJpeg(s.technicien && s.technicien.signature, 900, 0.9);
-      const mention = valeur((s.impression && s.impression.mentionClient)) ||
+      const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+      let mention = valeur((s.impression && s.impression.mentionClient)) ||
         "Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.";
-      const hT = Pdf.wrap(mention, this.CW - 14, 8).length * 10.6 + 9;
+      if (pcs.length > 0) {
+        mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
+      }
+      const mentionTraduite = this.L(mention);
+      const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 8).length * 10.6 + 9;
       const hBloc = 118;
       this.saut(hT + hBloc + 26);
       const y0 = p.y;
       p.rect(this.M, y0, this.CW, hT, { fill: [1, 0.976, 0.929], stroke: [0.99, 0.9, 0.6], lineWidth: 0.5 });
-      p.paragraph(mention, this.M + 7, y0 + 2, this.CW - 14, { size: 8, color: [0.42, 0.29, 0.05] });
+      p.paragraph(mentionTraduite, this.M + 7, y0 + 2, this.CW - 14, { size: 8, color: [0.42, 0.29, 0.05] });
       const y = y0 + hT + 10;
       const colW = (this.CW - 10) / 2;
       [0, 1].forEach(function (k) {
@@ -2685,7 +3085,17 @@ ul.liste li { margin-bottom: 6px; }
           p.text('Signature non recueillie', x + colW / 2, y + 74, { size: 8, color: C.gris, align: 'center' });
         }
       }, this);
-      p.y = y + hBloc + 10;
+
+      const collegues = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(t => t && !t.principal && valeur(t.nom))
+        : [];
+      if (collegues.length > 0) {
+        const txtCol = this.L('Accompagné de') + ' : ' + collegues.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ');
+        p.text(Pdf.trunc(txtCol, this.CW - 14, 7.8, false), this.M + 4, y + hBloc + 7, { size: 7.8, color: C.gris });
+        p.y = y + hBloc + 18;
+      } else {
+        p.y = y + hBloc + 10;
+      }
     }
 
     /* --- génération --- */
@@ -2714,23 +3124,65 @@ ul.liste li { margin-bottom: 6px; }
 
       /* ---- Corps du compte rendu (sections du canevas) ---- */
       this.titre('Intervention', valeur(i.numero) ? 'N° ' + valeur(i.numero) : null, 60);
-      this.kv([
-        ['Machine / équipement', valeur(i.machine && i.machine.designation) || '—', true],
-        ['Modèle', [valeur(i.machine && i.machine.marque), valeur(i.machine && i.machine.modele)].filter(Boolean).join(' ') || '—'],
-        ['N° de série', valeur(i.machine && i.machine.serie) || '—'],
-        /* Compteur et n° de parc ne sont plus demandés : affichés seulement
-           s'ils ont été saisis (rapports importés ou anciens brouillons). */
-        [valeur(i.machine && i.machine.compteur) ? 'Compteur' : '', [valeur(i.machine && i.machine.compteur), valeur(i.machine && i.machine.parc)].filter(Boolean).join(' — ')],
-        ['Objet / demande', valeur(i.objet) || '—', true],
-        ['Lieu', valeur(i.client && i.client.lieu) || '—'],
-        ['Contact sur site', [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—'],
-        ['Téléphone / e-mail client', [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—'],
-        ['Date d\'intervention', frDate(i.date)],
-        ['Horaires sur site', [heureFr(i.chrono && i.chrono.debut) || '—', heureFr(i.chrono && i.chrono.fin) || 'en cours'].join(' - ')],
-        ['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—'],
-        ['Technicien', nomTechnicien(i, s) || '—']
-      ]);
 
+      const machines = listeMachines(i);
+      const techniciens = listeTechniciens(i, s);
+      const kvLignes = [];
+
+      if (machines.length <= 1) {
+        const m = machines[0] || i.machine || {};
+        kvLignes.push(['Machine / équipement', valeur(m.designation) || '—', true]);
+        kvLignes.push(['Modèle', [valeur(m.marque), valeur(m.modele)].filter(Boolean).join(' ') || '—']);
+        kvLignes.push(['N° de série', valeur(m.serie) || '—']);
+      } else {
+        machines.forEach((m, idx) => {
+          const tit = (this.L('Machine') + ' ' + (idx + 1)) + (valeur(m.designation) ? ' : ' + valeur(m.designation) : '');
+          const det = [
+            valeur(m.modele) ? this.L('Modèle') + ' : ' + valeur(m.modele) : '',
+            valeur(m.serie) ? this.L('N° de série') + ' : ' + valeur(m.serie) : ''
+          ].filter(Boolean).join('  |  ');
+          kvLignes.push([tit, det || '—', true]);
+        });
+      }
+
+      /* Compteur et n° de parc ne sont plus demandés : affichés seulement
+         s'ils ont été saisis (rapports importés ou anciens brouillons). */
+      if (valeur(i.machine && (i.machine.compteur || i.machine.parc))) {
+        kvLignes.push([valeur(i.machine.compteur) ? 'Compteur' : '', [valeur(i.machine.compteur), valeur(i.machine.parc)].filter(Boolean).join(' — ')]);
+      }
+
+      kvLignes.push(['Objet / demande', valeur(i.objet) || '—', true]);
+      kvLignes.push(['Lieu', valeur(i.client && i.client.lieu) || '—']);
+      kvLignes.push(['Contact sur site', [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—']);
+      kvLignes.push(['Téléphone / e-mail client', [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—']);
+
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        const datesJ = i.jours.map(j => frDate(j.date)).filter(Boolean);
+        const plageDate = (datesJ.length > 1) ? (datesJ[0] + ' au ' + datesJ[datesJ.length - 1]) : (datesJ[0] || frDate(i.date));
+        kvLignes.push(['Date d\'intervention', plageDate]);
+        kvLignes.push(['Horaires sur site', i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée')]);
+      } else {
+        kvLignes.push(['Date d\'intervention', frDate(i.date)]);
+        kvLignes.push(['Horaires sur site', [heureFr(i.chrono && i.chrono.debut) || '—', heureFr(i.chrono && i.chrono.fin) || 'en cours'].join(' - ')]);
+      }
+
+      kvLignes.push(['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—']);
+
+      if (techniciens.length <= 1) {
+        kvLignes.push(['Technicien', nomTechnicien(i, s) || '—']);
+      } else {
+        const txtTechs = techniciens.map(t => t.nom + (t.fonction ? ' (' + this.L(t.fonction) + ')' : '') + (t.principal ? ' [' + this.L('Technicien principal') + ']' : '')).join(' · ');
+        kvLignes.push(['Technicien(s) sur site', txtTechs, true]);
+      }
+
+      this.kv(kvLignes);
+
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        this.titre('Relevé des journées d\'intervention', i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée'), 90);
+        await this.blocJours(i.jours);
+      }
+
+      let piecesRendues = false;
       // Sections du canevas
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
@@ -2747,12 +3199,26 @@ ul.liste li { margin-bottom: 6px; }
           if (!contenu) continue;
           this.titre(section.titre || 'Texte');
           this.blocTexte(null, contenu);
+        } else if (section.type === 'pieces') {
+          piecesRendues = true;
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (!pcs.length) continue;
+          this.titre(section.titre || 'Pièces de rechange', pcs.length + ' pièce(s)', 120);
+          await this.blocPieces(pcs);
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
           this.titre(section.titre || 'Photos', libres.length + ' photo(s)', 220);
           await this.photos(libres.map(ph => ({ dataUrl: ph.dataUrl, legende: valeur(ph.legende) })), true);
         } else if (section.type === 'signature') {
+          if (!piecesRendues) {
+            const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+            if (pcs.length) {
+              this.titre('Pièces de rechange', pcs.length + ' pièce(s)', 120);
+              await this.blocPieces(pcs);
+              piecesRendues = true;
+            }
+          }
           this.titre(section.titre || 'Validation', null, 170);
           await this.blocSignatures();
         }
@@ -2787,8 +3253,9 @@ ul.liste li { margin-bottom: 6px; }
      que le client et le SAV s'y retrouvent dans la pièce jointe. */
   function nomFichier(i, ext, langue) {
     const d = (i.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+    const machNom = (i.machine && i.machine.designation) || (i.machines && i.machines[0] && i.machines[0].designation) || '';
     const morceaux = ['Rapport', d, i.numero ? slug(i.numero) : '', slug(i.client && i.client.nom),
-      slug(i.machine && i.machine.designation)];
+      slug(machNom)];
     if (langue) morceaux.push(String(langue).toUpperCase());
     return morceaux.filter(Boolean).join('_') + '.' + ext;
   }
@@ -2852,10 +3319,18 @@ ul.liste li { margin-bottom: 6px; }
       d.para('', { taille: 6, apres: 200 });
 
       /* « Votre contact : » + bloc technicien */
-      d.para('Votre contact :', { taille: 10, couleur: '58595B', apres: 40 });
+      d.para(this.L('Votre contact :'), { taille: 10, couleur: '58595B', apres: 40 });
       d.para([{ t: Report.nomComplet(s.technicien) || '—', gras: true, taille: 11.5 }], { apres: 20 });
       [(s.technicien || {}).fonction, (s.technicien || {}).email, (s.technicien || {}).tel ? 'Tél. ' + s.technicien.tel : '']
         .filter(Boolean).forEach(function (l) { d.para(l, { taille: 10, couleur: '58595B', apres: 0 }); });
+
+      const colleguesP1Word = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
+        ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
+        : [];
+      if (colleguesP1Word.length > 0) {
+        d.para([{ t: this.L('Accompagné de') + ' : ', gras: true }, { t: colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }],
+          { taille: 9.5, couleur: '58595B', avant: 20, apres: 20 });
+      }
 
       /* Page 2 du modèle : destinataire, lieu et date, « À l'attention de » */
       d.sautDePage();
@@ -2868,32 +3343,109 @@ ul.liste li { margin-bottom: 6px; }
         { taille: 10, couleur: '58595B', apres: 60 });
       d.para("À l'attention de " + valeur(cli.contact) + ',', { taille: 10, couleur: '58595B', apres: 200 });
 
+      const machinesWord = listeMachines(i);
+      const techniciensWord = listeTechniciens(i, s);
+      const machPrincipalWord = machinesWord[0] || i.machine || {};
+      const machLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.designation).filter(Boolean).join(' ; ')
+        : (valeur(machPrincipalWord.designation) || '—');
+      const modLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.modele).filter(Boolean).join(' ; ')
+        : ([valeur(machPrincipalWord.marque), valeur(machPrincipalWord.modele)].filter(Boolean).join(' ') || '—');
+      const numSerieLabelWord = machinesWord.length > 1
+        ? machinesWord.map(m => m.serie).filter(Boolean).join(' ; ')
+        : (valeur(machPrincipalWord.serie) || '—');
+
+      const techLabelWord = techniciensWord.length > 1
+        ? techniciensWord.map(t => t.nom + (t.fonction ? ' (' + this.L(t.fonction) + ')' : '')).join(' · ')
+        : (nomTechnicien(i, s) || '—');
+
+      let horLabelWord = (heureFr(i.chrono && i.chrono.debut) || '—') + ' - ' + (heureFr(i.chrono && i.chrono.fin) || 'en cours');
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        horLabelWord = i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée');
+      }
+
       d.bandeau('Intervention');
       d.tableau([
-        [{ texte: 'Client', gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
-         { texte: 'Machine', gras: true }, { texte: valeur(i.machine && i.machine.designation) || '—' }],
-        [{ texte: 'Lieu', gras: true }, { texte: valeur(i.client && i.client.lieu) || '—' },
-         { texte: 'Modèle', gras: true }, { texte: [valeur(i.machine && i.machine.marque), valeur(i.machine && i.machine.modele)].filter(Boolean).join(' ') || '—' }],
-        [{ texte: 'Adresse client', gras: true }, { texte: valeur(i.client && i.client.adresse) || '—' },
-         { texte: 'N° de série', gras: true }, { texte: valeur(i.machine && i.machine.serie) || '—' }],
-        [{ texte: 'Contact sur site', gras: true },
+        [{ texte: this.L('Client'), gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
+         { texte: this.L('Machine'), gras: true }, { texte: machLabelWord }],
+        [{ texte: this.L('Lieu'), gras: true }, { texte: valeur(i.client && i.client.lieu) || '—' },
+         { texte: this.L('Modèle'), gras: true }, { texte: modLabelWord }],
+        [{ texte: this.L('Adresse client'), gras: true }, { texte: valeur(i.client && i.client.adresse) || '—' },
+         { texte: this.L('N° de série'), gras: true }, { texte: numSerieLabelWord }],
+        [{ texte: this.L('Contact sur site'), gras: true },
          { texte: [valeur(i.client && i.client.contact), valeur(i.client && i.client.fonction)].filter(Boolean).join(' — ') || '—' },
-         { texte: 'Technicien', gras: true }, { texte: nomTechnicien(i, s) || '—' }],
-        [{ texte: 'Téléphone / e-mail', gras: true },
+         { texte: this.L(techniciensWord.length > 1 ? 'Techniciens sur site' : 'Technicien'), gras: true }, { texte: techLabelWord }],
+        [{ texte: this.L('Téléphone / e-mail'), gras: true },
          { texte: [valeur(i.client && i.client.tel), valeur(i.client && i.client.email)].filter(Boolean).join(' / ') || '—' },
-         { texte: 'Horaires sur site', gras: true },
-         { texte: (heureFr(i.chrono && i.chrono.debut) || '—') + ' - ' + (heureFr(i.chrono && i.chrono.fin) || 'en cours') }]
+         { texte: this.L('Horaires sur site'), gras: true },
+         { texte: horLabelWord }]
       ].concat(
         /* Compteur / n° de parc : plus demandés, imprimés seulement s'ils existent. */
         valeur(i.machine && (i.machine.compteur || i.machine.parc))
           ? [[{ texte: 'Compteur / N° de parc', gras: true },
               { texte: [valeur(i.machine.compteur), valeur(i.machine.parc)].filter(Boolean).join(' — ') },
-              { texte: 'Durée sur site', gras: true },
+              { texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }]]
-          : [[{ texte: 'Durée sur site', gras: true },
+          : [[{ texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }, { texte: '' }, { texte: '' }]]
       ), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
 
+      // Si plusieurs machines, tableau récapitulatif détaillé des machines
+      if (machinesWord.length > 1) {
+        d.bandeau(this.L('Machines visitées'));
+        const enteteMach = [
+          { texte: this.L('Machine'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Modèle'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('N° de série'), gras: true, fond: 'E8EFFA' }
+        ];
+        const lignesMach = machinesWord.map(m => [
+          { texte: m.designation || '—' },
+          { texte: m.modele || '—' },
+          { texte: m.serie || '—' }
+        ]);
+        d.tableau([enteteMach].concat(lignesMach), { largeurs: [40, 30, 30] });
+      }
+
+      // Si intervention multi-jours, tableau récapitulatif des journées
+      if (i.multiJours && Array.isArray(i.jours) && i.jours.length > 0) {
+        d.bandeau(this.L('Relevé des journées d\'intervention'));
+        const enteteJours = [
+          { texte: this.L('Date'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Horaires sur site'), gras: true, fond: 'E8EFFA' },
+          { texte: this.L('Pause'), gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: this.L('Durée sur site'), gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: this.L('Activité / Travaux'), gras: true, fond: 'E8EFFA' }
+        ];
+        let totH = 0;
+        const lignesJours = i.jours.map(item => {
+          const dt = frDate(item.date) || '—';
+          const hor = (item.debut && item.fin) ? (item.debut + ' - ' + item.fin) : (item.debut || item.fin || '—');
+          const pauseTxt = item.pauseMinutes ? (item.pauseMinutes + ' min') : '—';
+          const dh = typeof item.dureeHeures === 'number' ? item.dureeHeures : (typeof item.duree === 'number' ? item.duree : 0);
+          totH += dh;
+          const durTxt = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '—';
+          const desc = valeur(item.description || item.activite) || '—';
+          return [
+            { texte: dt },
+            { texte: hor },
+            { texte: pauseTxt, align: 'center' },
+            { texte: durTxt, gras: true, align: 'center' },
+            { texte: desc }
+          ];
+        });
+        const durTotTxt = totH > 0 ? (Math.floor(totH) + ' h ' + pad2(Math.round((totH % 1) * 60)) + ' (' + totH.toFixed(2).replace('.', ',') + ' h)') : '—';
+        lignesJours.push([
+          { texte: this.L('Total cumulé'), gras: true, fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' },
+          { texte: durTotTxt, gras: true, align: 'center', fond: 'E8EFFA' },
+          { texte: '', fond: 'E8EFFA' }
+        ]);
+        d.tableau([enteteJours].concat(lignesJours), { largeurs: [18, 20, 14, 18, 30] });
+      }
+
+      let piecesRendues = false;
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
           d.bandeau(section.titre || 'Synthèse');
@@ -2918,11 +3470,17 @@ ul.liste li { margin-bottom: 6px; }
           for (const ev of evs) {
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
-            d.para([
-              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' },
+            const morc = [
+              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' }
+            ];
+            if (ev.machineNom) {
+              morc.push({ t: '   [⚙️ ' + ev.machineNom + ']', gras: true, taille: 10, couleur: '0284C7' });
+            }
+            morc.push(
               { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
               { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
-            ], { avant: 160, apres: 40 });
+            );
+            d.para(morc, { avant: 160, apres: 40 });
             d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 60, encadre: true });
             for (const ph of (ev.photos || []).filter(x => x.dataUrl)) {
               this.numeroPhoto++;
@@ -2934,24 +3492,68 @@ ul.liste li { margin-bottom: 6px; }
           if (!contenu) continue;
           d.bandeau(section.titre || 'Texte');
           d.para(contenu, { taille: 10, apres: 120 });
+        } else if (section.type === 'pieces') {
+          piecesRendues = true;
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (!pcs.length) continue;
+          d.bandeau(section.titre || 'Pièces de rechange');
+          const enteteTab = [
+            { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+          ];
+          const lignesTab = pcs.map(p => [
+            { texte: p.denomination || p.designation || '—' },
+            { texte: p.reference || '—' },
+            { texte: String(p.quantite || 1), align: 'center' }
+          ]);
+          d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+          d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
           d.bandeau(section.titre || 'Photos');
           libres.forEach(function (ph, k) { d.image(ph.dataUrl, 13, { legende: valeur(ph.legende) || ('Photo ' + (k + 1)) }); });
         } else if (section.type === 'signature') {
+          if (!piecesRendues) {
+            const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+            if (pcs.length) {
+              d.bandeau('Pièces de rechange');
+              const enteteTab = [
+                { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+              ];
+              const lignesTab = pcs.map(p => [
+                { texte: p.denomination || p.designation || '—' },
+                { texte: p.reference || '—' },
+                { texte: String(p.quantite || 1), align: 'center' }
+              ]);
+              d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+              d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
+              piecesRendues = true;
+            }
+          }
           d.bandeau(section.titre || 'Validation');
-          d.para(valeur(this.s.impression && this.s.impression.mentionClient) ||
-            "Le client reconnaît avoir pris connaissance du présent rapport et accepte les constats et travaux décrits.",
-            { taille: 9.5, apres: 160, encadre: true });
+          let mention = valeur(this.s.impression && this.s.impression.mentionClient) ||
+            "Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.";
+          const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
+          if (pcs.length > 0) {
+            mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
+          }
+          d.para(this.L(mention), { taille: 9.5, apres: 160, encadre: true });
           const cli = i.signatureClient || {};
+          const ligAccompagne = (colleguesP1Word.length > 0)
+            ? [[{ texte: '' }, { texte: this.L('Accompagné de') + ' : ' + colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }]]
+            : [];
           d.tableau([
-            [{ texte: 'Le client (bon pour accord)', gras: true, fond: 'E8EFFA' }, { texte: 'Le technicien', gras: true, fond: 'E8EFFA' }],
+            [{ texte: this.L('Le client (bon pour accord)'), gras: true, fond: 'E8EFFA' }, { texte: this.L('Le technicien'), gras: true, fond: 'E8EFFA' }],
             [{ texte: valeur(cli.nom) || '—' }, { texte: valeur(i.technicien) || valeur(s.technicien && s.technicien.nom) || '—' }],
-            [{ texte: valeur(cli.fonction) || '' }, { texte: [valeur(s.technicien && s.technicien.fonction), contactTech(s.technicien)].filter(Boolean).join(' — ') }],
+            [{ texte: valeur(cli.fonction) || '' }, { texte: [valeur(s.technicien && s.technicien.fonction), contactTech(s.technicien)].filter(Boolean).join(' — ') }]
+          ].concat(ligAccompagne).concat([
             [{ texte: 'Date : ' + frDate(cli.date || i.date) + (cli.heure ? ' à ' + cli.heure : '') },
              { texte: 'Date : ' + frDate(i.date) + (heureFr(i.chrono && i.chrono.fin) ? ' à ' + heureFr(i.chrono && i.chrono.fin) : '') }]
-          ], { largeurs: [50, 50] });
+          ]), { largeurs: [50, 50] });
           if (cli.dataUrl) d.image(cli.dataUrl, 6, { hauteurMaxCm: 3 });
         }
       }
@@ -2989,7 +3591,12 @@ ul.liste li { margin-bottom: 6px; }
       client: valeur(i.client && i.client.nom), contact: valeur(i.client && i.client.contact),
       lieu: valeur(i.client && (i.client.lieu || i.client.adresse)),
       date: frDate(i.date),
-      machine: valeur(i.machine && i.machine.designation),
+      machine: (function () {
+        const ms = listeMachines(i);
+        return ms.length > 1
+          ? ms.map(m => m.designation).filter(Boolean).join(' ; ')
+          : (valeur(i.machine && i.machine.designation) || '');
+      })(),
       serie: valeur(i.machine && i.machine.serie),
       technicien: nomTechnicien(i, reglages),
       societe: valeur(reglages.societe && reglages.societe.nom),
@@ -3058,8 +3665,9 @@ ul.liste li { margin-bottom: 6px; }
     },
     genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
-    etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, formatDuree: formatDuree,
+    etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, dureeTotale: dureeTotale, formatDuree: formatDuree,
     dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
+    listeMachines: listeMachines, listeTechniciens: listeTechniciens,
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
@@ -3353,6 +3961,11 @@ ul.liste li { margin-bottom: 6px; }
       this.ev = evenement;
       this.ctx = ctx || {};
       this.S = this.ctx.reglages || {};
+      this.machines = (this.ctx.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
+      if (!this.ev.machineNom && !this.ev.machineId && this.machines.length === 1) {
+        this.ev.machineId = this.machines[0].id || '';
+        this.ev.machineNom = this.machines[0].designation || '';
+      }
       /* Réouverture : on revient directement sur l'annotation si le domaine est déjà
          choisi (c'est ce qu'on corrige le plus souvent) ; « ← Retour » ramène au domaine. */
       this.etape = evenement.domaine ? 2 : 1;
@@ -3435,6 +4048,21 @@ ul.liste li { margin-bottom: 6px; }
         }
       });
 
+      overlay.addEventListener('change', (e) => {
+        if (e.target.id === 'evMachine') {
+          const val = e.target.value;
+          const mach = this.machines.find(m => (m.id && m.id === val) || m.designation === val);
+          if (mach) {
+            this.ev.machineId = mach.id || '';
+            this.ev.machineNom = mach.designation || '';
+          } else {
+            this.ev.machineId = '';
+            this.ev.machineNom = '';
+          }
+          this.maj();
+        }
+      });
+
       this.rendre();
     }
 
@@ -3507,8 +4135,21 @@ ul.liste li { margin-bottom: 6px; }
     etapeAnnotation() {
       const ev = this.ev;
       const dispo = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      const machSelect = (this.machines.length > 0) ? `
+        <div class="field" style="margin-bottom:12px">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569)">Machine concernée</label>
+          <select id="evMachine" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--bord,#cbd5e1);background:var(--card,#ffffff);font-size:0.95rem">
+            <option value="">— Non rattaché / Toute l'installation —</option>
+            ${this.machines.map(m => {
+              const sel = (ev.machineId && m.id === ev.machineId) || (ev.machineNom && m.designation === ev.machineNom);
+              const label = [m.designation || 'Machine', m.modele ? '(' + m.modele + ')' : ''].filter(Boolean).join(' ');
+              return `<option value="${esc(m.id || m.designation)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
+            }).join('')}
+          </select>
+        </div>` : '';
       return `<p class="assistant-question">Que constatez-vous ?</p>
         <p class="assistant-note">Écrivez, ou dictez à voix haute : le texte est ajouté automatiquement.</p>
+        ${machSelect}
         <textarea id="evTexte" class="ev-texte" rows="7" placeholder="Ex. Courroie d'entraînement détendue : flèche mesurée 12 mm pour 8 mm maximum. Traces de patinage et gomme sur la poulie. Bruit caractéristique au démarrage.">${esc(ev.texte || '')}</textarea>
         <div class="btnrow" style="margin-top:10px">
           <button class="btn ${this.ecoute ? 'or' : 'ghost'}" data-a="dictee">${this.ecoute ? '⏹️ Arrêter la dictée' : '🎤 Dicter'}</button>
@@ -3554,6 +4195,7 @@ ul.liste li { margin-bottom: 6px; }
         </div>
         <div class="ev-recap">
           <div class="ev-recap-ligne"><span>Domaine</span><strong>${esc(this.libelleDomaine())}</strong></div>
+          ${this.ev.machineNom ? `<div class="ev-recap-ligne"><span>Machine</span><strong>${esc(this.ev.machineNom)}</strong></div>` : ''}
           <div class="ev-recap-ligne"><span>Annotation</span><strong>${this.ev.texte ? this.ev.texte.length + ' caractère(s)' : 'vide'}</strong></div>
           <div class="ev-recap-ligne"><span>Photos</span><strong>${(this.ev.photos || []).length}</strong></div>
         </div>`;
@@ -3671,8 +4313,18 @@ ul.liste li { margin-bottom: 6px; }
 
   global.Assistant = {
     ouvrir: function (evenement, ctx) { return new Assistant(evenement, ctx); },
-    nouvelEvenement: function () {
-      return { id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6), domaine: '', texte: '', photos: [], categorie: '', heure: new Date().toISOString() };
+    nouvelEvenement: function (opts) {
+      opts = opts || {};
+      return {
+        id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6),
+        domaine: opts.domaine || '',
+        texte: opts.texte || '',
+        photos: opts.photos || [],
+        categorie: opts.categorie || '',
+        heure: new Date().toISOString(),
+        machineId: opts.machineId || '',
+        machineNom: opts.machineNom || ''
+      };
     }
   };
 })(window);
@@ -3717,6 +4369,12 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     },
     embarques: function () { return CLIENTS_EMBARQUES; },
     utiliseListeImportee: function () { return this.base() !== CLIENTS_EMBARQUES; },
+    listeTechniciens: function () {
+      return (Array.isArray(global.TECHNICIENS_BFR) ? global.TECHNICIENS_BFR : []).map(t => ({
+        nom: t.nom || t,
+        reference: t.reference || t.nom || t
+      }));
+    },
     memo: function () {
       try { return JSON.parse(global.localStorage.getItem(CLE_MEMO) || '{}') || {}; } catch (e) { return {}; }
     },
@@ -3956,6 +4614,12 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     const parts = p.split('.'); let c = o;
     for (let i = 0; i < parts.length - 1; i++) { if (c[parts[i]] == null) c[parts[i]] = {}; c = c[parts[i]]; }
     c[parts[parts.length - 1]] = v;
+    if (typeof R !== 'undefined' && o === R) {
+      if (p === 'machine.designation' && R.machines && R.machines[0]) R.machines[0].designation = v;
+      if (p === 'machine.modele' && R.machines && R.machines[0]) R.machines[0].modele = v;
+      if (p === 'machine.serie' && R.machines && R.machines[0]) R.machines[0].serie = v;
+      if (p === 'technicien' && R.techniciens && R.techniciens[0]) R.techniciens[0].nom = v;
+    }
   }
 
   const Store = (function () {
@@ -4054,9 +4718,17 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
          activé = deux rapports (français + langue choisie). */
       langue: { active: false, code: '' },
       machine: { designation: '', marque: '', modele: '', serie: '', compteur: '', parc: '' },
+      machines: [
+        { id: uid('m'), designation: '', modele: '', serie: '' }
+      ],
       objet: '', technicien: Report.nomComplet(S.technicien),
+      techniciens: [
+        { id: uid('t'), nom: Report.nomComplet(S.technicien), fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV', principal: true }
+      ],
       chrono: { debut: null, fin: null, pauses: [], enPause: false, debutPause: null },
-      evenements: [], photosLibres: [],
+      multiJours: false,
+      jours: [],
+      evenements: [], photosLibres: [], pieces: [],
       actions: '', aPrevoir: '', resumeTechnicien: '', noteInterne: '',
       travauxTermines: '', faitLe: todayISO(),
       signatureClient: { nom: '', fonction: '', dataUrl: '', date: '', heure: '' }
@@ -4065,12 +4737,54 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   let R = fusion(nouvelleIntervention(), Store.get(K.rapport, null) || {});
   if (!R.evenements) R.evenements = [];
+  if (!Array.isArray(R.pieces)) R.pieces = [];
   /* Rapports enregistrés avant l'option de traduction : valeurs par défaut. */
   if (!R.langue || typeof R.langue !== 'object') R.langue = { active: false, code: '' };
   if (R.client && R.client.langue == null) R.client.langue = '';
 
+  if (!Array.isArray(R.machines) || R.machines.length === 0) {
+    R.machines = [{
+      id: uid('m'),
+      designation: (R.machine && R.machine.designation) || '',
+      modele: (R.machine && R.machine.modele) || '',
+      serie: (R.machine && R.machine.serie) || ''
+    }];
+  }
+  if (!Array.isArray(R.techniciens) || R.techniciens.length === 0) {
+    R.techniciens = [{
+      id: uid('t'),
+      nom: R.technicien || Report.nomComplet(S.technicien) || '',
+      fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV',
+      principal: true
+    }];
+  }
+  if (!Array.isArray(R.jours)) R.jours = [];
+  if (typeof R.multiJours !== 'boolean') R.multiJours = (R.jours.length > 0);
+
+  function synchroniserEntites() {
+    if (!Array.isArray(R.machines) || R.machines.length === 0) {
+      R.machines = [{ id: uid('m'), designation: '', modele: '', serie: '' }];
+    }
+    if (R.machine) {
+      if (R.machine.designation && !R.machines[0].designation) R.machines[0].designation = R.machine.designation;
+      if (R.machine.modele && !R.machines[0].modele) R.machines[0].modele = R.machine.modele;
+      if (R.machine.serie && !R.machines[0].serie) R.machines[0].serie = R.machine.serie;
+
+      R.machine.designation = R.machines[0].designation || '';
+      R.machine.modele = R.machines[0].modele || '';
+      R.machine.serie = R.machines[0].serie || '';
+    }
+    if (!Array.isArray(R.techniciens) || R.techniciens.length === 0) {
+      R.techniciens = [{ id: uid('t'), nom: R.technicien || Report.nomComplet(S.technicien) || '', fonction: (S.technicien && S.technicien.fonction) || 'Technicien SAV', principal: true }];
+    } else {
+      if (R.technicien && !R.techniciens[0].nom) R.techniciens[0].nom = R.technicien;
+      R.technicien = R.techniciens[0].nom || '';
+    }
+  }
+
   let dirty = false, saveTimer;
   function sauver(silencieux) {
+    synchroniserEntites();
     R.maj = new Date().toISOString();
     const ok = Store.set(K.rapport, R);
     const liste = Store.get(K.rapports, []);
@@ -4090,7 +4804,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   /* ===================== Chronomètre ================================== */
   let tic = null;
-  function duree() { return Report.dureeMs(R.chrono); }
+  function duree() {
+    return Report.dureeTotale ? Report.dureeTotale(R) : Report.dureeMs(R.chrono);
+  }
   function dureeTexte() {
     const ms = duree();
     const s = Math.floor(ms / 1000);
@@ -4126,6 +4842,16 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   function rendreChrono() {
     const barre = $('#chronoBarre');
     if (!barre) return;
+    if (R.multiJours && Array.isArray(R.jours) && R.jours.length > 0) {
+      const tot = duree();
+      barre.innerHTML = `<div class="chrono-encours">
+        <div class="chrono-temps"><span class="chrono-label">Heures cumulées (${R.jours.length} jour(s))</span>
+          <strong id="chronoTemps">${Report.formatDuree(tot) || '0 min'}</strong></div>
+        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">✏️ Relevé jours</button></div></div>
+        <p class="chrono-note">${R.jours.map(j => (Report.frDate(j.date) || j.date) + ' (' + (j.dureeHeures || 0) + ' h)').join(' • ')} • ${Report.dureeDecimale(tot)} h</p>`;
+      clearInterval(tic);
+      return;
+    }
     const c = R.chrono;
     if (!c.debut) {
       barre.innerHTML = `<button class="btn chrono-demarrer" data-a="chrono-demarrer" style="width:100%">
@@ -4176,8 +4902,20 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   function rendreEntete() {
     const zone = $('#zoneEntete');
     if (!zone) return;
+    synchroniserEntites();
     const c = R.client, m = R.machine;
-    const renseigne = c.nom || m.designation;
+    const machinesValides = (R.machines || []).filter(x => x && (x.designation || x.modele || x.serie));
+    const renseigne = c.nom || m.designation || machinesValides.length > 0;
+    const recapMachines = machinesValides.length > 1
+      ? `<div><span>Machines</span><strong>${machinesValides.length} machines (${esc(machinesValides.map(x => x.designation || 'Machine').join(', '))})</strong></div>`
+      : `<div><span>Machine</span><strong>${esc([m.designation, m.modele].filter(Boolean).join(' — ') || '—')}</strong></div>
+         <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>`;
+
+    const techsValides = (R.techniciens || []).filter(t => t && t.nom);
+    const recapTechs = techsValides.length > 1
+      ? `<div><span>Techniciens</span><strong>${esc(techsValides.map(t => t.nom + (t.fonction ? ' (' + t.fonction + ')' : '')).join(' · '))}</strong></div>`
+      : '';
+
     zone.innerHTML = `
       <div class="card">
         <h2>Intervention <button class="btn sm grey" data-a="editer-client">✏️ ${renseigne ? 'Modifier' : 'Renseigner'}</button></h2>
@@ -4185,9 +4923,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
           ? `<div class="recap">
               <div><span>Client</span><strong>${esc(c.nom || '—')}</strong></div>
               <div><span>Lieu</span><strong>${esc(c.lieu || c.adresse || '—')}</strong></div>
-              <div><span>Machine</span><strong>${esc([m.designation, m.modele].filter(Boolean).join(' — ') || '—')}</strong></div>
-              <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>
+              ${recapMachines}
               <div><span>Contact</span><strong>${esc(c.contact || '—')}</strong></div>
+              ${recapTechs}
               <div><span>Objet</span><strong>${esc(R.objet || '—')}</strong></div>
               <div><span>Langue du rapport</span><strong>${R.langue.active && R.langue.code
                 ? 'français + ' + esc(I18N.natif(R.langue.code))
@@ -4204,6 +4942,7 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     return `<div class="ev-carte" data-ev="${ev.id}" style="--c:${cat.couleur};--f:${cat.fond}">
       <div class="ev-tete">
         <span class="ev-dom">${esc(dom.icone)} ${esc(dom.libelle)}</span>
+        ${ev.machineNom ? `<span class="pill" style="background:#e0f2fe;color:#0369a1;font-weight:600">⚙️ ${esc(ev.machineNom)}</span>` : ''}
         <span class="ev-cat">${esc(cat.icone)} ${esc(cat.libelle)}</span>
         <span class="ev-heure">${esc(Report.heureFr(ev.heure))}</span>
       </div>
@@ -4256,6 +4995,17 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         </div>
       </div>
 
+      <div class="card" id="cardPieces">
+        <h2>Pièces de rechange
+          ${(R.pieces && R.pieces.length) ? `<span class="pill">${R.pieces.length} pièce${R.pieces.length > 1 ? 's' : ''}</span>` : ''}
+        </h2>
+        <p class="hint">Pièces échangées ou laissées dans le stock du client sur place. La signature du client vaudra pour acceptation du devis final.</p>
+        ${rendreTableauPieces()}
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn wide ghost" data-a="ajouter-piece">➕ Ajouter pièce de rechange</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Point client & signature</h2>
         ${signe
@@ -4288,13 +5038,98 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
       ${options.map(o => `<option value="${esc(o)}"${v === o ? ' selected' : ''}>${esc(o || '— choisir —')}</option>`).join('')}</select></div>`;
   }
 
+  /* ===================== Pièces de rechange ============================ */
+  function rendreTableauPieces() {
+    const pcs = R.pieces || [];
+    if (!pcs.length) {
+      return '<p class="small" style="font-style:italic;color:var(--gris);padding:4px 0">Aucune pièce de rechange enregistrée pour cette intervention.</p>';
+    }
+    return `<div style="overflow-x:auto;margin:6px 0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--bord);border-radius:8px;overflow:hidden">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1.5px solid var(--bord);text-align:left;color:var(--gris)">
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Dénomination</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Référence</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:center">Qté</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pcs.map((p, idx) => `
+            <tr style="border-bottom:1px solid var(--bord);background:${idx % 2 === 1 ? '#fcfdff' : '#fff'}">
+              <td style="padding:7px 9px"><strong>${esc(p.denomination || '—')}</strong></td>
+              <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569">${esc(p.reference || '—')}</td>
+              <td style="padding:7px 9px;text-align:center"><strong>${esc(p.quantite || 1)}</strong></td>
+              <td style="padding:7px 9px;text-align:right;white-space:nowrap">
+                <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">✏️</button>
+                <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">🗑️</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  function feuillePiece(pieceExistante) {
+    const edit = !!pieceExistante;
+    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1 };
+    const panneau = Ouvrir.ouvrir(null, `<div class="panel">
+      <div class="grab"></div><h3>${edit ? 'Modifier la pièce' : 'Ajouter une pièce de rechange'}</h3>
+      <p class="sub">Pièce neuve de remplacement utilisée ou laissée dans le stock du client.</p>
+
+      <div class="field"><label>Dénomination / désignation</label>
+        <input type="text" id="pcDenom" value="${esc(p.denomination || '')}" placeholder="Ex. Roulement SKF 6205, Courroie SPZ 1250, Vérin…"></div>
+
+      <div class="field"><label>Référence BFR / fabricant</label>
+        <input type="text" id="pcRef" value="${esc(p.reference || '')}" placeholder="Ex. 734-9021-A, BFR-8820…"></div>
+
+      <div class="field"><label>Quantité</label>
+        <input type="number" id="pcQte" min="1" step="1" value="${esc(p.quantite || 1)}"></div>
+
+      <div class="btnrow"><button class="btn grey" data-a="fermer">Annuler</button>
+        <button class="btn" data-a="sauvegarder-piece">${edit ? 'Enregistrer' : 'Ajouter la pièce'}</button></div></div>`, (pEl) => {
+      setTimeout(() => { const el = $('#pcDenom', pEl); if (el) el.focus(); }, 80);
+      pEl.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-a="sauvegarder-piece"]')) return;
+        const denom = ($('#pcDenom', pEl).value || '').trim();
+        const ref = ($('#pcRef', pEl).value || '').trim();
+        const qteVal = parseInt($('#pcQte', pEl).value, 10);
+        const qte = (!isNaN(qteVal) && qteVal > 0) ? qteVal : 1;
+        if (!denom && !ref) {
+          toast('Veuillez renseigner au moins la dénomination ou la référence');
+          return;
+        }
+        if (edit) {
+          p.denomination = denom;
+          p.reference = ref;
+          p.quantite = qte;
+        } else {
+          if (!Array.isArray(R.pieces)) R.pieces = [];
+          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte });
+        }
+        planifier();
+        rendreTout();
+        pEl.closest('.sheet').remove();
+        toast(edit ? 'Pièce modifiée ✔' : 'Pièce ajoutée ✔');
+      });
+    });
+    return panneau;
+  }
+
   /* ===================== Évènements =================================== */
   function ajouterEvenement() {
-    const ev = Assistant.nouvelEvenement();
+    synchroniserEntites();
+    const machinesValides = (R.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
+    const ev = Assistant.nouvelEvenement({
+      machineId: (machinesValides.length === 1) ? machinesValides[0].id : '',
+      machineNom: (machinesValides.length === 1) ? machinesValides[0].designation : ''
+    });
     R.evenements.push(ev);
     planifier();
     Assistant.ouvrir(ev, {
       reglages: S,
+      machines: machinesValides,
       toast: toast,
       onMaj: () => { planifier(); rendreTout(); },
       onSupprimer: (x) => {
@@ -4311,10 +5146,14 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   }
 
   function editerEvenement(id) {
+    synchroniserEntites();
     const ev = R.evenements.find(e => e.id === id);
     if (!ev) return;
+    const machinesValides = (R.machines || []).filter(m => m && (m.designation || m.modele || m.serie));
     Assistant.ouvrir(ev, {
-      reglages: S, toast: toast,
+      reglages: S,
+      machines: machinesValides,
+      toast: toast,
       onMaj: () => { planifier(); rendreTout(); },
       onSupprimer: (x) => { R.evenements = R.evenements.filter(e => e.id !== x.id); planifier(); rendreTout(); },
       onFermer: () => { planifier(); rendreTout(); }
@@ -4323,20 +5162,23 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   /* ===================== Client & machine ============================= */
   function feuilleClient() {
+    synchroniserEntites();
     const f = (k, label, opt) => {
       opt = opt || {};
       const val = getPath(R, k) || '';
       return `<div class="field"><label>${esc(label)}</label><input type="${opt.type || 'text'}" data-fk="${k}" value="${esc(val)}" placeholder="${esc(opt.ph || '')}"${opt.list ? ' list="' + opt.list + '"' : ''}></div>`;
     };
-    const dl = (id, arr) => `<datalist id="${id}">${[...new Set(arr.filter(Boolean))].slice(-30).map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
+    const dl = (id, arr) => `<datalist id="${id}">${[...new Set((arr || []).filter(Boolean))].slice(-30).map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
     const histo = Store.get(K.rapports, []);
     const nbClients = Clients.liste().length;
+    const techsBFR = (Clients.listeTechniciens ? Clients.listeTechniciens() : (window.TECHNICIENS_BFR || [])).map(t => t.nom);
 
     const ouvrir = (e) => Ouvrir.ouvrir(e, `<div class="panel">
       <div class="grab"></div><h3>Client & machine</h3>
       <p class="sub">Ces informations figurent en tête du rapport.</p>
       ${dl('dlLieux', histo.map(r => r.client && r.client.lieu))}
       ${dl('dlMachines', histo.map(r => r.machine && r.machine.designation))}
+      ${dl('dlTechsBFR', techsBFR)}
       <div class="card"><h2>Client</h2>
         <div class="field"><label>Client</label>
           <input type="text" id="cliRecherche" autocomplete="off" value="${esc(R.client.nom || '')}"
@@ -4355,10 +5197,32 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         ${R.client.logo ? '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">'
                         : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>'}
       </div>
-      <div class="card"><h2>Machine</h2>
-        ${f('machine.designation', 'Machine / équipement', { list: 'dlMachines', ph: 'Ex. Presse hydraulique 120 T' })}
-        <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
-        <p class="small">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
+      <div class="card" id="cardMachines">
+        <h2>${(R.machines && R.machines.length > 1) ? 'Machines visitées' : 'Machine'}</h2>
+        <div id="listeMachinesForm">
+          <div class="machine-item" data-mach-idx="0">
+            ${(R.machines && R.machines.length > 1) ? '<div style="font-weight:600;font-size:0.9rem;margin-bottom:6px;color:var(--bleu,#0369a1)">Machine 1 (principale)</div>' : ''}
+            ${f('machine.designation', 'Machine / équipement', { list: 'dlMachines', ph: 'Ex. Presse hydraulique 120 T' })}
+            <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
+          </div>
+          <div id="zoneMachinesSub">
+            ${(R.machines || []).slice(1).map((m, idx) => `
+              <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
+                  <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                </div>
+                <div class="field"><label>Machine / équipement</label>
+                  <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
+                <div class="grid2">
+                  <div class="field"><label>Modèle</label><input type="text" data-m-k="modele" data-m-i="${idx + 1}" value="${esc(m.modele || '')}" placeholder="Ex. FP-400"></div>
+                  <div class="field"><label>N° de série</label><input type="text" data-m-k="serie" data-m-i="${idx + 1}" value="${esc(m.serie || '')}" placeholder="Ex. FP400-2020-001"></div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <button type="button" class="btn sm grey" id="btnAjouterMachine" style="margin-top:10px">+ Ajouter une autre machine</button>
+        <p class="small" style="margin-top:8px">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
       </div>
       <div class="card"><h2>Langue du client</h2>
         <div class="agreement"><input type="checkbox" id="langActive" ${R.langue.active ? 'checked' : ''}>
@@ -4377,8 +5241,25 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
       </div>
       <div class="card"><h2>Intervention</h2>
         <div class="grid2">${f('numero', 'N° de rapport')}<div class="field"><label>Date</label><input type="date" data-fk="date" value="${esc(R.date)}"></div></div>
-        ${f('technicien', 'Technicien', { ph: Report.nomComplet(S.technicien) })}
+        ${f('technicien', 'Technicien principal (signataire)', { ph: Report.nomComplet(S.technicien) })}
         ${Report.contactTech(S.technicien) ? '<p class="small">Vos coordonnées (' + esc(Report.contactTech(S.technicien)) + ') apparaissent dans les blocs de signature — modifiables dans ☰ → Mes informations.</p>' : ''}
+        <div id="listeColleguesForm" style="margin-top:12px">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569);display:block;margin-bottom:6px">Collègue(s) / Technicien(s) sur site</label>
+          <div id="zoneColleguesSub">
+            ${(R.techniciens || []).slice(1).map((t, idx) => `
+              <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
+                  <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                </div>
+                <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
+                  <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
+                <div class="field"><label>Fonction / Spécialité</label>
+                  <input type="text" data-t-k="fonction" data-t-i="${idx + 1}" value="${esc(t.fonction || 'Technicien SAV')}" placeholder="Ex. Automaticien, Mécanicien..."></div>
+              </div>`).join('')}
+          </div>
+          <button type="button" class="btn sm grey" id="btnAjouterTechnicien">+ Ajouter un collègue sur site</button>
+        </div>
         ${f('objet', 'Objet / demande du client', { ph: 'Ex. Audit mécanique suite à des bruits anormaux' })}
       </div>
       <div class="btnrow"><button class="btn grey" data-a="fermer">Fermer</button>
@@ -4386,6 +5267,99 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     </div>`, (panneau) => {
       $$('[data-fk]', panneau).forEach(el => {
         el.addEventListener('input', () => { setPath(R, el.dataset.fk, el.value); planifier(); rendreEntete(); rendreTout(); });
+      });
+
+      function rafraichirMachinesSub() {
+        const zone = $('#zoneMachinesSub', panneau);
+        if (!zone) return;
+        zone.innerHTML = (R.machines || []).slice(1).map((m, idx) => `
+          <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
+              <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+            </div>
+            <div class="field"><label>Machine / équipement</label>
+              <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
+            <div class="grid2">
+              <div class="field"><label>Modèle</label><input type="text" data-m-k="modele" data-m-i="${idx + 1}" value="${esc(m.modele || '')}" placeholder="Ex. FP-400"></div>
+              <div class="field"><label>N° de série</label><input type="text" data-m-k="serie" data-m-i="${idx + 1}" value="${esc(m.serie || '')}" placeholder="Ex. FP400-2020-001"></div>
+            </div>
+          </div>`).join('');
+      }
+
+      function rafraichirColleguesSub() {
+        const zone = $('#zoneColleguesSub', panneau);
+        if (!zone) return;
+        zone.innerHTML = (R.techniciens || []).slice(1).map((t, idx) => `
+          <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
+              <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+            </div>
+            <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
+              <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
+            <div class="field"><label>Fonction / Spécialité</label>
+              <input type="text" data-t-k="fonction" data-t-i="${idx + 1}" value="${esc(t.fonction || 'Technicien SAV')}" placeholder="Ex. Automaticien, Mécanicien..."></div>
+          </div>`).join('');
+      }
+
+      panneau.addEventListener('input', (ev) => {
+        const mk = ev.target.dataset.mK, mi = ev.target.dataset.mI;
+        if (mk && mi !== undefined) {
+          const idx = parseInt(mi, 10);
+          if (R.machines && R.machines[idx]) {
+            R.machines[idx][mk] = ev.target.value;
+            planifier(); rendreEntete();
+          }
+        }
+        const tk = ev.target.dataset.tK, ti = ev.target.dataset.tI;
+        if (tk && ti !== undefined) {
+          const idx = parseInt(ti, 10);
+          if (R.techniciens && R.techniciens[idx]) {
+            R.techniciens[idx][tk] = ev.target.value;
+            planifier(); rendreEntete();
+          }
+        }
+      });
+
+      panneau.addEventListener('click', (ev) => {
+        const btnM = ev.target.closest('#btnAjouterMachine');
+        if (btnM) {
+          if (!Array.isArray(R.machines)) R.machines = [];
+          R.machines.push({ id: uid('m'), designation: '', modele: '', serie: '' });
+          planifier(); rendreEntete();
+          rafraichirMachinesSub();
+          return;
+        }
+        const rmM = ev.target.closest('[data-rm-machine]');
+        if (rmM) {
+          const idx = parseInt(rmM.dataset.rmMachine, 10);
+          if (R.machines && R.machines.length > idx) {
+            R.machines.splice(idx, 1);
+            planifier(); rendreEntete();
+            rafraichirMachinesSub();
+          }
+          return;
+        }
+        const btnT = ev.target.closest('#btnAjouterTechnicien');
+        if (btnT) {
+          if (!Array.isArray(R.techniciens)) R.techniciens = [];
+          R.techniciens.push({ id: uid('t'), nom: '', fonction: 'Technicien SAV', principal: false });
+          planifier(); rendreEntete();
+          rafraichirColleguesSub();
+          return;
+        }
+        const rmT = ev.target.closest('[data-rm-technicien]');
+        if (rmT) {
+          const idx = parseInt(rmT.dataset.rmTechnicien, 10);
+          if (R.techniciens && R.techniciens.length > idx) {
+            R.techniciens.splice(idx, 1);
+            planifier(); rendreEntete();
+            rafraichirColleguesSub();
+          }
+          return;
+        }
+        if (ev.target.closest('[data-a="ok"], [data-a="fermer"]')) Clients.retenir(R.client);
       });
 
       /* ---------- Rapport bilingue (langue du client) ------------------- */
@@ -4574,8 +5548,10 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         </div>
         <div class="agreement"><input type="checkbox" id="sigAccord">
           <label for="sigAccord">${esc(S.impression.mentionClient)}</label></div>
-        <div class="sigwrap"><canvas id="sigCanvas"></canvas>
-          <div class="ph" id="sigPh">✍️ Le client signe ici, du doigt</div></div>
+        <div class="sigwrap" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important;">
+          <canvas id="sigCanvas" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important; touch-action:none;"></canvas>
+          <div class="ph" id="sigPh" style="color:#64748b; font-weight:600;">✍️ Le client signe ici, du doigt</div>
+        </div>
         <div class="btnrow" style="margin-top:8px">
           <button class="btn grey" data-a="effacer">Effacer</button>
           <button class="btn grey" data-a="horodater">Horodater</button>
@@ -4615,59 +5591,212 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   class Pad {
     constructor(canvas, onChange) {
-      this.canvas = canvas; this.onChange = onChange;
-      this.drawing = false; this.hasInk = false;
+      this.canvas = canvas;
+      this.onChange = onChange;
+      this.drawing = false;
+      this.hasInk = false;
+      this.points = [];
+      this.couleurEncre = '#0f172a'; // Bleu-nuit / noir d'encre stylo très foncé et net
       this.ctx = canvas.getContext('2d');
       this.resize();
       window.addEventListener('resize', () => this.resize(true));
-      canvas.addEventListener('pointerdown', e => this.down(e));
-      canvas.addEventListener('pointermove', e => this.move(e));
-      canvas.addEventListener('pointerup', e => this.up(e));
-      canvas.addEventListener('pointercancel', e => this.up(e));
-      canvas.addEventListener('pointerleave', e => this.up(e));
+
+      canvas.addEventListener('pointerdown', (e) => this.down(e));
+      canvas.addEventListener('pointermove', (e) => this.move(e));
+      canvas.addEventListener('pointerup', (e) => this.up(e));
+      canvas.addEventListener('pointercancel', (e) => this.up(e));
+      canvas.addEventListener('pointerleave', (e) => this.up(e));
+
+      // Empêche le défilement tactile ou le geste de recul pendant la signature
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
     }
+
+    remplirFondBlanc() {
+      if (!this.ctx) return;
+      this.ctx.save();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.restore();
+    }
+
+    appliquerStyle() {
+      if (!this.ctx) return;
+      const dpr = this.dpr || 1;
+      this.lineWidth = 2.4 * dpr;
+      this.ctx.lineWidth = this.lineWidth;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = this.couleurEncre;
+      this.ctx.fillStyle = this.couleurEncre;
+    }
+
     resize(redessiner) {
-      const data = redessiner && this.hasInk ? this.canvas.toDataURL() : null;
+      const data = redessiner && this.hasInk ? this.canvas.toDataURL('image/png') : null;
       const r = this.canvas.getBoundingClientRect();
       const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+      this.dpr = dpr;
       this.canvas.width = Math.max(300, Math.round((r.width || 300) * dpr));
-      this.canvas.height = Math.max(150, Math.round((r.height || 190) * dpr));
+      this.canvas.height = Math.max(150, Math.round((r.height || 210) * dpr));
       this.ctx = this.canvas.getContext('2d');
-      this.ctx.lineWidth = 2.4 * dpr; this.ctx.lineCap = 'round'; this.ctx.lineJoin = 'round';
-      this.ctx.strokeStyle = '#111827';
-      if (data) { const self = this; const img = new Image(); img.onload = () => self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height); img.src = data; }
+      this.remplirFondBlanc();
+      this.appliquerStyle();
+      if (data) {
+        const self = this;
+        const img = new Image();
+        img.onload = () => {
+          self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height);
+        };
+        img.src = data;
+      }
     }
+
     pt(e) {
       const r = this.canvas.getBoundingClientRect();
-      return { x: (e.clientX - r.left) * (this.canvas.width / (r.width || 1)), y: (e.clientY - r.top) * (this.canvas.height / (r.height || 1)) };
+      const scaleX = this.canvas.width / (r.width || 1);
+      const scaleY = this.canvas.height / (r.height || 1);
+      return {
+        x: (e.clientX - r.left) * scaleX,
+        y: (e.clientY - r.top) * scaleY
+      };
     }
+
     down(e) {
+      if (e.button != null && e.button !== 0) return;
       e.preventDefault();
-      if (this.canvas.setPointerCapture && e.pointerId != null) { try { this.canvas.setPointerCapture(e.pointerId); } catch (err) {} }
+      if (this.canvas.setPointerCapture && e.pointerId != null) {
+        try { this.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      }
       this.drawing = true;
-      const p = this.pt(e); this.last = p;
-      this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); this.ctx.lineTo(p.x + 0.1, p.y + 0.1); this.ctx.stroke();
+      const p = this.pt(e);
+      this.points = [p];
+      this.appliquerStyle();
+
+      // Dessine un point rond au premier contact (ex. point sur un i ou accent)
+      this.ctx.beginPath();
+      if (typeof this.ctx.arc === 'function') {
+        this.ctx.arc(p.x, p.y, this.lineWidth / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+      } else {
+        this.ctx.moveTo(p.x, p.y);
+        this.ctx.lineTo(p.x + 0.1, p.y + 0.1);
+        this.ctx.stroke();
+      }
       this.marquer();
     }
+
     move(e) {
       if (!this.drawing) return;
       e.preventDefault();
-      const p = this.pt(e);
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.last.x, this.last.y);
-      this.ctx.quadraticCurveTo(this.last.x, this.last.y, (this.last.x + p.x) / 2, (this.last.y + p.y) / 2);
-      this.ctx.stroke();
-      this.last = p; this.marquer();
+
+      // Prise en charge des micro-points interpolés par l'écran tactile (120 Hz / 240 Hz)
+      const evs = (typeof e.getCoalescedEvents === 'function' && e.getCoalescedEvents().length)
+        ? e.getCoalescedEvents()
+        : [e];
+
+      for (let i = 0; i < evs.length; i++) {
+        const p = this.pt(evs[i]);
+        const prev = this.points[this.points.length - 1];
+        if (prev) {
+          const dx = p.x - prev.x, dy = p.y - prev.y;
+          // Filtre les micro-tremblements imperceptibles (< 0.8px) pour lisser le tracé
+          if (dx * dx + dy * dy < 0.64) continue;
+        }
+
+        this.points.push(p);
+        const len = this.points.length;
+
+        if (len === 2) {
+          // Début de trait : ligne continue entre le point initial et le premier milieu
+          const p0 = this.points[0], p1 = this.points[1];
+          const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+          this.ctx.beginPath();
+          this.ctx.moveTo(p0.x, p0.y);
+          this.ctx.lineTo(midX, midY);
+          this.ctx.stroke();
+        } else if (len > 2) {
+          // Courbe de Bézier quadratique continue C1 :
+          // démarre EXACTEMENT au milieu précédent et s'arrête au milieu courant
+          // en utilisant le point précédent comme point de contrôle.
+          // Aucune discontinuité, aucun espace vide entre les segments.
+          const pPrev2 = this.points[len - 3];
+          const pPrev1 = this.points[len - 2];
+          const pCurr  = this.points[len - 1];
+
+          const startX = (pPrev2.x + pPrev1.x) / 2;
+          const startY = (pPrev2.y + pPrev1.y) / 2;
+          const endX   = (pPrev1.x + pCurr.x) / 2;
+          const endY   = (pPrev1.y + pCurr.y) / 2;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(startX, startY);
+          this.ctx.quadraticCurveTo(pPrev1.x, pPrev1.y, endX, endY);
+          this.ctx.stroke();
+        }
+      }
+      this.marquer();
     }
+
     up(e) {
       if (!this.drawing) return;
       this.drawing = false;
-      if (e && e.pointerId != null && this.canvas.releasePointerCapture) { try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) {} }
+      if (e && e.pointerId != null && this.canvas.releasePointerCapture) {
+        try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+
+      const len = this.points.length;
+      if (len > 2) {
+        // Raccorde le dernier milieu au point final pour terminer la courbe proprement
+        const pPrev = this.points[len - 2];
+        const pLast = this.points[len - 1];
+        const startX = (pPrev.x + pLast.x) / 2;
+        const startY = (pPrev.y + pLast.y) / 2;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(pLast.x, pLast.y);
+        this.ctx.stroke();
+      } else if (len === 2) {
+        const p0 = this.points[0], p1 = this.points[1];
+        this.ctx.beginPath();
+        this.ctx.moveTo(p0.x, p0.y);
+        this.ctx.lineTo(p1.x, p1.y);
+        this.ctx.stroke();
+      }
+      this.points = [];
     }
-    marquer() { if (!this.hasInk) { this.hasInk = true; if (this.onChange) this.onChange(true); } }
-    dataUrl() { return this.canvas.toDataURL('image/png'); }
-    load(d) { const self = this, img = new Image(); img.onload = function () { self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height); self.hasInk = true; if (self.onChange) self.onChange(true); }; img.src = d; }
-    clear() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.hasInk = false; if (this.onChange) this.onChange(false); }
+
+    marquer() {
+      if (!this.hasInk) {
+        this.hasInk = true;
+        if (this.onChange) this.onChange(true);
+      }
+    }
+
+    dataUrl() {
+      return this.canvas.toDataURL('image/png');
+    }
+
+    load(d) {
+      if (!d) return;
+      const self = this;
+      const img = new Image();
+      img.onload = function () {
+        self.remplirFondBlanc();
+        self.ctx.drawImage(img, 0, 0, self.canvas.width, self.canvas.height);
+        self.hasInk = true;
+        if (self.onChange) self.onChange(true);
+      };
+      img.src = d;
+    }
+
+    clear() {
+      this.remplirFondBlanc();
+      this.appliquerStyle();
+      this.hasInk = false;
+      this.points = [];
+      if (this.onChange) this.onChange(false);
+    }
   }
 
   /* ===================== Génération & envoi =========================== */
@@ -5097,7 +6226,7 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
       </div>
 
       <div class="card"><h2>Canevas du rapport (avancé)</h2>
-        <p class="small">Le canevas décrit l'ordre des sections du rapport. Types acceptés : <code>synthese</code>, <code>evenements</code> (avec <code>categories</code>), <code>texte</code> (avec <code>champ</code> : actions, aPrevoir, resumeTechnicien, objet), <code>photos</code>, <code>signature</code>.</p>
+        <p class="small">Le canevas décrit l'ordre des sections du rapport. Types acceptés : <code>synthese</code>, <code>evenements</code> (avec <code>categories</code>), <code>texte</code> (avec <code>champ</code> : actions, aPrevoir, resumeTechnicien, objet), <code>pieces</code>, <code>photos</code>, <code>signature</code>.</p>
         <textarea id="setCanevas" rows="12" style="width:100%;font-family:ui-monospace,monospace;font-size:12px">${esc(JSON.stringify(S.canevas, null, 1))}</textarea>
       </div>
 
@@ -5309,6 +6438,21 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
       else if (a === 'chrono-ajuster') feuilleAjusterChrono();
       else if (a === 'ajouter-ev') ajouterEvenement();
       else if (a === 'editer-client') feuilleClient();
+      else if (a === 'ajouter-piece') feuillePiece();
+      else if (a === 'editer-piece') {
+        const id = b.dataset.id;
+        const pc = (R.pieces || []).find(p => p.id === id);
+        if (pc) feuillePiece(pc);
+      }
+      else if (a === 'supprimer-piece') {
+        const id = b.dataset.id;
+        const idx = (R.pieces || []).findIndex(p => p.id === id);
+        if (idx >= 0 && confirm('Supprimer cette pièce de rechange ?')) {
+          R.pieces.splice(idx, 1);
+          planifier(); rendreTout();
+          toast('Pièce supprimée');
+        }
+      }
       else if (a === 'signer') signerClient();
       else if (a === 'effacer-signature') {
         if (!confirm('Effacer la signature du client ?')) return;
@@ -5334,24 +6478,187 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   }
 
   function feuilleAjusterChrono() {
+    synchroniserEntites();
     const c = R.chrono;
     const val = (iso) => iso ? new Date(iso).toISOString().slice(0, 16) : '';
+    if (!Array.isArray(R.jours)) R.jours = [];
+
+    function recalculerJour(j) {
+      if (j.debut && j.fin) {
+        const [hd, md] = (j.debut || '0:0').split(':').map(Number);
+        const [hf, mf] = (j.fin || '0:0').split(':').map(Number);
+        const min = (hf * 60 + mf) - (hd * 60 + md) - (Number(j.pauseMinutes) || 0);
+        j.dureeHeures = Math.max(0, Math.round(min * 100 / 60) / 100);
+        j.dureeMs = Math.max(0, min * 60000);
+      } else {
+        j.dureeHeures = 0;
+        j.dureeMs = 0;
+      }
+    }
+
+    function rafraichirJoursDOM(pEl) {
+      const zone = $('#listeJours', pEl);
+      if (!zone) return;
+      zone.innerHTML = (R.jours || []).map((j, idx) => {
+        recalculerJour(j);
+        const dh = j.dureeHeures || 0;
+        const durLabel = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '0 min';
+        return `
+        <div class="card" style="margin:0;padding:12px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:0.95rem">Journée ${idx + 1}</strong>
+            <button type="button" class="btn sm danger" data-rm-jour="${idx}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+          </div>
+          <div class="field" style="margin-bottom:8px"><label>Date</label>
+            <input type="date" data-j-k="date" data-j-i="${idx}" value="${esc(j.date || todayISO())}"></div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Début</label><input type="time" data-j-k="debut" data-j-i="${idx}" value="${esc(j.debut || '08:00')}"></div>
+            <div class="field"><label>Fin</label><input type="time" data-j-k="fin" data-j-i="${idx}" value="${esc(j.fin || '17:00')}"></div>
+          </div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Pause (min)</label><input type="number" min="0" step="5" data-j-k="pauseMinutes" data-j-i="${idx}" value="${esc(j.pauseMinutes != null ? j.pauseMinutes : 60)}"></div>
+            <div class="field"><label>Durée calculée</label><input type="text" readonly value="${esc(durLabel)}" style="background:#f1f5f9;font-weight:600"></div>
+          </div>
+          <div class="field"><label>Activité / Travaux réalisés</label>
+            <input type="text" data-j-k="description" data-j-i="${idx}" value="${esc(j.description || '')}" placeholder="Ex. Démontage, expertise et remplacement réducteur"></div>
+        </div>`;
+      }).join('') || '<p class="small">Aucune journée enregistrée pour le moment. Cliquez sur « Ajouter une journée » ci-dessous.</p>';
+
+      const totTxt = $('#totJoursTxt', pEl);
+      if (totTxt) {
+        const tot = duree();
+        totTxt.textContent = (Report.formatDuree(tot) || '0 min') + ' (' + Report.dureeDecimale(tot) + ' h)';
+      }
+    }
+
+    const multi = !!R.multiJours;
+
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Ajuster les heures</h3>
-      <p class="sub">Utile si vous avez oublié de démarrer ou d'arrêter le chrono.</p>
-      <div class="field"><label>Début sur site</label><input type="datetime-local" id="ajDebut" value="${val(c.debut)}"></div>
-      <div class="field"><label>Fin sur site</label><input type="datetime-local" id="ajFin" value="${val(c.fin)}"></div>
-      <p class="small">${(c.pauses || []).length} pause(s) enregistrée(s), déduites du temps sur site.</p>
-      <div class="btnrow"><button class="btn grey" data-a="fermer">Annuler</button>
+      <p class="sub">Relevé quotidien ou chrono de l'intervention.</p>
+      <div class="agreement" style="margin-bottom:14px;padding:10px;background:var(--fond-alt,#f1f5f9);border-radius:8px">
+        <input type="checkbox" id="ajMultiJours" ${multi ? 'checked' : ''}>
+        <label for="ajMultiJours"><strong>Intervention sur plusieurs jours (multi-jours)</strong></label>
+      </div>
+      <div id="blocChronoUnique" ${multi ? 'hidden' : ''}>
+        <div class="field"><label>Début sur site</label><input type="datetime-local" id="ajDebut" value="${val(c.debut)}"></div>
+        <div class="field"><label>Fin sur site</label><input type="datetime-local" id="ajFin" value="${val(c.fin)}"></div>
+        <p class="small">${(c.pauses || []).length} pause(s) enregistrée(s), déduites du temps sur site.</p>
+      </div>
+      <div id="blocMultiJours" ${multi ? '' : 'hidden'}>
+        <p class="small">Saisissez les horaires et temps de pause pour chaque journée. Les heures cumulées sont calculées automatiquement.</p>
+        <div id="listeJours" style="display:flex;flex-direction:column;gap:12px;margin:12px 0"></div>
+        <button type="button" class="btn sm grey" id="btnAjouterJour">+ Ajouter une journée</button>
+        <div style="margin-top:14px;padding:10px 12px;background:#e0f2fe;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;color:#0369a1">Total cumulé :</span>
+          <strong style="font-size:1.1rem;color:#0284c7" id="totJoursTxt">${Report.formatDuree(duree()) || '0 min'} (${Report.dureeDecimale(duree())} h)</strong>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:16px"><button class="btn grey" data-a="fermer">Annuler</button>
         <button class="btn" data-a="ok-ajust">Enregistrer</button></div></div>`, (panneau) => {
+
+      rafraichirJoursDOM(panneau);
+
+      const caseMulti = $('#ajMultiJours', panneau);
+      const blocMulti = $('#blocMultiJours', panneau);
+      const blocChrono = $('#blocChronoUnique', panneau);
+
+      if (caseMulti) {
+        caseMulti.addEventListener('change', () => {
+          R.multiJours = !!caseMulti.checked;
+          if (R.multiJours && R.jours.length === 0) {
+            const j1 = {
+              id: uid('j'),
+              date: R.date || todayISO(),
+              debut: (R.chrono && R.chrono.debut) ? Report.heureFr(R.chrono.debut) : '08:00',
+              fin: (R.chrono && R.chrono.fin) ? Report.heureFr(R.chrono.fin) : '17:00',
+              pauseMinutes: 60,
+              description: ''
+            };
+            recalculerJour(j1);
+            R.jours.push(j1);
+          }
+          if (blocMulti) blocMulti.hidden = !R.multiJours;
+          if (blocChrono) blocChrono.hidden = !!R.multiJours;
+          rafraichirJoursDOM(panneau);
+          planifier();
+        });
+      }
+
+      panneau.addEventListener('input', (e) => {
+        const jk = e.target.dataset.jK, ji = e.target.dataset.jI;
+        if (jk && ji !== undefined) {
+          const idx = parseInt(ji, 10);
+          if (R.jours && R.jours[idx]) {
+            R.jours[idx][jk] = (jk === 'pauseMinutes') ? (parseFloat(e.target.value) || 0) : e.target.value;
+            recalculerJour(R.jours[idx]);
+            const carteJour = e.target.closest('.card');
+            if (carteJour) {
+              const inDuree = carteJour.querySelector('input[readonly]');
+              if (inDuree) {
+                const dh = R.jours[idx].dureeHeures || 0;
+                inDuree.value = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '0 min';
+              }
+            }
+            const totTxt = $('#totJoursTxt', panneau);
+            if (totTxt) {
+              const tot = duree();
+              totTxt.textContent = (Report.formatDuree(tot) || '0 min') + ' (' + Report.dureeDecimale(tot) + ' h)';
+            }
+            planifier();
+          }
+        }
+      });
+
       panneau.addEventListener('click', (e) => {
-        if (!e.target.closest('[data-a="ok-ajust"]')) return;
-        const d = $('#ajDebut', panneau).value, f = $('#ajFin', panneau).value;
-        R.chrono.debut = d ? new Date(d).toISOString() : null;
-        R.chrono.fin = f ? new Date(f).toISOString() : null;
-        planifier(); rendreTout();
-        e.target.closest('.sheet').remove();
-        toast('Heures mises à jour');
+        const btnJ = e.target.closest('#btnAjouterJour');
+        if (btnJ) {
+          if (!Array.isArray(R.jours)) R.jours = [];
+          const derDate = R.jours.length ? R.jours[R.jours.length - 1].date : R.date;
+          let prochDate = derDate || todayISO();
+          try {
+            const dObj = new Date(derDate || todayISO());
+            dObj.setDate(dObj.getDate() + 1);
+            prochDate = dObj.toISOString().slice(0, 10);
+          } catch (err) {}
+          const nouvJour = {
+            id: uid('j'),
+            date: prochDate,
+            debut: '08:00',
+            fin: '17:00',
+            pauseMinutes: 60,
+            description: ''
+          };
+          recalculerJour(nouvJour);
+          R.jours.push(nouvJour);
+          rafraichirJoursDOM(panneau);
+          planifier();
+          return;
+        }
+
+        const rmJ = e.target.closest('[data-rm-jour]');
+        if (rmJ) {
+          const idx = parseInt(rmJ.dataset.rmJour, 10);
+          if (R.jours && R.jours.length > idx) {
+            R.jours.splice(idx, 1);
+            rafraichirJoursDOM(panneau);
+            planifier();
+          }
+          return;
+        }
+
+        if (e.target.closest('[data-a="ok-ajust"]')) {
+          if (!R.multiJours) {
+            const d = $('#ajDebut', panneau).value, f = $('#ajFin', panneau).value;
+            R.chrono.debut = d ? new Date(d).toISOString() : null;
+            R.chrono.fin = f ? new Date(f).toISOString() : null;
+          } else {
+            R.jours.forEach(recalculerJour);
+          }
+          planifier(); rendreTout();
+          e.target.closest('.sheet').remove();
+          toast('Heures mises à jour');
+        }
       });
     });
   }
@@ -5423,5 +6730,5 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   };
 })();
 </script>
-<script>window.SAV_VERSION="ba8750505a";</script></body>
+<script>window.SAV_VERSION="08782f742c";</script></body>
 </html>

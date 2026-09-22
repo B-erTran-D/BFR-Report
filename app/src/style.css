@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bleu: #0b3d91;
   --bleu-fonce: #072a66;
   --bleu-clair: #e8effa;
@@ -250,11 +251,39 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #93c5fd; border-c
 }
 
 /* ---------- Signature ---------- */
-.sig-client-corps { flex: 1; overflow-y: auto; padding: 14px 12px 20px; max-width: 760px; width: 100%; margin: 0 auto; }
-.sigwrap { border: 1.5px dashed var(--bord); border-radius: 12px; background: #fff; position: relative; overflow: hidden; touch-action: none; }
-.sigwrap canvas { display: block; width: 100%; height: 210px; touch-action: none; }
-.sigwrap .ph { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #a8b3c2; font-size: 14px; }
-.sigwrap.signed { border-style: solid; border-color: var(--ok); }
+.sig-client-corps {
+  flex: 1; overflow-y: auto; padding: 14px 12px 20px; max-width: 760px; width: 100%; margin: 0 auto;
+  color-scheme: light !important;
+}
+.sigwrap {
+  border: 2px dashed #94a3b8 !important;
+  border-radius: 12px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color-scheme: light !important;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.04);
+}
+.sigwrap canvas, #sigCanvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color-scheme: light !important;
+  touch-action: none;
+  cursor: crosshair;
+}
+.sigwrap .ph {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  color: #64748b; font-size: 14.5px; font-weight: 500; background: transparent; user-select: none;
+}
+.sigwrap.signed {
+  border-style: solid !important;
+  border-color: var(--ok) !important;
+}
 .agreement {
   display: flex; gap: 10px; align-items: flex-start; background: var(--gris-clair); border: 1px solid var(--bord);
   border-radius: 11px; padding: 10px; margin-bottom: 10px; font-size: 13.5px;

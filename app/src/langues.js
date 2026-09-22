@@ -108,6 +108,89 @@
       es: 'Dirección del cliente', it: 'Indirizzo cliente', pt: 'Endereço do cliente'
     },
 
+    /* Multi-machines */
+    'Machines visitées': {
+      en: 'Inspected machines', de: 'Besichtigte Maschinen', nl: 'Bezochte machines',
+      es: 'Máquinas inspeccionadas', it: 'Macchine ispezionate', pt: 'Máquinas inspecionadas'
+    },
+    'Machine concernée': {
+      en: 'Concerned machine', de: 'Betroffene Maschine', nl: 'Betrokken machine',
+      es: 'Máquina concernida', it: 'Macchina interessata', pt: 'Máquina em causa'
+    },
+    'Machine 1': { en: 'Machine 1', de: 'Maschine 1', nl: 'Machine 1', es: 'Máquina 1', it: 'Macchina 1', pt: 'Máquina 1' },
+    'Machine 2': { en: 'Machine 2', de: 'Maschine 2', nl: 'Machine 2', es: 'Máquina 2', it: 'Macchina 2', pt: 'Máquina 2' },
+    'Machine 3': { en: 'Machine 3', de: 'Maschine 3', nl: 'Machine 3', es: 'Máquina 3', it: 'Macchina 3', pt: 'Máquina 3' },
+    'Machine 4': { en: 'Machine 4', de: 'Maschine 4', nl: 'Machine 4', es: 'Máquina 4', it: 'Macchina 4', pt: 'Máquina 4' },
+    'Machine 5': { en: 'Machine 5', de: 'Maschine 5', nl: 'Machine 5', es: 'Máquina 5', it: 'Macchina 5', pt: 'Máquina 5' },
+    "Non rattaché / Toute l'installation": {
+      en: 'Unassigned / Entire line', de: 'Nicht zugeordnet / Gesamte Anlage', nl: 'Niet toegewezen / Volledige lijn',
+      es: 'No asignado / Línea completa', it: 'Non assegnato / Tutta la linea', pt: 'Não atribuído / Toda a linha'
+    },
+
+    /* Multi-jours */
+    "Relevé des journées d'intervention": {
+      en: 'Service days breakdown', de: 'Übersicht der Einsatztage', nl: 'Overzicht van de interventiedagen',
+      es: 'Detalle de las jornadas de intervención', it: 'Riepilogo delle giornate di intervento', pt: 'Registo dos dias de intervenção'
+    },
+    "Journées d'intervention": {
+      en: 'Service days', de: 'Einsatztage', nl: 'Interventiedagen',
+      es: 'Jornadas de intervención', it: 'Giornate di intervento', pt: 'Dias de intervenção'
+    },
+    'Journée': { en: 'Day', de: 'Tag', nl: 'Dag', es: 'Jornada', it: 'Giornata', pt: 'Dia' },
+    'Date': { en: 'Date', de: 'Datum', nl: 'Datum', es: 'Fecha', it: 'Data', pt: 'Data' },
+    'Pause': { en: 'Break', de: 'Pause', nl: 'Pauze', es: 'Pausa', it: 'Pausa', pt: 'Pausa' },
+    'Activité / Travaux': {
+      en: 'Activity / Work', de: 'Tätigkeit / Arbeiten', nl: 'Activiteit / Werkzaamheden',
+      es: 'Actividad / Trabajos', it: 'Attività / Lavori', pt: 'Atividade / Trabalhos'
+    },
+    'Total': { en: 'Total', de: 'Gesamt', nl: 'Totaal', es: 'Total', it: 'Totale', pt: 'Total' },
+    'Total cumulé': {
+      en: 'Cumulative total', de: 'Gesamtsumme', nl: 'Cumulatief totaal',
+      es: 'Total acumulado', it: 'Totale cumulativo', pt: 'Total acumulado'
+    },
+
+    /* Multi-techniciens */
+    'Techniciens sur site': {
+      en: 'On-site technicians', de: 'Techniker vor Ort', nl: 'Technici ter plaatse',
+      es: 'Técnicos en planta', it: 'Tecnici in loco', pt: 'Técnicos no local'
+    },
+    'Technicien(s) sur site': {
+      en: 'On-site technician(s)', de: 'Techniker vor Ort', nl: 'Technicus/technici ter plaatse',
+      es: 'Técnico(s) en planta', it: 'Tecnico/i in loco', pt: 'Técnico(s) no local'
+    },
+    'Équipe technique': {
+      en: 'Technical team', de: 'Serviceteam', nl: 'Technisch team',
+      es: 'Equipo técnico', it: 'Team tecnico', pt: 'Equipa técnica'
+    },
+    'Technicien principal': {
+      en: 'Lead technician', de: 'Leitender Techniker', nl: 'Hoofdtechnicus',
+      es: 'Técnico principal', it: 'Tecnico principale', pt: 'Técnico principal'
+    },
+    'Accompagné de': {
+      en: 'Accompanied by', de: 'In Begleitung von', nl: 'Vergezeld door',
+      es: 'Acompañado de', it: 'Accompagnato da', pt: 'Acompanhado por'
+    },
+    'Automaticien': {
+      en: 'Automation engineer', de: 'Automatisierungstechniker', nl: 'Automatiseringsspecialist',
+      es: 'Especialista en automatización', it: 'Specialista automazione', pt: 'Especialista em automação'
+    },
+    'Mécanicien': {
+      en: 'Mechanic', de: 'Mechaniker', nl: 'Monteur mechanica',
+      es: 'Mecánico', it: 'Meccanico', pt: 'Mecânico'
+    },
+    'Électrotechnicien': {
+      en: 'Electrical technician', de: 'Elektrotechniker', nl: 'Elektrotechnicus',
+      es: 'Electrotécnico', it: 'Elettrotecnico', pt: 'Eletrotécnico'
+    },
+    'Chef de projet SAV': {
+      en: 'Service project manager', de: 'Kundendienst-Projektleiter', nl: 'Projectleider klantenservice',
+      es: 'Jefe de proyecto posventa', it: 'Responsabile progetto post-vendita', pt: 'Gestor de projeto pós-venda'
+    },
+    'Support SAV': {
+      en: 'Service support', de: 'Kundendienst-Support', nl: 'Ondersteuning klantenservice',
+      es: 'Soporte posventa', it: 'Supporto post-vendita', pt: 'Suporte pós-venda'
+    },
+
     /* Sections du canevas */
     'Synthèse': { en: 'Summary', de: 'Zusammenfassung', nl: 'Samenvatting', es: 'Resumen', it: 'Sintesi', pt: 'Resumo' },
     'Synthèse du technicien': {
@@ -119,6 +202,22 @@
     'Texte': { en: 'Text', de: 'Text', nl: 'Tekst', es: 'Texto', it: 'Testo', pt: 'Texto' },
     'Photos': { en: 'Photos', de: 'Fotos', nl: "Foto's", es: 'Fotos', it: 'Foto', pt: 'Fotos' },
     'Validation': { en: 'Validation', de: 'Bestätigung', nl: 'Validatie', es: 'Validación', it: 'Convalida', pt: 'Validação' },
+    'Pièces de rechange': {
+      en: 'Spare parts', de: 'Ersatzteile', nl: 'Reserveonderdelen',
+      es: 'Piezas de repuesto', it: 'Pezzi di ricambio', pt: 'Peças sobressalentes'
+    },
+    'Dénomination': {
+      en: 'Description', de: 'Bezeichnung', nl: 'Benaming',
+      es: 'Denominación', it: 'Denominazione', pt: 'Denominação'
+    },
+    'Référence': {
+      en: 'Part number', de: 'Artikelnummer', nl: 'Referentie',
+      es: 'Referencia', it: 'Codice', pt: 'Referência'
+    },
+    'Quantité': {
+      en: 'Quantity', de: 'Menge', nl: 'Aantal',
+      es: 'Cantidad', it: 'Quantità', pt: 'Quantidade'
+    },
     'Catégorie': { en: 'Category', de: 'Kategorie', nl: 'Categorie', es: 'Categoría', it: 'Categoria', pt: 'Categoria' },
     'Nombre': { en: 'Number', de: 'Anzahl', nl: 'Aantal', es: 'Número', it: 'Numero', pt: 'Número' },
     'Photos jointes': {
@@ -159,13 +258,25 @@
       en: '7. Work to be planned', de: '7. Geplante Arbeiten', nl: '7. Gepland werk',
       es: '7. Trabajos a prever', it: '7. Lavori da prevedere', pt: '7. Trabalhos a prever'
     },
+    '8. Pièces de rechange': {
+      en: '8. Spare parts', de: '8. Ersatzteile', nl: '8. Reserveonderdelen',
+      es: '8. Piezas de repuesto', it: '8. Pezzi di ricambio', pt: '8. Peças sobressalentes'
+    },
     '8. Photos complémentaires': {
       en: '8. Additional photos', de: '8. Zusätzliche Fotos', nl: "8. Aanvullende foto's",
       es: '8. Fotos complementarias', it: '8. Foto aggiuntive', pt: '8. Fotos complementares'
     },
+    '9. Photos complémentaires': {
+      en: '9. Additional photos', de: '9. Zusätzliche Fotos', nl: "9. Aanvullende foto's",
+      es: '9. Fotos complementarias', it: '9. Foto aggiuntive', pt: '9. Fotos complementares'
+    },
     '9. Validation': {
       en: '9. Validation', de: '9. Bestätigung', nl: '9. Validatie',
       es: '9. Validación', it: '9. Convalida', pt: '9. Validação'
+    },
+    '10. Validation': {
+      en: '10. Validation', de: '10. Bestätigung', nl: '10. Validatie',
+      es: '10. Validación', it: '10. Convalida', pt: '10. Validação'
     },
 
     /* Domaines et catégories par défaut */
@@ -215,6 +326,22 @@
       es: 'El cliente reconoce haber leído el presente informe, haber recibido las explicaciones del técnico y acepta las observaciones y los trabajos descritos.',
       it: "Il cliente dichiara di aver preso visione del presente rapporto, di aver ricevuto le spiegazioni del tecnico e accetta le constatazioni e i lavori descritti.",
       pt: 'O cliente reconhece ter tomado conhecimento do presente relatório, ter recebido as explicações do técnico e aceita os factos e os trabalhos descritos.'
+    },
+    'La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.': {
+      en: "The customer's signature constitutes acceptance of the final quote and validation of the spare parts listed above.",
+      de: 'Die Unterschrift des Kunden gilt als Annahme des endgültigen Kostenvoranschlags und Genehmigung der oben aufgeführten Ersatzteile.',
+      nl: 'De handtekening van de klant geldt als aanvaarding van de definitieve offerte en goedkeuring van bovenstaande reserveonderdelen.',
+      es: 'La firma del cliente supone la aceptación del presupuesto final y la validación de las piezas de repuesto arriba indicadas.',
+      it: 'La firma del cliente costituisce accettazione del preventivo finale e convalida dei pezzi di ricambio sopra elencati.',
+      pt: 'A assinatura do cliente constitui a aceitação do orçamento final e a validação das peças sobressalentes acima indicadas.'
+    },
+    'Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits. La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.': {
+      en: "The customer acknowledges having read this report, having received the technician's explanations, and accepts the findings and the work described. The customer's signature constitutes acceptance of the final quote and validation of the spare parts listed above.",
+      de: 'Der Kunde bestätigt, diesen Bericht zur Kenntnis genommen, die Erläuterungen des Technikers erhalten zu haben und die beschriebenen Feststellungen und Arbeiten zu akzeptieren. Die Unterschrift des Kunden gilt als Annahme des endgültigen Kostenvoranschlags und Genehmigung der oben aufgeführten Ersatzteile.',
+      nl: 'De klant verklaart kennis te hebben genomen van dit verslag, de uitleg van de technicus te hebben ontvangen en de beschreven vaststellingen en werkzaamheden te aanvaarden. De handtekening van de klant geldt als aanvaarding van de definitieve offerte en goedkeuring van bovenstaande reserveonderdelen.',
+      es: 'El cliente reconoce haber leído el presente informe, haber recibido las explicaciones del técnico y acepta las observaciones y los trabajos descritos. La firma del cliente supone la aceptación del presupuesto final y la validación de las piezas de repuesto arriba indicadas.',
+      it: 'Il cliente dichiara di aver preso visione del presente rapporto, di aver ricevuto le spiegazioni del tecnico e accetta le constatazioni e i lavori descritti. La firma del cliente costituisce accettazione del preventivo finale e convalida dei pezzi di ricambio sopra elencati.',
+      pt: 'O cliente reconhece ter tomado conhecimento do presente relatório, ter recebido as explicações do técnico e aceita os factos e os trabalhos descritos. A assinatura do cliente constitui a aceitação do orçamento final e a validação das peças sobressalentes acima indicadas.'
     },
     'Le client reconnaît avoir pris connaissance du présent rapport et accepte les constats et travaux décrits.': {
       en: 'The customer acknowledges having read this report and accepts the findings and the work described.',
@@ -272,7 +399,9 @@
   const PREFIXABLES = [
     'mécanique', 'électrique', 'automatisme', 'sécurité', 'urgent', 'priorité haute',
     'basse', 'informatif', 'catégorie', 'nombre', 'photos', 'date', 'client', 'technicien',
-    'machine', 'modèle', 'lieu', 'intervention'
+    'machine', 'modèle', 'lieu', 'intervention', 'pièces de rechange', 'dénomination', 'quantité',
+    'machines visitées', 'machine concernée', 'techniciens sur site', 'technicien(s) sur site',
+    'relevé des journées d\'intervention', 'journées d\'intervention', 'total cumulé', 'activité / travaux'
   ];
 
   /* --- Règles de traduction des libellés composés ----------------------- */
@@ -286,6 +415,10 @@
       [/^Édité le (.*)$/, 'Generated on $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Page $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 event(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 spare part(s)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 machine(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 day(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 technician(s)'],
       [/^(\d+) photo\(s\)$/, '$1 photo(s)'],
       [/^Photo (\d+)$/, 'Photo $1'],
       [/^À l'attention de (.*),$/, 'For the attention of $1,'],
@@ -304,6 +437,10 @@
       [/^Édité le (.*)$/, 'Erstellt am $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Seite $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 Ereignis(se)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 Ersatzteil(e)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 Maschine(n)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 Tag(e)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 Techniker'],
       [/^(\d+) photo\(s\)$/, '$1 Foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'z. Hd. $1,'],
@@ -320,6 +457,10 @@
       [/^Édité le (.*)$/, 'Aangemaakt op $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 gebeurtenis(sen)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 reserveonderde(e)l(en)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 machine(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 dag(en)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 technicus/technici'],
       [/^(\d+) photo\(s\)$/, "$1 foto('s)"],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'Ter attentie van $1,'],
@@ -336,6 +477,10 @@
       [/^Édité le (.*)$/, 'Emitido el $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 pieza(s) de repuesto'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 máquina(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 jornada(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 técnico(s)'],
       [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'A la atención de $1,'],
@@ -352,6 +497,10 @@
       [/^Édité le (.*)$/, 'Creato il $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento/i'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 pezzo/i di ricambio'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 macchina/e'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 giorno/i'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 tecnico/i'],
       [/^(\d+) photo\(s\)$/, '$1 foto'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, "All'attenzione di $1,"],
@@ -368,6 +517,10 @@
       [/^Édité le (.*)$/, 'Emitido em $1'],
       [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
       [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+)\s+pièce\(s\)$/, '$1 peça(s) sobressalente(s)'],
+      [/^(\d+)\s+machine\(s\)$/, '$1 máquina(s)'],
+      [/^(\d+)\s+jour(?:née)?\(s\)$/, '$1 dia(s)'],
+      [/^(\d+)\s+technicien\(s\)$/, '$1 técnico(s)'],
       [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
       [/^Photo (\d+)$/, 'Foto $1'],
       [/^À l'attention de (.*),$/, 'À atenção de $1,'],

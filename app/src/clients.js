@@ -34,6 +34,12 @@
     },
     embarques: function () { return CLIENTS_EMBARQUES; },
     utiliseListeImportee: function () { return this.base() !== CLIENTS_EMBARQUES; },
+    listeTechniciens: function () {
+      return (Array.isArray(global.TECHNICIENS_BFR) ? global.TECHNICIENS_BFR : []).map(t => ({
+        nom: t.nom || t,
+        reference: t.reference || t.nom || t
+      }));
+    },
     memo: function () {
       try { return JSON.parse(global.localStorage.getItem(CLE_MEMO) || '{}') || {}; } catch (e) { return {}; }
     },

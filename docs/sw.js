@@ -5,7 +5,7 @@
    met le cache à jour en arrière-plan.
    Le nom du cache contient l'empreinte du build : chaque publication remplace
    la précédente et vide les anciens caches. */
-const CACHE = 'bfr-fiche-sav-ba8750505a';
+const CACHE = 'bfr-fiche-sav-08782f742c';
 const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png'];
 const DELAI_RESEAU = 3500;
 

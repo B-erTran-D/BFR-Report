@@ -146,6 +146,13 @@
         (ev.photos || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
       });
       (i.photosLibres || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
+      (i.pieces || []).forEach(function (p, k) {
+        if (p.denomination) ajouter(p, 'denomination', 'Pièce ' + (k + 1));
+      });
+      (i.jours || []).forEach(function (j, k) {
+        if (j.description) ajouter(j, 'description', 'Journée ' + (k + 1));
+        else if (j.activite) ajouter(j, 'activite', 'Journée ' + (k + 1));
+      });
       return taches;
     },
 
@@ -161,7 +168,11 @@
         evenements: (i.evenements || []).map(function (ev) {
           return Object.assign({}, ev, { photos: (ev.photos || []).map(function (ph) { return Object.assign({}, ph); }) });
         }),
-        photosLibres: (i.photosLibres || []).map(function (ph) { return Object.assign({}, ph); })
+        photosLibres: (i.photosLibres || []).map(function (ph) { return Object.assign({}, ph); }),
+        pieces: (i.pieces || []).map(function (p) { return Object.assign({}, p); }),
+        machines: (i.machines || []).map(function (m) { return Object.assign({}, m); }),
+        techniciens: (i.techniciens || []).map(function (t) { return Object.assign({}, t); }),
+        jours: (i.jours || []).map(function (j) { return Object.assign({}, j); })
       });
       /* on retraduit les mêmes champs sur la copie */
       const copieTaches = this.champs(copie);
