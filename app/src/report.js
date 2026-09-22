@@ -509,8 +509,8 @@
           p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
           p.rect(this.M, p.y, 3, 15, { fill: couleur });
           const libDom = this.L(dom.libelle);
-          const libMach = ev.machineNom ? ' — ⚙️ ' + ev.machineNom : '';
-          p.text((dom.icone ? dom.icone + ' ' + libDom : libDom) + libMach, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
+          const libMach = ev.machineNom ? ' — [' + ev.machineNom + ']' : '';
+          p.text(libDom + libMach, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
           p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
           p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
           p.y += 15;
@@ -1132,10 +1132,10 @@
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
             const morc = [
-              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' }
+              { t: this.L(dom.libelle), gras: true, taille: 11, couleur: '332E72' }
             ];
             if (ev.machineNom) {
-              morc.push({ t: '   [⚙️ ' + ev.machineNom + ']', gras: true, taille: 10, couleur: '0284C7' });
+              morc.push({ t: '   [' + ev.machineNom + ']', gras: true, taille: 10, couleur: '06BAF2' });
             }
             morc.push(
               { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },

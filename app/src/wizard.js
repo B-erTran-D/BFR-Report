@@ -34,11 +34,12 @@
     categories() { return this.S.categories || []; }
 
     ouvrir() {
+      const icoClose = (window.ICO && window.ICO.close(20)) || '✕';
       const overlay = document.createElement('div');
       overlay.className = 'assistant';
       overlay.innerHTML = `
         <div class="assistant-bar">
-          <button type="button" class="iconbtn" data-a="fermer">✕</button>
+          <button type="button" class="iconbtn" data-a="fermer">${icoClose}</button>
           <div class="assistant-titre">Évènement</div>
           <button type="button" class="btn sm" data-a="enregistrer">Enregistrer</button>
         </div>
@@ -170,7 +171,7 @@
       const nav = [];
       if (this.etape > 1) nav.push('<button class="btn grey" data-a="retour">← Retour</button>');
       if (this.etape < 4) nav.push('<button class="btn" data-a="suivant">Suivant →</button>');
-      else nav.push('<button class="btn or" data-a="enregistrer">✔ Terminer</button>');
+      else nav.push('<button class="btn or" data-a="enregistrer">' + ((window.ICO && window.ICO.check(16)) || '') + ' Terminer</button>');
       if (this.ev.domaine) nav.push('<button class="btn danger" data-a="supprimer">Supprimer</button>');
       this.overlay.querySelector('#assistantNav').innerHTML = nav.join('');
       this.corps.scrollTop = 0;
@@ -181,8 +182,9 @@
       return `<p class="assistant-question">Sur quel domaine porte cet évènement ?</p>
         <div class="domaines">
           ${this.domaines().map(function (x) {
+            const icoHtml = (window.ICO && window.ICO.domaine(x.id || x.icone, 22)) || '';
             return `<button type="button" class="domaine${(d && d.id === x.id) ? ' on' : ''}" data-domaine="${esc(x.id)}">
-              <span class="ico">${esc(x.icone || '🔧')}</span><span class="lib">${esc(x.libelle)}</span></button>`;
+              <span class="ico">${icoHtml}</span><span class="lib">${esc(x.libelle)}</span></button>`;
           }).join('')}
         </div>
         ${d ? `<p class="assistant-note">Domaine choisi : <strong>${esc(d.libelle)}</strong></p>` : ''}`;
@@ -191,10 +193,12 @@
     etapeAnnotation() {
       const ev = this.ev;
       const dispo = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      const icoMic = (window.ICO && (this.ecoute ? window.ICO.stop(16) : window.ICO.mic(18))) || '';
+      const icoRelire = (window.ICO && window.ICO.speaker(18)) || '';
       const machSelect = (this.machines.length > 0) ? `
         <div class="field" style="margin-bottom:12px">
-          <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569)">Machine concernée</label>
-          <select id="evMachine" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--bord,#cbd5e1);background:var(--card,#ffffff);font-size:0.95rem">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--bfr-secondary,#332e72)">Machine concernée</label>
+          <select id="evMachine" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--bfr-border,#dbe2ea);background:var(--bfr-card-bg,#ffffff);font-size:0.95rem">
             <option value="">— Non rattaché / Toute l'installation —</option>
             ${this.machines.map(m => {
               const sel = (ev.machineId && m.id === ev.machineId) || (ev.machineNom && m.designation === ev.machineNom);
@@ -208,19 +212,23 @@
         ${machSelect}
         <textarea id="evTexte" class="ev-texte" rows="7" placeholder="Ex. Courroie d'entraînement détendue : flèche mesurée 12 mm pour 8 mm maximum. Traces de patinage et gomme sur la poulie. Bruit caractéristique au démarrage.">${esc(ev.texte || '')}</textarea>
         <div class="btnrow" style="margin-top:10px">
-          <button class="btn ${this.ecoute ? 'or' : 'ghost'}" data-a="dictee">${this.ecoute ? '⏹️ Arrêter la dictée' : '🎤 Dicter'}</button>
-          <button class="btn ghost" data-a="relire" ${ev.texte ? '' : 'disabled'}>🔊 Relire</button>
+          <button class="btn ${this.ecoute ? 'or' : 'ghost'}" data-a="dictee">${icoMic} ${this.ecoute ? 'Arrêter la dictée' : 'Dicter'}</button>
+          <button class="btn ghost" data-a="relire" ${ev.texte ? '' : 'disabled'}>${icoRelire} Relire</button>
         </div>
-        ${dispo ? '' : '<p class="assistant-note">Dictée indisponible sur ce navigateur : utilisez le micro du clavier (bouton 🎤 de votre clavier Android).</p>'}`;
+        ${dispo ? '' : '<p class="assistant-note">Dictée indisponible sur ce navigateur : utilisez la dictée vocale de votre clavier Android.</p>'}`;
     }
 
     etapePhoto() {
       const ev = this.ev;
+      const icoCamera = (window.ICO && window.ICO.camera(18)) || '';
+      const icoGallery = (window.ICO && window.ICO.image(18)) || '';
+      const icoPen = (window.ICO && window.ICO.pen(14)) || '';
+      const icoRm = (window.ICO && window.ICO.close(16)) || '✕';
       return `<p class="assistant-question">Ajouter une photo</p>
         <p class="assistant-note">Prenez la photo puis annotez-la au doigt (flèche, cercle, texte) pour montrer précisément la zone concernée.</p>
         <div class="btnrow">
-          <button class="btn" data-a="photo">📷 Prendre une photo</button>
-          <button class="btn ghost" data-a="photo-lib">🖼️ Galerie</button>
+          <button class="btn" data-a="photo">${icoCamera} Prendre une photo</button>
+          <button class="btn ghost" data-a="photo-lib">${icoGallery} Galerie</button>
         </div>
         <input type="file" id="evPhotoInput" accept="image/*" capture="environment" hidden>
         <input type="file" id="evPhotoLib" accept="image/*" multiple hidden>
@@ -228,8 +236,8 @@
           ${(ev.photos || []).map(function (p, i) {
             return `<div class="ev-photo">
               <img src="${p.dataUrl}" alt="photo ${i + 1}">
-              <button type="button" class="ev-photo-annot" data-annot="${i}">✏️ Annoter</button>
-              <button type="button" class="ev-photo-rm" data-retirer-photo="${i}">✕</button>
+              <button type="button" class="ev-photo-annot" data-annot="${i}">${icoPen} Annoter</button>
+              <button type="button" class="ev-photo-rm" data-retirer-photo="${i}">${icoRm}</button>
               ${(p.annotations && p.annotations.length) ? '<span class="ev-photo-badge">annotée</span>' : ''}
             </div>`;
           }).join('') || '<p class="assistant-note">Aucune photo pour l\'instant — vous pouvez continuer sans photo.</p>'}
@@ -242,11 +250,13 @@
         <p class="assistant-note">Cette catégorie détermine la place de l'évènement dans le rapport : les problèmes de sécurité et les urgences apparaissent en premier.</p>
         <div class="categories">
           ${cats.map(function (c) {
+            const icoHtml = (window.ICO && window.ICO.categorie(c.id || c.icone, 20)) || '';
+            const checkHtml = (window.ICO && window.ICO.check(18)) || '✔';
             return `<button type="button" class="categorie${choisi === c.id ? ' on' : ''}" data-categorie="${esc(c.id)}"
               style="--c:${c.couleur};--f:${c.fond}">
-              <span class="ico">${esc(c.icone || '•')}</span>
+              <span class="ico">${icoHtml}</span>
               <span class="lib">${esc(c.libelle)}</span>
-              <span class="fleche">${choisi === c.id ? '✔' : '›'}</span></button>`;
+              <span class="fleche">${choisi === c.id ? checkHtml : '›'}</span></button>`;
           }).join('')}
         </div>
         <div class="ev-recap">

@@ -7,7 +7,24 @@
   'use strict';
 
   const COULEURS = ['#e11d48', '#f59e0b', '#22c55e', '#ffffff', '#111827'];
-  const NOMS = { crayon: '✏️ Crayon', fleche: '➡️ Flèche', cercle: '⭕ Cercle', texte: '🅰️ Texte' };
+  const OUTILS = {
+    crayon: {
+      nom: 'Crayon',
+      ico: '<svg class="bfr-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
+    },
+    fleche: {
+      nom: 'Flèche',
+      ico: '<svg class="bfr-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+    },
+    cercle: {
+      nom: 'Cercle',
+      ico: '<svg class="bfr-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>'
+    },
+    texte: {
+      nom: 'Texte',
+      ico: '<svg class="bfr-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="9" y1="20" x2="15" y2="20"/></svg>'
+    }
+  };
 
   /** Convertit une image (dataURL) en objet Image chargé. */
   function chargerImage(dataUrl) {
@@ -92,7 +109,7 @@
       overlay.className = 'annot-editeur';
       overlay.innerHTML = `
         <div class="annot-bar">
-          <button type="button" class="iconbtn" data-a="annuler">✕</button>
+          <button type="button" class="iconbtn" data-a="annuler">${(window.ICO && window.ICO.close(20)) || '✕'}</button>
           <div class="annot-titre">Annoter la photo</div>
           <button type="button" class="btn sm" data-a="valider">Valider</button>
         </div>
@@ -101,12 +118,12 @@
         </div>
         <div class="annot-outils">
           <div class="annot-ligne">
-            ${Object.keys(NOMS).map(o => `<button type="button" class="outil" data-outil="${o}"><span>${NOMS[o].split(' ')[0]}</span>${NOMS[o].split(' ').slice(1).join(' ')}</button>`).join('')}
+            ${Object.keys(OUTILS).map(o => `<button type="button" class="outil" data-outil="${o}"><span>${OUTILS[o].ico}</span>${OUTILS[o].nom}</button>`).join('')}
           </div>
           <div class="annot-ligne">
             ${COULEURS.map(c => `<button type="button" class="pastille" data-couleur="${c}" style="background:${c}"></button>`).join('')}
-            <button type="button" class="btn sm grey" data-a="undo">↩︎ Annuler</button>
-            <button type="button" class="btn sm grey" data-a="vider">🗑️ Tout</button>
+            <button type="button" class="btn sm grey" data-a="undo">Annuler</button>
+            <button type="button" class="btn sm grey" data-a="vider">${(window.ICO && window.ICO.trash(14)) || ''} Tout</button>
           </div>
         </div>`;
       document.body.appendChild(overlay);

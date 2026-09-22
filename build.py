@@ -16,7 +16,7 @@ OUT_SINGLE = os.path.join(ROOT, 'CR-Intervention-SAV.html')   # fichier unique (
 # Icônes PNG générées sans dépendance : fond bleu arrondi + coche blanche
 # --------------------------------------------------------------------------
 def png_icon(size):
-    bleu, bleu2 = (11, 61, 145), (7, 42, 102)
+    bleu, bleu2 = (51, 46, 114), (31, 28, 69)
     blanc = (255, 255, 255)
     r = size * 0.22
 
@@ -96,6 +96,7 @@ def construire_single_file(avec_pwa):
         'DOCX': lire(os.path.join(SRC, 'docx.js')),
         'REPORT': lire(os.path.join(SRC, 'report.js')),
         'ANNOT': lire(os.path.join(SRC, 'annotate.js')),
+        'ICONS': lire(os.path.join(SRC, 'icons.js')),
         'WIZARD': lire(os.path.join(SRC, 'wizard.js')),
         'LOGO': lire(os.path.join(SRC, 'logo-bfr.js')),
         'CLIENTS': clients_data + lire(os.path.join(SRC, 'clients.js')),
@@ -175,8 +176,8 @@ MANIFEST = {
     "scope": "./",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#eef2f7",
-    "theme_color": "#0b3d91",
+    "background_color": "#f4f6f9",
+    "theme_color": "#332e72",
     "icons": [
         {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
         {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},

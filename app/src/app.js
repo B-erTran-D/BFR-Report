@@ -48,6 +48,7 @@
   }
   function vibrate(ms) { if (navigator.vibrate) try { navigator.vibrate(ms || 12); } catch (e) {} }
   const pad2 = (n) => ('0' + n).slice(-2);
+  const ICO = (typeof window !== 'undefined' && window.ICO) || (typeof global !== 'undefined' && global.ICO) || {};
 
   /* ===================== Réglages ===================================== */
   const K = { settings: 'sav3.settings', rapport: 'sav3.rapport', rapports: 'sav3.rapports' };
@@ -201,7 +202,7 @@
     if (i >= 0) liste[i] = leger; else liste.unshift(leger);
     if (liste.length > 40) liste.length = 40;
     const ok2 = Store.set(K.rapports, liste);
-    if (!ok || !ok2) { if (!silencieux) toast('⚠️ Mémoire pleine : exportez la sauvegarde (☰)', 5000); return false; }
+    if (!ok || !ok2) { if (!silencieux) toast('Mémoire pleine : exportez la sauvegarde (Menu)', 5000); return false; }
     dirty = false;
     if (!silencieux) toast('Enregistré');
     return true;
@@ -253,7 +254,7 @@
       barre.innerHTML = `<div class="chrono-encours">
         <div class="chrono-temps"><span class="chrono-label">Heures cumulées (${R.jours.length} jour(s))</span>
           <strong id="chronoTemps">${Report.formatDuree(tot) || '0 min'}</strong></div>
-        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">✏️ Relevé jours</button></div></div>
+        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">${(ICO.pen && ICO.pen(14)) || ''} Relevé jours</button></div></div>
         <p class="chrono-note">${R.jours.map(j => (Report.frDate(j.date) || j.date) + ' (' + (j.dureeHeures || 0) + ' h)').join(' • ')} • ${Report.dureeDecimale(tot)} h</p>`;
       clearInterval(tic);
       return;
@@ -261,21 +262,21 @@
     const c = R.chrono;
     if (!c.debut) {
       barre.innerHTML = `<button class="btn chrono-demarrer" data-a="chrono-demarrer" style="width:100%">
-        ▶️ Démarrer l'intervention</button>
+        ${(ICO.play && ICO.play(16)) || ''} Démarrer l'intervention</button>
         <p class="chrono-note">L'heure de début est enregistrée automatiquement.</p>`;
     } else if (!c.fin) {
       barre.innerHTML = `<div class="chrono-encours">
         <div class="chrono-temps"><span class="chrono-label">${c.enPause ? 'En pause depuis' : 'Sur site depuis'}</span>
           <strong id="chronoTemps">${dureeTexte()}</strong></div>
         <div class="chrono-actions">
-          <button class="btn sm grey" data-a="chrono-pause">${c.enPause ? '▶️ Reprendre' : '⏸️ Pause'}</button>
-          <button class="btn sm or" data-a="chrono-terminer">⏹️ Terminer</button>
+          <button class="btn sm grey" data-a="chrono-pause">${c.enPause ? (((ICO.play && ICO.play(14)) || '') + ' Reprendre') : (((ICO.pause && ICO.pause(14)) || '') + ' Pause')}</button>
+          <button class="btn sm or" data-a="chrono-terminer">${(ICO.stop && ICO.stop(14)) || ''} Terminer</button>
         </div></div>
         <p class="chrono-note">Début ${Report.heureFr(c.debut)}${(c.pauses || []).length ? ' — ' + c.pauses.length + ' pause(s) déduite(s)' : ''}</p>`;
     } else {
       barre.innerHTML = `<div class="chrono-encours">
         <div class="chrono-temps"><span class="chrono-label">Temps sur site</span><strong>${Report.formatDuree(duree()) || '0 min'}</strong></div>
-        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">✏️ Ajuster</button></div></div>
+        <div class="chrono-actions"><button class="btn sm grey" data-a="chrono-ajuster">${(ICO.pen && ICO.pen(14)) || ''} Ajuster</button></div></div>
         <p class="chrono-note">De ${Report.heureFr(c.debut)} à ${Report.heureFr(c.fin)}${(c.pauses || []).length ? ' — ' + c.pauses.length + ' pause(s)' : ''} • ${Report.dureeDecimale(duree())} h</p>`;
     }
     clearInterval(tic);
@@ -289,15 +290,21 @@
   function domDe(id) { return (S.domaines || []).find(d => d.id === id) || { id: '', libelle: '—', icone: '' }; }
 
   function rendreTout() {
-    const bm = $('#brandMark'), bn = $('#brandName');
+    const bm = $('#brandMark'), bn = $('#brandName'), tl = $('#topbarLogo');
+    if (tl && window.LOGO_BFR_TOPBAR && tl.getAttribute('src') !== window.LOGO_BFR_TOPBAR) {
+      tl.src = window.LOGO_BFR_TOPBAR;
+    }
     if (bn) bn.textContent = S.societe.nom || 'Rapport d\'intervention';
     if (bm) {
       if (S.societe.logo) { bm.innerHTML = '<img src="' + S.societe.logo + '" alt="logo">'; }
       else bm.textContent = S.societe.sigle || 'SAV';
     }
     const e = Report.etat(R, S);
-    $('#hdrNum').textContent = (R.signatureClient.dataUrl ? '✔ Signé • ' : '') + 'N° ' + (R.numero || '—') +
-      (R.client.nom ? ' • ' + R.client.nom : '');
+    const hn = $('#hdrNum');
+    if (hn) {
+      hn.textContent = (R.signatureClient.dataUrl ? '✔ Signé • ' : '') + 'N° ' + (R.numero || '—') +
+        (R.client.nom ? ' • ' + R.client.nom : '');
+    }
     rendreChrono();
     rendreEntete();
     rendreEvenements(e);
@@ -324,7 +331,7 @@
 
     zone.innerHTML = `
       <div class="card">
-        <h2>Intervention <button class="btn sm grey" data-a="editer-client">✏️ ${renseigne ? 'Modifier' : 'Renseigner'}</button></h2>
+        <h2>Intervention <button class="btn sm grey" data-a="editer-client">${(ICO.pen && ICO.pen(14)) || ''} ${renseigne ? 'Modifier' : 'Renseigner'}</button></h2>
         ${renseigne
           ? `<div class="recap">
               <div><span>Client</span><strong>${esc(c.nom || '—')}</strong></div>
@@ -347,9 +354,9 @@
     const texte = Report.valeur(ev.texte);
     return `<div class="ev-carte" data-ev="${ev.id}" style="--c:${cat.couleur};--f:${cat.fond}">
       <div class="ev-tete">
-        <span class="ev-dom">${esc(dom.icone)} ${esc(dom.libelle)}</span>
-        ${ev.machineNom ? `<span class="pill" style="background:#e0f2fe;color:#0369a1;font-weight:600">⚙️ ${esc(ev.machineNom)}</span>` : ''}
-        <span class="ev-cat">${esc(cat.icone)} ${esc(cat.libelle)}</span>
+        <span class="ev-dom">${(ICO.domaine && ICO.domaine(dom.id || dom.icone, 16)) || ''} ${esc(dom.libelle)}</span>
+        ${ev.machineNom ? `<span class="pill" style="background:var(--bfr-primary-light);color:var(--bfr-secondary);font-weight:600;border:1px solid var(--bfr-primary-border)">${(ICO.gear && ICO.gear(13)) || ''} ${esc(ev.machineNom)}</span>` : ''}
+        <span class="ev-cat">${(ICO.categorie && ICO.categorie(cat.id || cat.icone, 16)) || ''} ${esc(cat.libelle)}</span>
         <span class="ev-heure">${esc(Report.heureFr(ev.heure))}</span>
       </div>
       <div class="ev-corps">
@@ -372,10 +379,10 @@
       <div class="card">
         <h2>Évènements <span class="pill compteur-ev">0</span></h2>
         <p class="hint">Chaque constat, défaut ou information relevée sur la machine. Appuyez sur un évènement pour le compléter ou le corriger à tout moment.</p>
-        ${e.securite ? `<div class="alerte-securite">🛑 ${e.securite} point(s) de sécurité ou d'urgence — ils apparaîtront en tête du rapport.</div>` : ''}
+        ${e.securite ? `<div class="alerte-securite">${(ICO.shieldAlert && ICO.shieldAlert(18)) || ''} ${e.securite} point(s) de sécurité ou d'urgence — ils apparaîtront en tête du rapport.</div>` : ''}
         ${evs.length ? `<div class="ev-liste">${evs.map(carteEvenement).join('')}</div>`
           : `<div class="ev-vide">
-               <span class="ev-vide-ico">📝</span>
+               <span class="ev-vide-ico">${(ICO.fileText && ICO.fileText(36)) || ''}</span>
                <p>Aucun évènement pour l'instant.</p>
                <p class="small">Commencez par le premier constat : domaine → annotation → photo → catégorie.</p>
              </div>`}
@@ -408,14 +415,14 @@
         <p class="hint">Pièces échangées ou laissées dans le stock du client sur place. La signature du client vaudra pour acceptation du devis final.</p>
         ${rendreTableauPieces()}
         <div class="btnrow" style="margin-top:10px">
-          <button class="btn wide ghost" data-a="ajouter-piece">➕ Ajouter pièce de rechange</button>
+          <button class="btn wide ghost" data-a="ajouter-piece">${(ICO.plus && ICO.plus(16)) || ''} Ajouter pièce de rechange</button>
         </div>
       </div>
 
       <div class="card">
         <h2>Point client & signature</h2>
         ${signe
-          ? `<div class="signe-ok">✅ Signé par <strong>${esc(R.signatureClient.nom || 'le client')}</strong>
+          ? `<div class="signe-ok">${(ICO.checkCircle && ICO.checkCircle(18)) || ''} Signé par <strong>${esc(R.signatureClient.nom || 'le client')}</strong>
                ${R.signatureClient.heure ? 'à ' + esc(R.signatureClient.heure) : ''}
                <img src="${R.signatureClient.dataUrl}" alt="signature"></div>
              <div class="btnrow" style="margin-top:8px">
@@ -423,16 +430,16 @@
                <button class="btn sm grey" data-a="effacer-signature">Effacer</button>
              </div>`
           : `<p class="hint">En fin d'intervention : présentez le déroulé au client, puis faites-le signer directement sur l'écran.</p>
-             <button class="btn wide" data-a="signer">✍️ Faire signer le client</button>`}
+             <button class="btn wide" data-a="signer">${(ICO.signature && ICO.signature(18)) || ''} Faire signer le client</button>`}
       </div>
 
       <div class="card">
         <h2>Soumettre le rapport</h2>
         <p class="hint">Le rapport est mis en forme selon le canevas « ${esc((S.canevas && S.canevas.nom) || 'standard')} » : ${e.evenements.length} évènement(s), ${e.nbPhotos} photo(s), ${Report.formatDuree(e.duree) || 'durée non mesurée'}.</p>
-        <button class="btn or wide" data-a="soumettre">📤 Soumettre le rapport</button>
+        <button class="btn or wide" data-a="soumettre">${(ICO.send && ICO.send(18)) || ''} Soumettre le rapport</button>
         <div class="btnrow" style="margin-top:8px">
-          <button class="btn ghost" data-a="apercu">👁️ Aperçu PDF</button>
-          <button class="btn grey" data-a="word">📄 Word</button>
+          <button class="btn ghost" data-a="apercu">${(ICO.eye && ICO.eye(18)) || ''} Aperçu PDF</button>
+          <button class="btn grey" data-a="word">${(ICO.fileText && ICO.fileText(18)) || ''} Word</button>
         </div>
         <p class="small" style="margin-top:8px">Destinataires : client <strong>${esc(R.client.email || 'non renseigné')}</strong> — SAV <strong>${esc(S.mail.destinataireSAV || 'non renseigné')}</strong></p>
       </div>`;
@@ -467,8 +474,8 @@
               <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569">${esc(p.reference || '—')}</td>
               <td style="padding:7px 9px;text-align:center"><strong>${esc(p.quantite || 1)}</strong></td>
               <td style="padding:7px 9px;text-align:right;white-space:nowrap">
-                <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">✏️</button>
-                <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">🗑️</button>
+                <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">${(ICO.pen && ICO.pen(12)) || ''}</button>
+                <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">${(ICO.trash && ICO.trash(12)) || ''}</button>
               </td>
             </tr>
           `).join('')}
@@ -517,7 +524,7 @@
         planifier();
         rendreTout();
         pEl.closest('.sheet').remove();
-        toast(edit ? 'Pièce modifiée ✔' : 'Pièce ajoutée ✔');
+        toast(edit ? 'Pièce modifiée' : 'Pièce ajoutée');
       });
     });
     return panneau;
@@ -591,7 +598,7 @@
                  placeholder="${nbClients ? 'Tapez 3 lettres (ex. ENT, CFR, LAC…)' : 'Tapez 3 lettres du nom du client'}">
           <p class="small">${nbClients
             ? 'Liste BFR : ' + nbClients + " client(s) — les correspondances s'affichent dès la 3<sup>e</sup> lettre."
-            : 'Aucune liste clients dans cette version : importez-la une fois dans ☰ → Réglages → <em>Liste clients</em>.'}</p>
+            : 'Aucune liste clients dans cette version : importez-la une fois dans Menu → Réglages → <em>Liste clients</em>.'}</p>
           <div class="suggestions" id="cliSug" hidden></div>
         </div>
         <div class="grid2">${f('client.contact', 'Contact sur site (nom)', { ph: 'Ex. M. Rivière' })}${f('client.fonction', 'Fonction', { ph: 'Ex. Responsable maintenance' })}</div>
@@ -599,7 +606,7 @@
         ${f('client.adresse', 'Adresse du client', { ph: 'Rue, code postal, ville' })}
         ${f('client.lieu', "Lieu d'intervention", { list: 'dlLieux', ph: "Ex. Atelier 2 — ligne 4" })}
         <div class="filebtn" style="margin-top:8px"><input type="file" id="logoClient" accept="image/*">
-          <label for="logoClient">🖼️ ${R.client.logo ? 'Changer le logo du client' : 'Ajouter le logo du client (facultatif)'}</label></div>
+          <label for="logoClient">${(ICO.image && ICO.image(16)) || ''} ${R.client.logo ? 'Changer le logo du client' : 'Ajouter le logo du client (facultatif)'}</label></div>
         ${R.client.logo ? '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">'
                         : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>'}
       </div>
@@ -616,7 +623,7 @@
               <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                   <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
-                  <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                  <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">${(ICO.trash && ICO.trash(12)) || ''} Retirer</button>
                 </div>
                 <div class="field"><label>Machine / équipement</label>
                   <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
@@ -648,7 +655,7 @@
       <div class="card"><h2>Intervention</h2>
         <div class="grid2">${f('numero', 'N° de rapport')}<div class="field"><label>Date</label><input type="date" data-fk="date" value="${esc(R.date)}"></div></div>
         ${f('technicien', 'Technicien principal (signataire)', { ph: Report.nomComplet(S.technicien) })}
-        ${Report.contactTech(S.technicien) ? '<p class="small">Vos coordonnées (' + esc(Report.contactTech(S.technicien)) + ') apparaissent dans les blocs de signature — modifiables dans ☰ → Mes informations.</p>' : ''}
+        ${Report.contactTech(S.technicien) ? '<p class="small">Vos coordonnées (' + esc(Report.contactTech(S.technicien)) + ') apparaissent dans les blocs de signature — modifiables dans Menu → Mes informations.</p>' : ''}
         <div id="listeColleguesForm" style="margin-top:12px">
           <label style="font-size:0.85rem;font-weight:600;color:var(--texte-doux,#475569);display:block;margin-bottom:6px">Collègue(s) / Technicien(s) sur site</label>
           <div id="zoneColleguesSub">
@@ -656,7 +663,7 @@
               <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                   <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
-                  <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+                  <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">${(ICO.trash && ICO.trash(12)) || ''} Retirer</button>
                 </div>
                 <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
                   <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
@@ -682,7 +689,7 @@
           <div class="machine-item" data-mach-idx="${idx + 1}" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bord,#cbd5e1)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <span style="font-weight:600;font-size:0.9rem;color:var(--bleu,#0369a1)">Machine ${idx + 2}</span>
-              <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+              <button type="button" class="btn sm danger" data-rm-machine="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">${(ICO.trash && ICO.trash(12)) || ''} Retirer</button>
             </div>
             <div class="field"><label>Machine / équipement</label>
               <input type="text" data-m-k="designation" data-m-i="${idx + 1}" value="${esc(m.designation || '')}" placeholder="Ex. Ensacheuse, Convoyeur..." list="dlMachines"></div>
@@ -700,7 +707,7 @@
           <div class="collegue-item" data-col-idx="${idx + 1}" style="padding:10px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);border-radius:6px;margin-bottom:8px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <span style="font-size:0.85rem;font-weight:600">Collègue ${idx + 1}</span>
-              <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+              <button type="button" class="btn sm danger" data-rm-technicien="${idx + 1}" style="padding:2px 8px;font-size:0.8rem">${(ICO.trash && ICO.trash(12)) || ''} Retirer</button>
             </div>
             <div class="field" style="margin-bottom:6px"><label>Nom du collègue</label>
               <input type="text" data-t-k="nom" data-t-i="${idx + 1}" value="${esc(t.nom || '')}" placeholder="Ex. Thomas BERNARD" list="dlTechsBFR"></div>
@@ -888,7 +895,7 @@
         if (!c.contact) manque.push('contact');
         if (!c.email) manque.push('e-mail');
         toast(manque.length ? 'Client ' + c.nom + ' — à compléter : ' + manque.join(', ')
-                            : 'Client ' + c.nom + ' ✔', 3200);
+                            : 'Client ' + c.nom, 3200);
       }
 
       champ.addEventListener('input', afficherSuggestions);
@@ -908,7 +915,7 @@
         if (!ev.target.files[0]) return;
         try {
           R.client.logo = await compresserImage(ev.target.files[0], 520, 0.92);
-          planifier(); toast('Logo du client enregistré ✔');
+          planifier(); toast('Logo du client enregistré');
         } catch (err) { toast('Image illisible'); }
       });
     });
@@ -943,7 +950,7 @@
     overlay.className = 'assistant';
     overlay.innerHTML = `
       <div class="assistant-bar">
-        <button type="button" class="iconbtn" data-a="fermer">✕</button>
+        <button type="button" class="iconbtn" data-a="fermer">${(ICO.close && ICO.close(20)) || '✕'}</button>
         <div class="assistant-titre">Signature du client</div>
         <button type="button" class="btn sm" data-a="valider">Valider</button>
       </div>
@@ -956,7 +963,7 @@
           <label for="sigAccord">${esc(S.impression.mentionClient)}</label></div>
         <div class="sigwrap" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important;">
           <canvas id="sigCanvas" style="background:#ffffff !important; background-color:#ffffff !important; color-scheme:light !important; touch-action:none;"></canvas>
-          <div class="ph" id="sigPh" style="color:#64748b; font-weight:600;">✍️ Le client signe ici, du doigt</div>
+          <div class="ph" id="sigPh" style="color:#64748b; font-weight:600;">${(ICO.signature && ICO.signature(18)) || ''} Le client signe ici, du doigt</div>
         </div>
         <div class="btnrow" style="margin-top:8px">
           <button class="btn grey" data-a="effacer">Effacer</button>
@@ -990,7 +997,7 @@
         R.statut = 'signé';
         if (!R.chrono.fin) { /* la signature peut précéder la fin du chrono */ }
         overlay.remove(); planifier(); rendreTout();
-        toast('Signature enregistrée ✔');
+        toast('Signature enregistrée');
       }
     });
   }
@@ -1373,7 +1380,7 @@
     if (e.etape === 'debut') toast('Préparation de la traduction (' + e.langue + ')…', 2200);
     else if (e.etape === 'telechargement') toast('Téléchargement de la langue : ' + (e.pct || 0) + ' %', 1400);
     else if (e.etape === 'traduction' && e.total && (e.fait === e.total || e.fait === 0)) {
-      toast(e.fait === 0 ? 'Traduction des commentaires…' : 'Traduction terminée ✔', 1600);
+      toast(e.fait === 0 ? 'Traduction des commentaires…' : 'Traduction terminée', 1600);
     }
   }
 
@@ -1410,7 +1417,7 @@
         await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S, langueMail) });
         R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
         planifier(); rendreTout();
-        toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ') ✔' : 'Rapport transmis ✔', 2600);
+        toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ')' : 'Rapport transmis', 2600);
         return;
       } catch (e) { if (e && e.name === 'AbortError') return; }
     }
@@ -1440,13 +1447,13 @@
       <div class="grab"></div><h3>Envoyer le rapport</h3>
       <p class="sub">Le PDF a été enregistré sur le téléphone. Choisissez le mode d'envoi :</p>
       ${t ? `<div class="sticky-note">Deux rapports : français + ${esc(I18N.natif(t.code))}${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
-      <button class="menu-item" data-a="partager"><span class="ico">📤</span><span>Partager le rapport<small>Gmail / Outlook — PDF (et Word) déjà joints</small></span></button>
-      <button class="menu-item" data-a="mailto"><span class="ico">✉️</span><span>Ouvrir l'application e-mail<small>Destinataires et texte pré-remplis</small></span></button>
-      <button class="menu-item" data-a="dl"><span class="ico">⬇️</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
-      ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">⬇️</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
-      <button class="menu-item" data-a="dlw"><span class="ico">📄</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
-      ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">📄</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
-      <button class="menu-item" data-a="copier"><span class="ico">📋</span><span>Copier le texte du rapport</span></button>
+      <button class="menu-item" data-a="partager"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Partager le rapport<small>Gmail / Outlook — PDF (et Word) déjà joints</small></span></button>
+      <button class="menu-item" data-a="mailto"><span class="ico">${(ICO.mail && ICO.mail(18)) || ''}</span><span>Ouvrir l'application e-mail<small>Destinataires et texte pré-remplis</small></span></button>
+      <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
+      ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
+      <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
+      ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
+      <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du rapport</span></button>
       <div class="sticky-note">Destinataires : ${esc(to || 'non renseignés')}</div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('click', async (e) => {
@@ -1469,7 +1476,7 @@
   }
   function copier(txt) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(txt).then(() => toast('Copié ✔'), () => toast('Copie impossible'));
+      navigator.clipboard.writeText(txt).then(() => toast('Copié'), () => toast('Copie impossible'));
     } else toast('Copie indisponible');
   }
 
@@ -1502,7 +1509,7 @@
     const champ = (cle, label, type, ph) => `<div class="field"><label>${esc(label)}</label>
       <input type="${type || 'text'}" data-sk="${cle}" value="${esc(t[cle.split('.')[1]] || '')}" placeholder="${esc(ph || '')}"></div>`;
     const panneau = Ouvrir.ouvrir(null, `<div class="panel">
-      <div class="grab"></div><h3>${premiereFois ? 'Bienvenue 👋' : 'Mes informations'}</h3>
+      <div class="grab"></div><h3>${premiereFois ? 'Bienvenue' : 'Mes informations'}</h3>
       <p class="sub">${premiereFois
         ? 'Renseignez vos coordonnées une seule fois : elles sont conservées sur ce téléphone et reprises automatiquement dans tous vos rapports.'
         : 'Ces informations sont mémorisées sur ce téléphone et reprises automatiquement à chaque intervention.'}</p>
@@ -1521,7 +1528,7 @@
       <div class="card"><h2>Ma signature</h2>
         <p class="hint">Facultatif : une photo de votre signature (sur papier blanc) sera apposée à côté de celle du client.</p>
         <div class="filebtn"><input type="file" id="sigIdentite" accept="image/*">
-          <label for="sigIdentite">✍️ ${t.signature ? 'Changer ma signature' : 'Ajouter ma signature'}</label></div>
+          <label for="sigIdentite">${(ICO.signature && ICO.signature(16)) || ''} ${t.signature ? 'Changer ma signature' : 'Ajouter ma signature'}</label></div>
         ${t.signature ? '<img id="apercuSig" src="' + t.signature + '" style="max-height:64px;background:#fff;border:1px solid var(--bord);border-radius:6px;margin-top:8px">' : ''}
       </div>
 
@@ -1534,7 +1541,7 @@
         try {
           t.signature = await compresserImage(e.target.files[0], 700, 0.9);
           Store.set(K.settings, S);
-          toast('Signature enregistrée ✔');
+          toast('Signature enregistrée');
         } catch (err) { toast('Image illisible'); }
       });
       pan.addEventListener('click', (e) => {
@@ -1549,7 +1556,7 @@
         if (!R.technicien || R.technicien === nomAvant) R.technicien = nomApres;
         e.target.closest('.sheet').remove();
         planifier(); rendreEntete(); rendreTout();
-        toast('Bonjour ' + nomApres + ' — informations conservées ✔', 3200);
+        toast('Bonjour ' + nomApres + ' — informations conservées', 3200);
       });
     });
     setTimeout(() => { const p = $('#technicien\.prenom', panneau) || panneau.querySelector('[data-sk="technicien.prenom"]'); if (p && !p.value) p.focus(); }, 80);
@@ -1570,9 +1577,9 @@
           <div><span>Fonction</span><strong>${esc(S.technicien.fonction || '—')}</strong></div>
           <div><span>Téléphone</span><strong>${esc(S.technicien.tel || '—')}</strong></div>
           <div><span>E-mail</span><strong>${esc(S.technicien.email || '—')}</strong></div>
-          <div><span>Signature</span><strong>${S.technicien.signature ? 'enregistrée ✔' : 'absente'}</strong></div>
+          <div><span>Signature</span><strong>${S.technicien.signature ? 'enregistrée' : 'absente'}</strong></div>
         </div>
-        <button class="btn wide" data-a="identite">✏️ Mes informations</button>
+        <button class="btn wide" data-a="identite">${(ICO.pen && ICO.pen(16)) || ''} Mes informations</button>
         <p class="small">Ces coordonnées restent dans le téléphone et servent à chaque intervention.</p>
       </div>
 
@@ -1584,7 +1591,7 @@
         <div class="grid2">${f('societe.email', 'E-mail société', 'email')}${f('societe.siteWeb', 'Site web')}</div>
         <div class="grid2">${f('societe.siret', 'SIRET')}${f('societe.tva', 'N° TVA')}</div>
         <div class="filebtn" style="margin-top:8px"><input type="file" id="logoInput" accept="image/*">
-          <label for="logoInput">🖼️ ${S.societe.logo ? 'Changer le logo' : 'Ajouter le logo'}</label></div>
+          <label for="logoInput">${(ICO.image && ICO.image(16)) || ''} ${S.societe.logo ? 'Changer le logo' : 'Ajouter le logo'}</label></div>
         ${S.societe.logo ? '<img src="' + S.societe.logo + '" style="max-height:56px;margin-top:8px">' : ''}
       </div>
 
@@ -1610,7 +1617,7 @@
         Les téléphones, e-mails, logos et contacts saisis sur le terrain sont mémorisés sur ce téléphone
         (${Object.keys(Clients.memo()).length} fiche(s) enrichie(s)) et proposés la prochaine fois.</p>
         <div class="filebtn"><input type="file" id="clientsImport" accept=".csv,.json,text/csv,application/json">
-          <label for="clientsImport">📥 Mettre à jour la liste (export CSV du classeur ou JSON)</label></div>
+          <label for="clientsImport">${(ICO.download && ICO.download(16)) || ''} Mettre à jour la liste (export CSV du classeur ou JSON)</label></div>
         <p class="small">Le fichier remplace la liste précédente ; il est conservé dans le téléphone et reste
         disponible hors connexion. Le même bouton sert à transmettre la liste à un collègue (le fichier se
         transmet par mail, messagerie ou Bluetooth).</p>
@@ -1651,7 +1658,7 @@
       $('#logoInput', panneau).addEventListener('change', async (e) => {
         if (!e.target.files[0]) return;
         S.societe.logo = await compresser(e.target.files[0], 520, 0.92);
-        Store.set(K.settings, S); toast('Logo enregistré ✔'); rendreTout();
+        Store.set(K.settings, S); toast('Logo enregistré'); rendreTout();
         e.target.previousElementSibling; // rien
       });
       /* ---------- Liste clients : import / export / remise à zéro ---------- */
@@ -1662,7 +1669,7 @@
         lecteur.onload = () => {
           const n = Clients.importer(lecteur.result);
           if (!n) { toast('Fichier illisible : attendu un CSV du classeur ou un JSON'); return; }
-          toast(n + ' client(s) chargé(s) ✔ — disponible hors connexion', 3200);
+          toast(n + ' client(s) chargé(s) — disponible hors connexion', 3200);
           ev.target.closest('.sheet').remove();
           feuilleReglages();
         };
@@ -1707,7 +1714,7 @@
         if (!R.technicien) R.technicien = Report.nomComplet(S.technicien);
         e.target.closest('.sheet').remove();
         rendreTout();
-        toast('Réglages enregistrés ✔');
+        toast('Réglages enregistrés');
       });
     });
   }
@@ -1718,14 +1725,14 @@
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Menu</h3>
       <p class="sub">Rapport N° ${esc(R.numero || '—')} — ${esc(R.client.nom || 'client non renseigné')}</p>
-      <button class="menu-item" data-a="identite"><span class="ico">👤</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
-      <button class="menu-item" data-a="reglages"><span class="ico">⚙️</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
-      <button class="menu-item" data-a="nouveau"><span class="ico">➕</span><span>Nouvelle intervention<small>Le rapport en cours reste dans l'historique</small></span></button>
-      <button class="menu-item" data-a="historique"><span class="ico">🗂️</span><span>Rapports enregistrés (${liste.length})</span></button>
-      <button class="menu-item" data-a="export"><span class="ico">📦</span><span>Exporter la sauvegarde (JSON)</span></button>
-      <button class="menu-item" data-a="import"><span class="ico">📥</span><span>Importer une sauvegarde</span></button>
-      <button class="menu-item" data-a="aide"><span class="ico">❓</span><span>Mode d'emploi</span></button>
-      <div class="sticky-note">${Store.ok ? 'Tout est conservé sur ce téléphone — rien n\'est envoyé sans votre accord.' : '⚠️ Stockage local indisponible : pensez à exporter votre travail.'}</div>
+      <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
+      <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
+      <button class="menu-item" data-a="nouveau"><span class="ico">${(ICO.plus && ICO.plus(18)) || ''}</span><span>Nouvelle intervention<small>Le rapport en cours reste dans l'historique</small></span></button>
+      <button class="menu-item" data-a="historique"><span class="ico">${(ICO.folder && ICO.folder(18)) || ''}</span><span>Rapports enregistrés (${liste.length})</span></button>
+      <button class="menu-item" data-a="export"><span class="ico">${(ICO.package && ICO.package(18)) || ''}</span><span>Exporter la sauvegarde (JSON)</span></button>
+      <button class="menu-item" data-a="import"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Importer une sauvegarde</span></button>
+      <button class="menu-item" data-a="aide"><span class="ico">${(ICO.help && ICO.help(18)) || ''}</span><span>Mode d'emploi</span></button>
+      <div class="sticky-note">${Store.ok ? 'Tout est conservé sur ce téléphone — rien n\'est envoyé sans votre accord.' : 'Stockage local indisponible : pensez à exporter votre travail.'}</div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('click', (e) => {
         const b = e.target.closest('[data-a]:not([data-a="fermer"])');
@@ -1755,7 +1762,7 @@
                 if (d.reglages) { S = fusion(settingsDefaut, d.reglages); Store.set(K.settings, S); }
                 if (Array.isArray(d.rapports)) Store.set(K.rapports, d.rapports);
                 if (d.rapport) R = fusion(nouvelleIntervention(), d.rapport);
-                rendreTout(); toast('Sauvegarde importée ✔');
+                rendreTout(); toast('Sauvegarde importée');
               } catch (err) { toast('Fichier invalide'); }
             };
             r.readAsText(f);
@@ -1803,7 +1810,7 @@
   function feuilleAide() {
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Mode d'emploi</h3>
-      <p class="sub">Une fois pour toutes : ☰ → <strong>Mes informations</strong> (nom, téléphone, e-mail) — ces coordonnées restent dans le téléphone et partent dans tous vos rapports.</p>
+      <p class="sub">Une fois pour toutes : Menu → <strong>Mes informations</strong> (nom, téléphone, e-mail) — ces coordonnées restent dans le téléphone et partent dans tous vos rapports.</p>
       <p class="sub">Puis quatre gestes, dans l'ordre de l'intervention.</p>
       <ol class="liste" style="font-size:14px">
         <li><strong>Démarrer</strong> — appuyez sur « Démarrer l'intervention » en haut : l'heure de début est enregistrée. Pause possible (repas, attente pièce).</li>
@@ -1913,7 +1920,7 @@
         <div class="card" style="margin:0;padding:12px;background:var(--fond,#f8fafc);border:1px solid var(--bord,#e2e8f0);position:relative">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <strong style="font-size:0.95rem">Journée ${idx + 1}</strong>
-            <button type="button" class="btn sm danger" data-rm-jour="${idx}" style="padding:2px 8px;font-size:0.8rem">🗑️ Retirer</button>
+            <button type="button" class="btn sm danger" data-rm-jour="${idx}" style="padding:2px 8px;font-size:0.8rem">${(ICO.trash && ICO.trash(12)) || ''} Retirer</button>
           </div>
           <div class="field" style="margin-bottom:8px"><label>Date</label>
             <input type="date" data-j-k="date" data-j-i="${idx}" value="${esc(j.date || todayISO())}"></div>
@@ -2074,10 +2081,10 @@
       <div class="grab"></div><h3>Photos complémentaires</h3>
       <p class="sub">Photos qui ne sont pas rattachées à un évènement (vue d'ensemble, plaque machine…).</p>
       <div class="photos">${(R.photosLibres || []).map((p, i) => `<div class="photo">
-        <img src="${p.dataUrl}" alt=""><button class="rm" data-rm="${i}">✕</button>
+        <img src="${p.dataUrl}" alt=""><button class="rm" data-rm="${i}">${(ICO.close && ICO.close(14)) || '✕'}</button>
         <input class="cap" value="${esc(p.legende || '')}" data-leg="${i}" placeholder="Légende"></div>`).join('') || '<p class="small">Aucune photo.</p>'}</div>
       <div class="filebtn" style="margin-top:10px"><input type="file" id="plInput" accept="image/*" capture="environment" multiple>
-        <label for="plInput">📷 Ajouter des photos</label></div>
+        <label for="plInput">${(ICO.camera && ICO.camera(16)) || ''} Ajouter des photos</label></div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('input', (e) => {
         if (e.target.dataset.leg !== undefined) { R.photosLibres[+e.target.dataset.leg].legende = e.target.value; planifier(); }
