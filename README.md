@@ -153,9 +153,11 @@ cd depot-public && git add -A && git commit -m "mise à jour" && git push
 ```
 
 Puis **Settings → Pages → Deploy from a branch → `main` → `/docs`** : la nouvelle version est
-en ligne, et les téléphones la reçoivent à la prochaine ouverture (l'application se met à jour
-toute seule). La liste importée sur chaque téléphone et les rapports enregistrés ne sont
-pas touchés.
+en ligne. Chaque téléphone la prend **à sa prochaine ouverture avec du réseau** (le service
+worker va d'abord chercher la nouvelle version, puis sert le cache hors connexion). Le n° de
+version en cours s'affiche dans ☰ → *Mode d'emploi* : si un téléphone reste en retard, le
+rouvrir avec du réseau une seconde fois suffit. La liste importée sur chaque téléphone et les
+rapports enregistrés ne sont pas touchés.
 
 ## 4. Structure du projet
 

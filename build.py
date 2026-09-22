@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import struct
@@ -117,9 +118,35 @@ def construire_single_file(avec_pwa):
     return html
 
 
-SW = """/* Service worker — met l'application en cache pour un usage hors connexion */
-const CACHE = 'bfr-fiche-sav-v1';
+SW = """/* Service worker — application hors connexion.
+   Stratégie : RÉSEAU D'ABORD (la nouvelle version est prise dès la prochaine
+   ouverture avec du réseau), puis cache (usage hors connexion). Si le réseau
+   met plus de 3,5 s à répondre, le cache est servi sans attendre — le réseau
+   met le cache à jour en arrière-plan.
+   Le nom du cache contient l'empreinte du build : chaque publication remplace
+   la précédente et vide les anciens caches. */
+const CACHE = 'bfr-fiche-sav-__VERSION__';
 const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png'];
+const DELAI_RESEAU = 3500;
+
+const delai = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+function servir(requete, estPage) {
+  const reseau = fetch(requete).then((rep) => {
+    if (rep && rep.ok) {
+      const copie = rep.clone();
+      caches.open(CACHE).then((c) => c.put(requete, copie)).catch(() => {});
+    }
+    return rep && rep.ok ? rep : null;
+  }).catch(() => null);
+
+  return Promise.race([reseau, delai(DELAI_RESEAU)]).then((vite) =>
+    vite || caches.match(requete)
+      .then((c) => c || (estPage ? caches.match('./') : null))
+      .then((c) => c || reseau)
+      .then((c) => c || new Response('Hors connexion', { status: 503 }))
+  );
+}
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FICHIERS)).then(() => self.skipWaiting()));
@@ -134,13 +161,8 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request).then((rep) => {
-      const copie = rep.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copie)).catch(() => {});
-      return rep;
-    }).catch(() => caches.match('./index.html')))
-  );
+  if (new URL(e.request.url).origin !== self.location.origin) return;
+  e.respondWith(servir(e.request, e.request.mode === 'navigate'));
 });
 """
 
@@ -163,18 +185,31 @@ MANIFEST = {
 }
 
 
+def injecter_version(html, version):
+    """Inscrit le n° de version dans la page (☰ → Mode d'emploi) : sur le
+    téléphone, on voit d'un coup d'œil quelle version tourne réellement."""
+    balise = '<script>window.SAV_VERSION="%s";</script></body>' % version
+    if html.count('</body>') != 1:
+        raise SystemExit('Balise </body> attendue une seule fois dans app/index.html')
+    return html.replace('</body>', balise)
+
+
 def main():
+    # Version = empreinte du code : elle change à chaque modification réelle,
+    # ce qui vide le cache du téléphone et lui livre la nouvelle version.
+    version = hashlib.sha256(construire_single_file(avec_pwa=True).encode('utf-8')).hexdigest()[:10]
+
     # 1) fichier unique (livrable terrain : un seul fichier à ouvrir dans Chrome)
     with open(OUT_SINGLE, 'w', encoding='utf-8') as f:
-        f.write(construire_single_file(avec_pwa=False))
+        f.write(injecter_version(construire_single_file(avec_pwa=False), version))
 
     # 2) site déployable (GitHub Pages : docs/)
     os.makedirs(SITE, exist_ok=True)
     with open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8') as f:
-        f.write(construire_single_file(avec_pwa=True))
+        f.write(injecter_version(construire_single_file(avec_pwa=True), version))
     ecrire_icones(SITE)
     with open(os.path.join(SITE, 'sw.js'), 'w', encoding='utf-8') as f:
-        f.write(SW)
+        f.write(SW.replace('__VERSION__', version))
     with open(os.path.join(SITE, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump(MANIFEST, f, ensure_ascii=False, indent=2)
     # fichier .nojekyll : GitHub Pages ne doit pas filtrer les fichiers
@@ -184,6 +219,7 @@ def main():
         print('%-46s %8.0f Ko' % (os.path.relpath(p, ROOT), os.path.getsize(p) / 1024))
     if SANS_LISTE:
         print('Liste clients NON embarquée : à charger dans ☰ → Réglages → Liste clients.')
+    print('version du build : ' + version)
     print('docs/ : ' + ' '.join(sorted(os.listdir(SITE))))
 
 

@@ -67,8 +67,10 @@ liste importée si nécessaire.
 
 - Ne pas faire **« Effacer les données »** sur ce site (Chrome → Paramètres du site) : cela
   viderait la liste importée et les rapports. Si cela arrive : réimporter le fichier de la liste.
-- Mettre l'application à jour = **rouvrir la page** (l'application se met à jour toute seule) ;
-  la liste clients importée et les rapports enregistrés sont conservés.
+- Mettre l'application à jour = **rouvrir l'application avec du réseau** (elle vérifie la
+  nouvelle version au lancement et la recharge si besoin) ; la liste clients importée et les
+  rapports enregistrés sont conservés. Le **n° de version** en cours figure dans
+  ☰ → *Mode d'emploi*, tout en bas.
 - Aucune donnée client n'est envoyée à un serveur : rapports et listes restent dans les
   téléphones, les mails partent du compte mail du technicien.
 
@@ -86,3 +88,11 @@ liste importée si nécessaire.
 - **Pas de traduction du tout sur ce téléphone** : mettre **Chrome à jour** (menu ⋮ →
   *Mettre à jour Chrome*). Les libellés du rapport sont de toute façon traduits ; seuls les
   commentaires saisis resteraient en français.
+- **L'application est restée sur l'ancienne version** (pas de nouveauté affichée) : comparer
+  le n° de version de ☰ → *Mode d'emploi* avec celui annoncé par le responsable. Si le
+  téléphone est en retard : rouvrir l'application **avec du réseau**, la fermer, la rouvrir
+  (après une mise en ligne, un téléphone peut demander ces deux ouvertures ; ensuite la
+  nouvelle version est prise au lancement). En dernier recours, dans Chrome :
+  Paramètres → Confidentialité → **Effacer les données de navigation** → cocher
+  **« Données des sites »** : ⚠️ cela vide aussi la liste clients importée et les rapports —
+  réimporter la liste (§ 3) et ressaisir vos informations après.
