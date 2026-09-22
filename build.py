@@ -89,6 +89,8 @@ def construire_single_file(avec_pwa):
     clients_data = ('' if SANS_LISTE else lire(os.path.join(SRC, 'clients-data.js')) + '\n')
     contenu = {
         'CSS': lire(os.path.join(SRC, 'style.css')),
+        'LANGUES': lire(os.path.join(SRC, 'langues.js')),
+        'TRADUCTION': lire(os.path.join(SRC, 'traduction.js')),
         'PDF': lire(os.path.join(SRC, 'pdf.js')),
         'DOCX': lire(os.path.join(SRC, 'docx.js')),
         'REPORT': lire(os.path.join(SRC, 'report.js')),

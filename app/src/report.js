@@ -185,17 +185,28 @@
       this.i = intervention;
       this.s = reglages || {};
       this.opts = opts || {};
+      /* Langue du rapport : 'fr' (défaut) ou le code de la langue du client.
+         Les libellés du modèle sont traduits par langues.js, à l'écriture. */
+      this.langue = this.opts.langue || (intervention.langue && intervention.langue.code) || 'fr';
       this.canevas = (this.s.canevas && this.s.canevas.sections) ? this.s.canevas.sections : canevasDefaut().sections;
       this.etat = etat(intervention, reglages);
       /* Aperçu à l'écran : même mise en page, dessinée sur des canvas
          (aucune visionneuse PDF n'est nécessaire dans le navigateur). */
-      this.pdf = this.opts.apercu ? new Pdf.Apercu({ margin: M.margin }) : new Pdf.Doc({ margin: M.margin });
+      this.pdf = this.opts.apercu
+        ? new Pdf.Apercu({ margin: M.margin, langue: this.langue })
+        : new Pdf.Doc({ margin: M.margin, langue: this.langue });
       this.M = this.pdf.margin;
       this.W = this.pdf.W;
       this.H = this.pdf.H;
       this.CW = this.pdf.contentWidth;
       this.C = COULEURS_PDF;
       this.numeroPhoto = 0;
+    }
+
+    /* Traduction d'un libellé du catalogue (domaines, catégories) : ce sont
+       des libellés, pas des données du terrain. */
+    L(txt) {
+      return (global.I18N ? global.I18N.traduire(txt, this.langue) : txt);
     }
 
     /* --- structure de page (modèle « Compte rendu d'intervention ») --- */
@@ -441,8 +452,9 @@
           this.saut(26 + 2 * lh);
           p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
           p.rect(this.M, p.y, 3, 15, { fill: couleur });
-          p.text(dom.icone ? dom.icone + ' ' + dom.libelle : dom.libelle, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
-          p.text(cat.libelle.toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
+          const libDom = this.L(dom.libelle);
+          p.text(dom.icone ? dom.icone + ' ' + libDom : libDom, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
+          p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
           p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
           p.y += 15;
         }
@@ -472,7 +484,7 @@
           const x = this.M + k * (caseW + 5);
           p.rect(x, y, caseW, 30, { fill: hexClair(c.couleur, 0.88), stroke: hexRgb(c.couleur), lineWidth: 0.5 });
           p.text(String(e.parCategorie[c.id]), x + caseW / 2, y + 15, { size: 15, font: 'F2', color: hexRgb(c.couleur), align: 'center' });
-          p.text(Pdf.trunc(c.libelle, caseW - 6, 6.6), x + caseW / 2, y + 25, { size: 6.6, color: C.gris, align: 'center' });
+          p.text(Pdf.trunc(this.L(c.libelle), caseW - 6, 6.6), x + caseW / 2, y + 25, { size: 6.6, color: C.gris, align: 'center' });
         }, this);
         p.y = y + 38;
       }
@@ -620,15 +632,19 @@
         d.text('Page ' + num + ' / ' + total, d.W - d.margin, y - 8, { size: 7, font: 'F2', color: COULEURS_PDF.gris, align: 'right' });
       });
 
-      if (this.opts.apercu) return { apercu: doc, filename: nomFichier(this.i, 'pdf') };
-      return { blob: doc.blob(), filename: nomFichier(this.i, 'pdf') };
+      if (this.opts.apercu) return { apercu: doc, filename: nomFichier(this.i, 'pdf', this.opts.suffixe ? this.langue : null) };
+      return { blob: doc.blob(), filename: nomFichier(this.i, 'pdf', this.opts.suffixe ? this.langue : null) };
     }
   }
 
-  function nomFichier(i, ext) {
+  /* Nom du fichier : « Rapport_20260921_260921-01_CLIENT.pdf ». Quand le
+     rapport existe en deux langues, chacune porte son code (_FR / _NL…) pour
+     que le client et le SAV s'y retrouvent dans la pièce jointe. */
+  function nomFichier(i, ext, langue) {
     const d = (i.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
     const morceaux = ['Rapport', d, i.numero ? slug(i.numero) : '', slug(i.client && i.client.nom),
       slug(i.machine && i.machine.designation)];
+    if (langue) morceaux.push(String(langue).toUpperCase());
     return morceaux.filter(Boolean).join('_') + '.' + ext;
   }
 
@@ -636,20 +652,29 @@
      WORD (.docx)
      ====================================================================== */
   class RapportWord {
-    constructor(intervention, reglages) {
+    constructor(intervention, reglages, opts) {
       this.i = intervention;
       this.s = reglages || {};
+      this.opts = opts || {};
+      this.langue = this.opts.langue || (intervention.langue && intervention.langue.code) || 'fr';
       this.canevas = (this.s.canevas && this.s.canevas.sections) ? this.s.canevas.sections : canevasDefaut().sections;
       this.etat = etat(intervention, reglages);
       this.doc = new Docx.Doc({
+        langue: this.langue,
         auteur: (this.s.societe && this.s.societe.nom) || 'Application SAV',
         /* Pied de page du modèle : nom + adresses des deux sites, et numérotation. */
         pied: [(this.s.societe && this.s.societe.nom) || 'BFR SYSTEMS']
           .concat([valeur(this.s.societe && this.s.societe.siege1) || SIEGES_BFR[0],
                    valeur(this.s.societe && this.s.societe.siege2) || SIEGES_BFR[1]])
       });
-      this.doc.titreDoc = 'Compte rendu d\'intervention N° ' + valeur(intervention.numero);
+      this.doc.titreDoc = (global.I18N ? global.I18N.traduire("Compte rendu d'intervention", this.langue) : "Compte rendu d'intervention") +
+        (this.langue === 'fr' ? ' N° ' : ' No. ') + valeur(intervention.numero);
       this.numeroPhoto = 0;
+    }
+
+    /* Traduction d'un libellé du catalogue (domaines, catégories). */
+    L(txt) {
+      return (global.I18N ? global.I18N.traduire(txt, this.langue) : txt);
     }
 
     async generer() {
@@ -728,11 +753,11 @@
         if (section.type === 'synthese') {
           d.bandeau(section.titre || 'Synthèse');
           const lignes = (this.s.categories || []).filter(c => this.etat.parCategorie[c.id])
-            .map(c => [{ texte: c.libelle }, { texte: String(this.etat.parCategorie[c.id]), align: 'center', gras: true }]);
+            .map(c => [{ texte: this.L(c.libelle) }, { texte: String(this.etat.parCategorie[c.id]), align: 'center', gras: true }]);
           if (lignes.length) d.tableau([[{ texte: 'Catégorie', gras: true }, { texte: 'Nombre', gras: true, align: 'center' }]].concat(lignes),
             { largeurs: [70, 30], enteteFond: 'E8EFFA' });
           const dom = (this.s.domaines || []).filter(x => this.etat.parDomaine[x.id])
-            .map(x => x.libelle + ' : ' + this.etat.parDomaine[x.id]);
+            .map(x => this.L(x.libelle) + ' : ' + this.etat.parDomaine[x.id]);
           if (dom.length) d.para(dom.join('   •   '), { taille: 10, couleur: '334155', apres: 60 });
           d.para('Heures passées sur site : ' + (formatDuree(this.etat.duree) || '—') +
             (this.etat.duree ? ' (' + dureeDecimale(this.etat.duree) + ' h)' : '') + '   •   Photos : ' + this.etat.nbPhotos,
@@ -749,8 +774,8 @@
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
             d.para([
-              { t: (dom.icone ? dom.icone + ' ' : '') + dom.libelle, gras: true, taille: 11, couleur: '0B3D91' },
-              { t: '   [' + cat.libelle.toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
+              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' },
+              { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
               { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
             ], { avant: 160, apres: 40 });
             d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 60, encadre: true });
@@ -785,7 +810,7 @@
           if (cli.dataUrl) d.image(cli.dataUrl, 6, { hauteurMaxCm: 3 });
         }
       }
-      return { blob: this.doc.blob(), filename: nomFichier(this.i, 'docx') };
+      return { blob: this.doc.blob(), filename: nomFichier(this.i, 'docx', this.opts.suffixe ? this.langue : null) };
     }
   }
 
@@ -843,8 +868,12 @@
   function objetMail(i, s) {
     return appliquer((s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}', variables(i, s));
   }
-  function corpsMail(i, s) {
-    return appliquer((s.mail && s.mail.corps) || defaultCorpsMail(), variables(i, s));
+  function corpsMail(i, s, langue) {
+    const corps = appliquer((s.mail && s.mail.corps) || defaultCorpsMail(), variables(i, s));
+    /* Rapport envoyé en deux langues : on le dit au client, dans sa langue,
+       à la fin du message (le corps du mail reste en français pour le SAV). */
+    const phrase = (langue && langue !== 'fr' && global.I18N) ? global.I18N.phraseTraduction(langue) : null;
+    return phrase ? corps + '\n\n' + phrase : corps;
   }
   function defaultCorpsMail() {
     return [
@@ -873,14 +902,16 @@
   }
 
   global.Report = {
-    genererPDF: function (i, s) { return new RapportPDF(i, s).generer(); },
+    /* opts : { langue: 'en', suffixe: true } pour la version traduite. */
+    genererPDF: function (i, s, opts) { return new RapportPDF(i, s, opts).generer(); },
     /* Aperçu dans l'application : renvoie un canvas par page. */
     apercu: async function (i, s, opts) {
-      const r = await new RapportPDF(i, s, { apercu: true }).generer();
-      const pages = await Pdf.rendrePages(r.apercu, opts || {});
+      opts = opts || {};
+      const r = await new RapportPDF(i, s, Object.assign({}, opts, { apercu: true })).generer();
+      const pages = await Pdf.rendrePages(r.apercu, opts);
       return { pages: pages, doc: r.apercu, filename: r.filename };
     },
-    genererDOCX: function (i, s) { return new RapportWord(i, s).generer(); },
+    genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
     etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, formatDuree: formatDuree,
     dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,

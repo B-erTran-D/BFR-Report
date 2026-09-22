@@ -90,6 +90,14 @@
     return out;
   }
 
+  /* --- Traduction des libellés (langues.js) ---------------------------- */
+  /* Un texte qui n'est pas un libellé connu — donc une donnée saisie par le
+     technicien — est rendu tel quel. */
+  function traduire(txt, langue) {
+    if (!langue || langue === 'fr' || !global.I18N) return txt;
+    return global.I18N.traduire(txt, langue);
+  }
+
   /* --- Aide XML ------------------------------------------------------- */
   function x(s) {
     return String(s == null ? '' : s)
@@ -115,6 +123,9 @@
       this.images = [];         // { rid, nom, donnees, ext }
       this.ridSuivant = 10;
       this.idDessin = 1;
+      /* Langue du document : les libellés connus sont traduits par les packs
+         de langue (langues.js). En français, rien n'est modifié. */
+      this.langue = opts.langue || 'fr';
       this.demande = '(' + (opts.auteur || 'Application SAV') + ')';
       /* Mise en page du modèle « Compte rendu d'intervention » BFR :
          A4, marges 1,9 cm (côtés) et 2,5 cm (haut/bas), Open Sans 11 pt. */
@@ -127,6 +138,7 @@
     /* --- éléments de base --- */
     para(texte, opt) {
       opt = opt || {};
+      const langue = this.langue;
       const props = [];
       const align = { center: 'center', right: 'right', both: 'both' }[opt.align] || 'left';
       if (align !== 'left') props.push(`<w:jc w:val="${align}"/>`);
@@ -150,7 +162,7 @@
         if (couleur) rpr.push(`<w:color w:val="${couleur}"/>`);
         runs.push(`<w:r>${rpr.length ? '<w:rPr>' + rpr.join('') + '</w:rPr>' : ''}` +
           (m.saut ? '<w:br/>' : '') +
-          `<w:t xml:space="preserve">${x(m.t || '')}</w:t></w:r>`);
+          `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`);
       });
       this.corps.push(`<w:p><w:pPr>${props.join('')}</w:pPr>${runs.join('')}</w:p>`);
       return this;
@@ -169,6 +181,8 @@
     /** Bandeau de section du modèle : fond cyan BFR, texte blanc en petites
         capitales (style « Titre 1 » du Google Doc de référence). */
     bandeau(texte, couleurFond, droit) {
+      texte = traduire(texte, this.langue);
+      droit = droit ? traduire(droit, this.langue) : droit;
       const fond = couleurFond || '06BAF2';
       this.corps.push('<w:p><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/>' +
         '<w:pBdr><w:top w:val="single" w:sz="4" w:color="' + fond + '"/>' +
@@ -190,6 +204,7 @@
 
     tableau(lignes, opt) {
       opt = opt || {};
+      const langue = this.langue;
       const largeurs = opt.largeurs || null;      // en pourcentage (somme = 100)
       const bordures = opt.sansBordures
         ? '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (c) {
@@ -226,7 +241,7 @@
               if (m.taille) r2.push(`<w:sz w:val="${Math.round(m.taille * 2)}"/>`);
               if (m.couleur) r2.push(`<w:color w:val="${m.couleur}"/>`);
               return `<w:r>${r2.length ? '<w:rPr>' + r2.join('') + '</w:rPr>' : ''}` +
-                (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(m.t || '')}</w:t></w:r>`;
+                (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`;
             }).join('');
             return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${c.align && c.align !== 'left' ? `<w:jc w:val="${c.align}"/>` : ''}</w:pPr>${runsCellule}</w:p>`;
           }).join('');

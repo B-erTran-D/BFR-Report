@@ -52,6 +52,12 @@ liste importée si nécessaire.
   Informatif). Chaque évènement reste **modifiable à tout moment**.
 - **Fin d'intervention** : point avec le client, explication de vive voix, puis **signature du
   client** au doigt sur l'écran.
+- **Client étranger** : dans *Client & machine*, cocher **« Traduire le rapport dans la langue
+  du client »** et choisir la langue (anglais, allemand, néerlandais, espagnol, italien,
+  portugais). Deux rapports sont alors envoyés dans le même mail : le français **et** la
+  version traduite. La langue est retenue pour ce client (reproposée la fois suivante).
+  Un appui sur **« Préparer la langue sur ce téléphone »**, au bureau ou en Wi-Fi, télécharge
+  la langue une bonne fois : ensuite la traduction fonctionne **même sans réseau**.
 - **Soumettre le rapport** : le PDF (+ Word) est créé dans le téléphone, puis envoyé au client
   et au responsable SAV par mail / partage Android (Gmail). L'envoi demande du réseau ;
   **la création du rapport, elle, marche hors connexion**.
@@ -73,3 +79,10 @@ liste importée si nécessaire.
   installée, elle, fonctionne hors connexion.
 - **Le mail ne part pas** : la création du rapport est bonne, choisir Gmail / Outlook dans la
   fenêtre de partage, ou réessayer avec du réseau ; le PDF est disponible dans l'application.
+- **La version traduite n'est pas complète** (commentaires restés en français) : la langue
+  n'avait pas encore été téléchargée sur ce téléphone au moment de l'envoi. Rouvrir la fiche
+  du client, appuyer sur **« Préparer la langue sur ce téléphone »** avec du réseau, puis
+  resoumettre le rapport.
+- **Pas de traduction du tout sur ce téléphone** : mettre **Chrome à jour** (menu ⋮ →
+  *Mettre à jour Chrome*). Les libellés du rapport sont de toute façon traduits ; seuls les
+  commentaires saisis resteraient en français.

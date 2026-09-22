@@ -59,7 +59,14 @@
       else if (c >= 32 && c <= 0x7E) out.push(c);
       else if (c >= 0xA0 && c <= 0xFF) out.push(c);
       else if (c < 32) out.push(32);
-      else out.push(63); // '?' pour ce que WinAnsi ne sait pas représenter (emoji…)
+      /* Pictogrammes (emoji des domaines et catégories, flèches, puces…)
+         absents de WinAnsi : on les laisse de côté plutôt que d'imprimer un
+         « ? » au milieu du rapport. Les lettres non représentables (autres
+         alphabets) continuent, elles, d'être signalées par un « ? ». */
+      else if (c === 0x200D || (c >= 0xFE00 && c <= 0xFE0F) || c === 0x20E3 ||
+               (c >= 0x2100 && c <= 0x214F) || (c >= 0x2190 && c <= 0x2BFF) ||
+               (c >= 0x1F000 && c <= 0x1FAFF)) continue;
+      else out.push(63); // '?' : caractère non représentable en WinAnsi
     }
     return out;
   }
@@ -76,6 +83,14 @@
   }
 
   function pdfString(str) { return escBytes(toBytes(str)); }
+
+  /* Traduction des libellés du rapport (langues.js). Un texte qui n'est pas
+     un libellé connu — donc une donnée saisie par le technicien — est rendu
+     tel quel : le dictionnaire ne touche jamais aux données du terrain. */
+  function traduire(str, langue) {
+    if (!langue || langue === 'fr' || !global.I18N) return str;
+    return global.I18N.traduire(str, langue);
+  }
 
   function charWidth(code) {
     if (W[code]) return W[code];
@@ -141,6 +156,9 @@
       this.W = opts.width || 595.28;   // A4 portrait
       this.H = opts.height || 841.89;
       this.margin = opts.margin != null ? opts.margin : 34;
+      /* Langue du rapport : les libellés connus sont traduits par les packs
+         de langue (langues.js). En français, rien n'est modifié. */
+      this.langue = opts.langue || 'fr';
       this.pages = [];
       this.newPage();
     }
@@ -183,6 +201,7 @@
     /** Texte sur une ligne. y = ligne de base. */
     text(str, x, y, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const font = opt.font || 'F1';
       const color = opt.color || [0.1, 0.1, 0.12];
@@ -198,6 +217,7 @@
     /** Paragraphe avec retour à la ligne automatique. Renvoie le nouveau y. */
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);          // traduit avant le calcul des lignes
       const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lines = wrap(str, width, size, opt.bold);
@@ -209,6 +229,7 @@
 
     paragraphHeight(str, width, size, bold) {
       size = size || 9;
+      str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }
 
@@ -336,6 +357,7 @@
       this.W = opts.width || 595.28;
       this.H = opts.height || 841.89;
       this.margin = opts.margin != null ? opts.margin : 34;
+      this.langue = opts.langue || 'fr';        // comme le PDF : mêmes libellés
       this.pages = [];
       this.newPage();
     }
@@ -360,6 +382,7 @@
     }
     text(str, x, y, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const texte = String(str == null ? '' : str);
       const largeur = measure(texte, size, opt.bold);       // largeur de référence (Helvetica)
@@ -372,6 +395,7 @@
     }
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lignes = wrap(str, width, size, opt.bold);
@@ -380,6 +404,7 @@
     }
     paragraphHeight(str, width, size, bold) {
       size = size || 9;
+      str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }
     /* Les images arrivent ici en octets JPEG (comme dans le PDF) : on les garde

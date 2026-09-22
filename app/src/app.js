@@ -113,7 +113,10 @@
       id: uid('r'), cree: new Date().toISOString(), maj: new Date().toISOString(), statut: 'brouillon',
       numero: numeroSuggere(), date: todayISO(),
       client: { nom: '', reference: '', numeroClient: '', contact: '', fonction: '', tel: '', email: '',
-                lieu: '', adresse: '', logo: '', noteContacts: '' },
+                lieu: '', adresse: '', logo: '', noteContacts: '', langue: '' },
+      /* Rapport bilingue : désactivé = un seul rapport en français ;
+         activé = deux rapports (français + langue choisie). */
+      langue: { active: false, code: '' },
       machine: { designation: '', marque: '', modele: '', serie: '', compteur: '', parc: '' },
       objet: '', technicien: Report.nomComplet(S.technicien),
       chrono: { debut: null, fin: null, pauses: [], enPause: false, debutPause: null },
@@ -126,6 +129,9 @@
 
   let R = fusion(nouvelleIntervention(), Store.get(K.rapport, null) || {});
   if (!R.evenements) R.evenements = [];
+  /* Rapports enregistrés avant l'option de traduction : valeurs par défaut. */
+  if (!R.langue || typeof R.langue !== 'object') R.langue = { active: false, code: '' };
+  if (R.client && R.client.langue == null) R.client.langue = '';
 
   let dirty = false, saveTimer;
   function sauver(silencieux) {
@@ -247,6 +253,9 @@
               <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>
               <div><span>Contact</span><strong>${esc(c.contact || '—')}</strong></div>
               <div><span>Objet</span><strong>${esc(R.objet || '—')}</strong></div>
+              <div><span>Langue du rapport</span><strong>${R.langue.active && R.langue.code
+                ? 'français + ' + esc(I18N.natif(R.langue.code))
+                : 'français'}</strong></div>
             </div>`
           : `<p class="hint">Renseignez le client et la machine : ces informations se retrouvent dans le rapport.</p>
              <button class="btn wide" data-a="editer-client">Client & machine</button>`}
@@ -415,6 +424,21 @@
         <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
         <p class="small">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
       </div>
+      <div class="card"><h2>Langue du client</h2>
+        <div class="agreement"><input type="checkbox" id="langActive" ${R.langue.active ? 'checked' : ''}>
+          <label for="langActive">Traduire le rapport dans la langue du client</label></div>
+        <div class="field" id="langChoix" ${R.langue.active ? '' : 'hidden'}>
+          <label>Langue du rapport envoyé au client</label>
+          <select id="langCode">
+            ${I18N.langues.map(l => `<option value="${l.code}" ${R.langue.code === l.code ? 'selected' : ''}>${l.nom} — ${l.natif}</option>`).join('')}
+          </select>
+        </div>
+        <div class="btnrow" id="langPretBloc" ${R.langue.active ? '' : 'hidden'}>
+          <button class="btn grey" type="button" id="langPret">Préparer la langue sur ce téléphone</button>
+        </div>
+        <p class="small" id="langResume">${texteLangue(R)}</p>
+        <p class="small" id="langEtat">${texteEtatTraduction()}</p>
+      </div>
       <div class="card"><h2>Intervention</h2>
         <div class="grid2">${f('numero', 'N° de rapport')}<div class="field"><label>Date</label><input type="date" data-fk="date" value="${esc(R.date)}"></div></div>
         ${f('technicien', 'Technicien', { ph: Report.nomComplet(S.technicien) })}
@@ -426,6 +450,67 @@
     </div>`, (panneau) => {
       $$('[data-fk]', panneau).forEach(el => {
         el.addEventListener('input', () => { setPath(R, el.dataset.fk, el.value); planifier(); rendreEntete(); rendreTout(); });
+      });
+
+      /* ---------- Rapport bilingue (langue du client) ------------------- */
+      const caseLangue = $('#langActive', panneau);
+      const selLangue = $('#langCode', panneau);
+
+      function majLangue() {
+        R.langue.active = !!(caseLangue && caseLangue.checked);
+        if (R.langue.active && !R.langue.code) {
+          R.langue.code = R.client.langue || (I18N.langues[0] && I18N.langues[0].code) || 'en';
+        }
+        if (!R.langue.active) R.langue.code = R.langue.code || R.client.langue || 'en';
+        if (selLangue) selLangue.value = R.langue.code;
+        const choix = $('#langChoix', panneau);
+        if (choix) choix.hidden = !R.langue.active;
+        const blocPret = $('#langPretBloc', panneau);
+        if (blocPret) blocPret.hidden = !R.langue.active;
+        const zoneEtat = $('#langEtat', panneau);
+        const btn = $('#langPret', panneau);
+        if (zoneEtat && (!btn || !btn.disabled)) zoneEtat.textContent = texteEtatTraduction();
+        const resume = $('#langResume', panneau);
+        if (resume) resume.textContent = texteLangue(R);
+        if (R.langue.active) {
+          R.client.langue = R.langue.code;      // retenu pour ce client
+          if (R.client.nom) Clients.retenir(R.client);
+        }
+        Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = '';
+        planifier(); rendreEntete(); rendreTout();
+      }
+      if (caseLangue) caseLangue.addEventListener('change', majLangue);
+      if (selLangue) selLangue.addEventListener('change', () => { R.langue.code = selLangue.value; majLangue(); });
+
+      /* Téléchargement de la langue, à faire une fois (au bureau ou en Wi-Fi)
+         pour que la traduction fonctionne ensuite même sans réseau. */
+      const btnPret = $('#langPret', panneau);
+      if (btnPret) btnPret.addEventListener('click', async () => {
+        const zone = $('#langEtat', panneau);
+        const dire = (t) => { if (zone) zone.textContent = t; };
+        const l = I18N.langue(R.langue.code);
+        const nom = l ? l.natif : R.langue.code;
+        if (!Traduction.utilisable()) { dire(texteEtatTraduction()); return; }
+        btnPret.disabled = true;
+        dire('Préparation de la langue ' + nom + '…');
+        let res;
+        try {
+          res = await Traduction.pret(R.langue.code, (e) => {
+            if (e && e.etape === 'telechargement') {
+              dire('Téléchargement de la langue ' + nom + ' : ' + e.pct + ' % (une seule fois, avec du réseau).');
+            }
+          });
+        } catch (e) { res = { ok: false, motif: 'refus' }; }
+        btnPret.disabled = false;
+        if (res.ok) {
+          dire('Langue ' + nom + ' prête sur ce téléphone : la traduction fonctionnera même sans réseau.');
+        } else if (res.motif === 'modele') {
+          dire('Téléchargement impossible : ce téléphone n\'a pas de réseau pour le moment. À refaire une fois connecté (bureau, Wi-Fi de l\'atelier) — le rapport reste envoyable en attendant.');
+        } else if (res.motif === 'refus') {
+          dire("La langue " + nom + " n'est pas disponible sur ce téléphone : les libellés du rapport seront traduits, les commentaires resteront en français.");
+        } else {
+          dire(texteEtatTraduction());
+        }
       });
       /* Toute correction saisie ici (téléphone, e-mail, contact, logo) est
          mémorisée pour les prochaines interventions chez ce client. */
@@ -466,6 +551,16 @@
         if (c.logo) R.client.logo = c.logo;
         if (c.numeroClient) R.client.numeroClient = c.numeroClient;
         R.client.noteContacts = c.autresContacts || R.client.noteContacts || '';
+        /* Langue déjà utilisée chez ce client : proposée d'office (l'option
+           reste à cocher par le technicien, elle n'est jamais activée seule). */
+        if (c.langue) {
+          R.client.langue = c.langue;
+          R.langue.code = c.langue;
+          const sel = $('#langCode', panneau);
+          if (sel) sel.value = c.langue;
+          const resume = $('#langResume', panneau);
+          if (resume) resume.textContent = texteLangue(R);
+        }
         planifier();
         champ.value = c.nom;
         $$('[data-fk]', panneau).forEach(el => { el.value = getPath(R, el.dataset.fk) || ''; });
@@ -506,6 +601,9 @@
 
   const Ouvrir = {
     ouvrir: function (e, html, branche) {
+      /* Une seule feuille à l'écran : un double appui ne doit pas superposer
+         deux panneaux (le second resterait inerte). */
+      document.querySelectorAll('.sheet').forEach((x) => x.remove());
       const overlay = document.createElement('div');
       overlay.className = 'sheet open';
       overlay.innerHTML = html;
@@ -637,19 +735,28 @@
   }
 
   /* ===================== Génération & envoi =========================== */
-  const Cache = { pdf: null, docx: null, cle: '' };
-  function cleCache() { return JSON.stringify([R.id, R.maj, (S.canevas && S.canevas.nom) || '']); }
-  async function pdf() {
-    if (Cache.pdf && Cache.cle === cleCache()) return Cache.pdf;
-    toast('Mise en forme du rapport…', 1600);
-    const res = await Report.genererPDF(R, S);
-    Cache.pdf = res; Cache.cle = cleCache();
+  const Cache = { pdf: null, docx: null, clePdf: '', cleDocx: '', cleTrad: '' };
+  function cleCache(rapport, langue) {
+    rapport = rapport || R;
+    return JSON.stringify([rapport.id, rapport.maj, (S.canevas && S.canevas.nom) || '', langue || 'fr']);
+  }
+  /* Génère le PDF : français par défaut, ou dans la langue demandée
+     (suffixe : nom de fichier « …_EN.pdf » quand les deux langues cohabitent). */
+  async function pdf(rapport, langue, suffixe) {
+    rapport = rapport || R; langue = langue || 'fr';
+    const cle = cleCache(rapport, langue);
+    if (Cache.pdf && Cache.clePdf === cle) return Cache.pdf;
+    toast(langue === 'fr' ? 'Mise en forme du rapport…' : 'Mise en forme de la version ' + I18N.natif(langue) + '…', 1800);
+    const res = await Report.genererPDF(rapport, S, { langue: langue, suffixe: !!suffixe });
+    Cache.pdf = res; Cache.clePdf = cle;
     return res;
   }
-  async function docx() {
-    if (Cache.docx && Cache.cle === cleCache()) return Cache.docx;
-    const res = await Report.genererDOCX(R, S);
-    Cache.docx = res;
+  async function docx(rapport, langue, suffixe) {
+    rapport = rapport || R; langue = langue || 'fr';
+    const cle = cleCache(rapport, langue);
+    if (Cache.docx && Cache.cleDocx === cle) return Cache.docx;
+    const res = await Report.genererDOCX(rapport, S, { langue: langue, suffixe: !!suffixe });
+    Cache.docx = res; Cache.cleDocx = cle;
     return res;
   }
   function urlObjet(blob) {
@@ -667,8 +774,12 @@
      (Chrome bloque l'affichage d'un PDF dans un cadre, surtout hors connexion
      ou dans un onglet « sandbox »). Le rendu est identique au PDF final. */
   async function apercuPDF() {
+    const bilingue = !!(R.langue && R.langue.active && R.langue.code);
     const panneau = Ouvrir.ouvrir(null, `<div class="panel" style="max-height:92vh">
       <div class="grab"></div><h3>Aperçu du rapport</h3>
+      ${bilingue ? `<div class="btnrow" style="margin:2px 0 8px">
+        <button class="btn" data-ap="fr">Français</button>
+        <button class="btn ghost" data-ap="trad">${esc(I18N.natif(R.langue.code))}</button></div>` : ''}
       <p class="sub" id="apInfo">Préparation de l'aperçu…</p>
       <div id="apPages" class="apercu-zone"><p class="hint">Mise en page en cours…</p></div>
       <div class="btnrow" style="margin-top:10px">
@@ -676,13 +787,29 @@
         <button class="btn ghost" id="apOuvrir" hidden>Ouvrir dans un onglet</button>
         <button class="btn" id="apTel" disabled>Télécharger</button></div></div>`);
 
-    try {
-      const res = await pdf();
-      const rendu = await Report.apercu(R, S, { echelle: 1.5 });
+    let langueAffichee = 'fr';
+
+    function erreurApercu(e) {
+      $('#apInfo', panneau).textContent = 'Aperçu impossible : ' + (e && e.message ? e.message : e);
+      $('#apPages', panneau).innerHTML = '<p class="hint">Le rapport reste téléchargeable ci-dessous.</p>';
+    }
+
+    async function dessiner() {
+      const zone = $('#apPages', panneau);
+      zone.innerHTML = '<p class="hint">Mise en page en cours…</p>';
+      $('#apInfo', panneau).textContent = "Préparation de l'aperçu…";
+      let rapport = R, langue = langueAffichee;
+      /* Version traduite : traduction (ou repli annoncé) avant la mise en page. */
+      if (langue !== 'fr') {
+        const trad = await traduireRapport(surEtatTraduction);
+        if (trad.actif && trad.ok) rapport = trad.rapport;
+        else { langue = 'fr'; langueAffichee = 'fr'; }
+      }
+      const res = (langue === 'fr') ? await pdf() : await pdf(rapport, langue, true);
+      const rendu = await Report.apercu(rapport, S, { echelle: 1.5, langue: langue, suffixe: langue !== 'fr' });
       const pages = rendu.pages;
       $('#apInfo', panneau).textContent = rendu.filename + ' — ' + pages.length + ' page(s) — ' +
         (res.blob.size / 1024).toFixed(0) + ' Ko';
-      const zone = $('#apPages', panneau);
       zone.innerHTML = '';
       pages.forEach((c, n) => {
         const bloc = document.createElement('div');
@@ -694,24 +821,74 @@
         bloc.appendChild(num);
         zone.appendChild(bloc);
       });
+      $('#apTel', panneau).disabled = false;
+      $('#apTel', panneau).onclick = () => { telecharger(res.blob, res.filename); toast('Rapport enregistré'); };
       const url = urlObjet(res.blob);
-      const boutonTel = $('#apTel', panneau);
-      boutonTel.disabled = false;
-      boutonTel.addEventListener('click', () => { telecharger(res.blob, res.filename); toast('Rapport enregistré'); });
       if (url) {
         const ouvrir = $('#apOuvrir', panneau);
         ouvrir.hidden = false;
-        ouvrir.addEventListener('click', () => {
+        ouvrir.onclick = () => {
           const fenetre = window.open(url, '_blank');
           if (!fenetre) toast('Onglet bloqué : utilisez « Télécharger » puis ouvrez le fichier', 4000);
-        });
+        };
         setTimeout(() => { if (url.indexOf('blob:') === 0) URL.revokeObjectURL(url); }, 120000);
       }
-    } catch (e) {
-      $('#apInfo', panneau).textContent = 'Aperçu impossible : ' + (e && e.message ? e.message : e);
-      $('#apPages', panneau).innerHTML = '<p class="hint">Le rapport reste téléchargeable ci-dessous.</p>';
+      panneau.querySelectorAll('[data-ap]').forEach(function (b) {
+        const actif = (b.dataset.ap === 'fr') === (langue === 'fr');
+        b.className = actif ? 'btn' : 'btn ghost';
+      });
     }
+
+    panneau.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ap]');
+      if (!b) return;
+      langueAffichee = b.dataset.ap === 'fr' ? 'fr' : R.langue.code;
+      dessiner().catch(erreurApercu);
+    });
+
+    dessiner().catch(erreurApercu);
   }
+
+  /* ---------- Langue du client (rapport bilingue) ---------------------- */
+  function texteLangue(r) {
+    if (!r.langue || !r.langue.active) {
+      return "Un seul rapport est créé, en français. Cochez la case si le client a besoin du rapport dans sa langue.";
+    }
+    const l = I18N.langue(r.langue.code);
+    return 'Deux rapports sont créés : un en français et un en ' + (l ? l.natif : '?') +
+      " (libellés et commentaires traduits). Numéro, dates et heures sont identiques sur les deux, et le français reste la version de référence.";
+  }
+  function texteEtatTraduction() {
+    if (!Traduction.utilisable()) {
+      return "Sur ce téléphone, la traduction automatique n'est pas disponible : les libellés du rapport seront traduits, mais les commentaires saisis resteront en français.";
+    }
+    return "Traduction faite par le téléphone : gratuit, et hors connexion une fois la langue téléchargée (une seule fois). La version traduite peut être relue dans l'aperçu avant l'envoi.";
+  }
+
+  /* Traduit le rapport si l'option est active. Renvoie :
+     { actif:false }                          → rien à traduire
+     { actif:true, ok:true, rapport, partiel} → version traduite à mettre en page
+     { actif:true, ok:false, annule:true }    → le technicien a renoncé        */
+  async function traduireRapport(surEtat) {
+    if (!R.langue || !R.langue.active || !R.langue.code) return { actif: false };
+    const code = R.langue.code;
+    const nom = I18N.natif(code);
+    if (surEtat) surEtat({ etape: 'debut', langue: nom });
+    const res = await Traduction.rapport(R, code, surEtat);
+    if (res.ok) {
+      return { actif: true, ok: true, rapport: res.rapport, code: code, nb: res.nb, total: res.total, erreurs: res.erreurs };
+    }
+    /* Traduction automatique impossible : on demande quoi faire, sans jamais
+       bloquer l'envoi du rapport français. */
+    const explication = res.motif === 'indisponible'
+      ? "Ce téléphone ne peut pas traduire les commentaires automatiquement."
+      : "La langue n'a pas pu être préparée (le modèle se télécharge au premier usage : il faut du réseau).";
+    const poursuivre = confirm(explication + "\n\nCréer quand même le rapport en " + nom +
+      " (libellés traduits, commentaires laissés en français) ?\n\n« Annuler » = n'envoyer que le rapport français.");
+    if (!poursuivre) return { actif: true, ok: false, annule: true, motif: res.motif };
+    return { actif: true, ok: true, rapport: R, code: code, partiel: true, motif: res.motif };
+  }
+
   function destinataires() {
     const to = [];
     if (S.mail.envoyerClient && R.client.email) to.push(R.client.email.trim());
@@ -719,43 +896,85 @@
     if (S.mail.destinatairesCopie) S.mail.destinatairesCopie.split(/[;,]/).forEach(x => { if (x.trim()) to.push(x.trim()); });
     return to;
   }
+  /* Suivi de la traduction à l'écran (téléchargement du modèle, avancement). */
+  function surEtatTraduction(e) {
+    if (!e) return;
+    if (e.etape === 'debut') toast('Préparation de la traduction (' + e.langue + ')…', 2200);
+    else if (e.etape === 'telechargement') toast('Téléchargement de la langue : ' + (e.pct || 0) + ' %', 1400);
+    else if (e.etape === 'traduction' && e.total && (e.fait === e.total || e.fait === 0)) {
+      toast(e.fait === 0 ? 'Traduction des commentaires…' : 'Traduction terminée ✔', 1600);
+    }
+  }
+
   async function soumettre() {
     if (!R.client.nom) { toast('Renseignez d\'abord le client'); feuilleClient(); return; }
     if (!R.signatureClient.dataUrl && !confirm('Le client n\'a pas signé. Soumettre quand même le rapport ?')) return;
     if (!R.chrono.fin && R.chrono.debut && !confirm('Le chrono n\'est pas terminé. Continuer ?')) return;
+
+    /* 1. Rapport français : toujours créé, c'est la version de référence. */
     const res = await pdf();
     let resWord = null;
     try { resWord = await docx(); } catch (e) { resWord = null; }
-    const fichier = new File([res.blob], res.filename, { type: 'application/pdf' });
+
+    /* 2. Version dans la langue du client, si l'option est activée. */
+    let trad = { actif: false }, resTrad = null, resWordTrad = null;
+    if (R.langue && R.langue.active && R.langue.code) {
+      trad = await traduireRapport(surEtatTraduction);
+      if (trad.actif && trad.ok) {
+        resTrad = await pdf(trad.rapport, trad.code, true);
+        try { resWordTrad = await docx(trad.rapport, trad.code, true); } catch (e) { resWordTrad = null; }
+      }
+    }
+
+    const lots = { fr: { pdf: res, word: resWord }, trad: (resTrad ? { code: trad.code, pdf: resTrad, word: resWordTrad } : null), partiel: !!(trad.partiel) };
+    const fichiers = fichiersEnvoi(lots);
     const message = Report.valeur(S.mail.messagePartage).replace(/\{\{(\w+)\}\}/g, (m, k) => {
       const v = Report.variables(R, S);
       return v[k] !== undefined ? v[k] : m;
     });
-    const envoi = [];
-    if (resWord) envoi.push(new File([resWord.blob], resWord.filename, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-    envoi.unshift(fichier);
+    const langueMail = lots.trad ? lots.trad.code : null;
 
-    if (navigator.canShare && navigator.canShare({ files: envoi })) {
+    if (navigator.canShare && navigator.canShare({ files: fichiers })) {
       try {
-        await navigator.share({ files: envoi, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S) });
-        R.statut = 'transmis'; planifier(); rendreTout();
-        toast('Rapport transmis ✔');
+        await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S, langueMail) });
+        R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
+        planifier(); rendreTout();
+        toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ') ✔' : 'Rapport transmis ✔', 2600);
         return;
       } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     telecharger(res.blob, res.filename);
-    feuilleEnvoi(res, resWord);
+    feuilleEnvoi(lots);
   }
 
-  function feuilleEnvoi(res, resWord) {
+  /* Fichiers joints au mail : le rapport français, puis sa version traduite. */
+  function fichiersEnvoi(lots) {
+    const PDF = 'application/pdf';
+    const WORD = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const fichiers = [new File([lots.fr.pdf.blob], lots.fr.pdf.filename, { type: PDF })];
+    if (lots.fr.word) fichiers.push(new File([lots.fr.word.blob], lots.fr.word.filename, { type: WORD }));
+    if (lots.trad) {
+      fichiers.push(new File([lots.trad.pdf.blob], lots.trad.pdf.filename, { type: PDF }));
+      if (lots.trad.word) fichiers.push(new File([lots.trad.word.blob], lots.trad.word.filename, { type: WORD }));
+    }
+    return fichiers;
+  }
+
+  function feuilleEnvoi(lots) {
     const to = destinataires().join(';');
+    const res = lots.fr.pdf, resWord = lots.fr.word;
+    const t = lots.trad;
+    const langueMail = t ? t.code : null;
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Envoyer le rapport</h3>
       <p class="sub">Le PDF a été enregistré sur le téléphone. Choisissez le mode d'envoi :</p>
+      ${t ? `<div class="sticky-note">Deux rapports : français + ${esc(I18N.natif(t.code))}${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
       <button class="menu-item" data-a="partager"><span class="ico">📤</span><span>Partager le rapport<small>Gmail / Outlook — PDF (et Word) déjà joints</small></span></button>
       <button class="menu-item" data-a="mailto"><span class="ico">✉️</span><span>Ouvrir l'application e-mail<small>Destinataires et texte pré-remplis</small></span></button>
-      <button class="menu-item" data-a="dl"><span class="ico">⬇️</span><span>Télécharger le PDF</span></button>
-      <button class="menu-item" data-a="dlw"><span class="ico">📄</span><span>Télécharger la version Word</span></button>
+      <button class="menu-item" data-a="dl"><span class="ico">⬇️</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
+      ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">⬇️</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
+      <button class="menu-item" data-a="dlw"><span class="ico">📄</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
+      ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">📄</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
       <button class="menu-item" data-a="copier"><span class="ico">📋</span><span>Copier le texte du rapport</span></button>
       <div class="sticky-note">Destinataires : ${esc(to || 'non renseignés')}</div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
@@ -764,16 +983,16 @@
         if (!b) return;
         const a = b.dataset.a;
         if (a === 'partager') {
-          const fichiers = [new File([res.blob], res.filename, { type: 'application/pdf' })];
-          if (resWord) fichiers.push(new File([resWord.blob], resWord.filename, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-          if (navigator.share) { try { await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: Report.corpsMail(R, S) }); } catch (err) {} }
+          if (navigator.share) { try { await navigator.share({ files: fichiersEnvoi(lots), title: Report.objetMail(R, S), text: Report.corpsMail(R, S, langueMail) }); } catch (err) {} }
           else toast('Partage indisponible');
         } else if (a === 'mailto') {
           window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(Report.objetMail(R, S)) +
-            '&body=' + encodeURIComponent(Report.corpsMail(R, S));
+            '&body=' + encodeURIComponent(Report.corpsMail(R, S, langueMail));
         } else if (a === 'dl') telecharger(res.blob, res.filename);
+        else if (a === 'dlt' && t) telecharger(t.pdf.blob, t.pdf.filename);
         else if (a === 'dlw' && resWord) telecharger(resWord.blob, resWord.filename);
-        else if (a === 'copier') copier(Report.corpsMail(R, S));
+        else if (a === 'dlwt' && t && t.word) telecharger(t.word.blob, t.word.filename);
+        else if (a === 'copier') copier(Report.corpsMail(R, S, langueMail));
       });
     });
   }
@@ -1045,7 +1264,7 @@
         if (a === 'reglages') feuilleReglages();
         else if (a === 'nouveau') {
           if (!confirm('Créer une nouvelle intervention ?')) return;
-          sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null;
+          sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
           Store.set(K.rapport, R); rendreTout(); toast('Nouvelle intervention — N° ' + R.numero);
         } else if (a === 'historique') feuilleHistorique();
         else if (a === 'aide') feuilleAide();
@@ -1101,7 +1320,7 @@
           if (!r || !confirm('Rouvrir ce rapport ? Le rapport en cours sera conservé au préalable.')) return;
           sauver(true);
           R = fusion(nouvelleIntervention(), r);
-          Cache.pdf = Cache.docx = null;
+          Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
           Store.set(K.rapport, R);
           e.target.closest('.sheet').remove(); rendreTout();
           toast('Rapport ' + R.numero + ' chargé');
@@ -1122,6 +1341,7 @@
         <li><strong>Soumettre le rapport</strong> — le PDF (et la version Word) partent par e-mail au client et au responsable SAV. Vos nom et coordonnées figurent dans le bloc de signature.</li>
       </ol>
       <div class="sep"></div>
+      <p class="small"><strong>Client étranger :</strong> dans <em>Client &amp; machine</em>, cochez « Traduire le rapport dans la langue du client » et choisissez la langue (anglais, allemand, néerlandais, espagnol, italien, portugais). Le mail part alors avec <strong>deux rapports</strong> : le français et la version traduite. La langue est retenue pour ce client. Un appui sur « Préparer la langue sur ce téléphone » (au bureau, en Wi-Fi) rend la traduction disponible même hors connexion.</p>
       <p class="small">Un évènement reste modifiable à tout moment : appuyez dessus pour reprendre l'assistant.</p>
       <p class="small"><strong>Installation :</strong> dans Chrome, menu ⋮ → « Ajouter à l'écran d'accueil ». L'application fonctionne ensuite hors connexion.</p>
       <button class="btn grey wide" data-a="fermer">Fermer</button></div>`);

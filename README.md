@@ -79,10 +79,11 @@ Déroulé de l'intervention, calqué sur la fiche papier :
 
 | Étape | Contenu |
 |---|---|
-| **Client & machine** | Client par **autocomplétion** (3 lettres), contact sur site, fonction, téléphone du client, e-mail, adresse, lieu d'intervention, logo du client (facultatif), machine (désignation, marque, n° de série, compteur), objet de la demande, N° de rapport `AAMMJJ-NN` généré automatiquement |
+| **Client & machine** | Client par **autocomplétion** (3 lettres), contact sur site, fonction, téléphone du client, e-mail, adresse, lieu d'intervention, logo du client (facultatif), machine (machine / équipement, modèle, n° de série), objet de la demande, N° de rapport `AAMMJJ-NN` généré automatiquement |
 | **Chrono** | Bouton **Démarrer l'intervention** : l'heure de début est horodatée. Pauses (repas, attente pièce) et fin d'intervention ; la durée sur site est calculée pauses déduites |
 | **Ajouter un évènement** | Assistant en 4 étapes : **1. domaine** (mécanique / électrique / automatisme) → **2. annotation** écrite ou dictée, avec relecture vocale → **3. photo** prise au téléphone puis **annotée au doigt** (flèche, cercle, crayon, texte, 5 couleurs) → **4. catégorie** (🛑 Sécurité, ⚠️ Urgent, 🔺 Priorité haute, 🔽 Priorité basse, ℹ️ Informatif). L'évènement est **modifiable à tout moment** : on appuie dessus pour rouvrir l'assistant |
 | **Compte rendu** | Résumé / synthèse, travaux réalisés, travaux à prévoir (base du devis), note interne |
+| **Langue du client** | Case à cocher **« Traduire le rapport dans la langue du client »** (anglais, allemand, néerlandais, espagnol, italien, portugais). Décochée = **un seul rapport, en français**. Cochée = **deux rapports** : le français (version de référence) **et** la version dans la langue du client |
 | **Signature** | Point client de vive voix puis **signature au doigt** sur l'écran, horodatée, nom et fonction du signataire |
 | **Aperçu** | 👁️ **Aperçu PDF dans l'application** : les pages sont dessinées à l'écran (sans visionneuse PDF, que Chrome bloque), exactement comme le PDF final — puis téléchargement ou ouverture dans un onglet |
 | **Soumettre le rapport** | PDF **et** version Word, **calqués sur le modèle « Compte rendu d'intervention » BFR** : logo en en-tête, bloc client, titre cyan, « Votre contact : », page destinataire « À Blyes, le … / À l'attention de … », bandeaux cyan par section, pied de page des deux sites |
@@ -101,6 +102,35 @@ Bouton orange **📤 Envoyer** :
 
 Autres options : **👁️ Aperçu** (contrôle avant envoi), **⬇️ PDF**, **✉️ E-mail** (destinataires
 et texte pré-remplis), **📋 Copier le texte**.
+
+### Rapport dans la langue du client
+
+Dans *Client & machine*, la carte **Langue du client** :
+
+- **case décochée** (client français) → **un seul rapport, en français** : rien ne change ;
+- **case cochée** + choix de la langue → **deux rapports** sont créés et **joints au même
+  mail** (client et responsable SAV dans le même message) : le rapport français
+  (`Rapport_…pdf`) et sa version traduite (`Rapport_…_NL.pdf`, `_EN`, `_DE`, `_ES`, `_IT`, `_PT`).
+
+Ce qui est traduit :
+
+- **tous les libellés** du rapport (titres, tableaux, sections, mentions, pied de page,
+  phrases du mail) par les **packs de langue embarqués** — donc **toujours disponibles,
+  même sans réseau** ;
+- **les textes saisis par le technicien** (objet, travaux, observations des évènements,
+  synthèse, légendes, travaux à prévoir) par le **traducteur du téléphone** (Chrome Android,
+  gratuit). Les **données du terrain ne sont jamais traduites** : nom du client, adresses,
+  contacts, machine, n° de série, dates, heures, signature.
+
+La langue est **mémorisée par client** : le rapport suivant chez le même client la repropose.
+Le bouton **« Préparer la langue sur ce téléphone »** (même carte) télécharge la langue une
+bonne fois au bureau ou en Wi-Fi : ensuite la traduction marche **hors connexion**.
+
+Avant l'envoi, l'**aperçu** permet de relire les deux versions (boutons *Français* / *Nederlands*,
+*English*…) et de corriger un mot si besoin (on rouvre l'évènement, on corrige, on resoumet).
+Si le téléphone ne sait pas traduire (navigateur ancien), l'application le dit et laisse le
+choix : envoyer le français seul, ou envoyer les libellés traduits avec les commentaires en
+français.
 
 Tout est **enregistré automatiquement** dans le téléphone. Le menu **☰** permet de créer une
 nouvelle fiche, rouvrir une fiche précédente (historique), exporter/importer une sauvegarde
@@ -137,6 +167,8 @@ app/src/style.css          mise en forme (interface tactile, gros boutons)
 app/src/pdf.js             moteur de génération PDF (aucune dépendance)
 app/src/report.js          mise en page du rapport + texte des e-mails
 app/src/clients.js         recherche client (3 lettres) + import du fichier de liste
+app/src/langues.js         packs de langue du rapport (6 langues, hors connexion)
+app/src/traduction.js      traduction des commentaires par le traducteur du téléphone
 app/src/app.js             interface, signature, photos, temps, sauvegarde, envoi
 build.py                   assemble le fichier unique et le site docs/ (icônes incluses)
 modele/                    modèle « Compte rendu d'intervention » de référence
@@ -173,6 +205,7 @@ modifier `settingsDefaut` dans `app/src/app.js` puis relancer `build.py`.
 
 ## 5. Feuille de route
 
+- [x] **Rapport dans la langue du client** (6 langues, libellés + commentaires, envoi unique).
 - [ ] Chiffrage des pièces et de la main-d'œuvre (total HT/TTC, proposition de devis).
 - [ ] Suivi du parc : historique par ligne/machine, alertes de périodicité.
 - [ ] Envoi automatique par le serveur (SMTP) avec archivage central et copie au SAV.

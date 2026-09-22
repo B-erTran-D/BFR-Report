@@ -404,6 +404,687 @@ ul.liste li { margin-bottom: 6px; }
 <div id="toast"></div>
 
 <script>/* =========================================================================
+   langues.js — Traduction du rapport dans la langue du client
+   -------------------------------------------------------------------------
+   Deux mécanismes complémentaires :
+
+   1. PACKS DE LANGUE (ce fichier) : tous les libellés fixes du rapport
+      (titres, tableaux, mentions, pied de page…) sont traduits par un
+      dictionnaire embarqué. Cela fonctionne HORS CONNEXION, sans rien
+      installer, et c'est identique dans le PDF, l'aperçu et le Word.
+
+   2. TRADUCTION AUTOMATIQUE (traduction.js) : les textes SAISIS par le
+      technicien (objet, actions, observations, synthèse) sont traduits par
+      le traducteur du téléphone (Chrome, gratuit, hors connexion une fois
+      la langue téléchargée).
+
+   Rien ici ne modifie le rapport français : la génération en français reste
+   la référence, la version traduite est produite à côté.
+   ========================================================================= */
+(function (global) {
+  'use strict';
+
+  /* --- Langues proposées (ordre d'affichage) --------------------------- */
+  /* Toutes compatibles avec le moteur PDF de l'application (police latine
+     standard : accents d'Europe de l'Ouest). */
+  const LANGUES = [
+    { code: 'en', nom: 'Anglais', natif: 'English' },
+    { code: 'de', nom: 'Allemand', natif: 'Deutsch' },
+    { code: 'nl', nom: 'Néerlandais', natif: 'Nederlands' },
+    { code: 'es', nom: 'Espagnol', natif: 'Español' },
+    { code: 'it', nom: 'Italien', natif: 'Italiano' },
+    { code: 'pt', nom: 'Portugais', natif: 'Português' }
+  ];
+
+  /* --- Dictionnaire : libellé français -> traductions ------------------- */
+  /* La clé est le texte exact écrit par le générateur de rapport. */
+  const DICO = {
+    /* Titres et blocs du modèle */
+    "Compte rendu d'intervention": {
+      en: 'Service report', de: 'Servicebericht', nl: 'Serviceverslag',
+      es: 'Informe de intervención', it: 'Rapporto di intervento', pt: 'Relatório de intervenção'
+    },
+    'Votre contact :': {
+      en: 'Your contact:', de: 'Ihr Ansprechpartner:', nl: 'Uw contactpersoon:',
+      es: 'Su contacto:', it: 'Il suo referente:', pt: 'O seu contacto:'
+    },
+    'Intervention': {
+      en: 'Service call', de: 'Einsatz', nl: 'Interventie',
+      es: 'Intervención', it: 'Intervento', pt: 'Intervenção'
+    },
+
+    /* Tableau d'identification */
+    'Machine / équipement': {
+      en: 'Machine / equipment', de: 'Maschine / Anlage', nl: 'Machine / installatie',
+      es: 'Máquina / equipo', it: 'Macchina / impianto', pt: 'Máquina / equipamento'
+    },
+    'Modèle': { en: 'Model', de: 'Modell', nl: 'Model', es: 'Modelo', it: 'Modello', pt: 'Modelo' },
+    'N° de série': {
+      en: 'Serial number', de: 'Seriennummer', nl: 'Serienummer',
+      es: 'N.º de serie', it: 'Numero di serie', pt: 'N.º de série'
+    },
+    'Compteur': { en: 'Counter', de: 'Zähler', nl: 'Teller', es: 'Contador', it: 'Contatore', pt: 'Contador' },
+    'Compteur / N° de parc': {
+      en: 'Counter / asset no.', de: 'Zähler / Anlagennr.', nl: 'Teller / activanr.',
+      es: 'Contador / n.º de activo', it: 'Contatore / n. impianto', pt: 'Contador / n.º de ativo'
+    },
+    'Objet / demande': {
+      en: 'Subject / request', de: 'Betreff / Anfrage', nl: 'Onderwerp / aanvraag',
+      es: 'Asunto / solicitud', it: 'Oggetto / richiesta', pt: 'Assunto / pedido'
+    },
+    'Objet / demande du client': {
+      en: "Customer's subject / request", de: 'Betreff / Anfrage des Kunden', nl: 'Onderwerp / aanvraag van de klant',
+      es: 'Asunto / solicitud del cliente', it: 'Oggetto / richiesta del cliente', pt: 'Assunto / pedido do cliente'
+    },
+    'Lieu': { en: 'Location', de: 'Standort', nl: 'Locatie', es: 'Ubicación', it: 'Luogo', pt: 'Local' },
+    'Contact sur site': {
+      en: 'On-site contact', de: 'Ansprechpartner vor Ort', nl: 'Contact ter plaatse',
+      es: 'Contacto en planta', it: 'Referente in loco', pt: 'Contacto no local'
+    },
+    'Téléphone / e-mail': {
+      en: 'Phone / e-mail', de: 'Telefon / E-Mail', nl: 'Telefoon / e-mail',
+      es: 'Teléfono / correo', it: 'Telefono / e-mail', pt: 'Telefone / e-mail'
+    },
+    'Téléphone / e-mail client': {
+      en: 'Customer phone / e-mail', de: 'Telefon / E-Mail Kunde', nl: 'Telefoon / e-mail klant',
+      es: 'Teléfono / correo del cliente', it: 'Telefono / e-mail cliente', pt: 'Telefone / e-mail do cliente'
+    },
+    "Date d'intervention": {
+      en: 'Service date', de: 'Einsatzdatum', nl: 'Datum interventie',
+      es: 'Fecha de intervención', it: "Data dell'intervento", pt: 'Data da intervenção'
+    },
+    'Horaires sur site': {
+      en: 'On-site times', de: 'Zeiten vor Ort', nl: 'Tijden ter plaatse',
+      es: 'Horario en planta', it: 'Orari in loco', pt: 'Horário no local'
+    },
+    'Durée sur site': {
+      en: 'Time on site', de: 'Zeit vor Ort', nl: 'Tijd ter plaatse',
+      es: 'Duración en planta', it: 'Durata in loco', pt: 'Duração no local'
+    },
+    'Heures passées sur site': {
+      en: 'Hours spent on site', de: 'Vor Ort verbrachte Stunden', nl: 'Uren ter plaatse',
+      es: 'Horas en planta', it: 'Ore passate in loco', pt: 'Horas no local'
+    },
+    'Technicien': { en: 'Technician', de: 'Techniker', nl: 'Technicus', es: 'Técnico', it: 'Tecnico', pt: 'Técnico' },
+    'Client': { en: 'Customer', de: 'Kunde', nl: 'Klant', es: 'Cliente', it: 'Cliente', pt: 'Cliente' },
+    'Machine': { en: 'Machine', de: 'Maschine', nl: 'Machine', es: 'Máquina', it: 'Macchina', pt: 'Máquina' },
+    'Adresse client': {
+      en: 'Customer address', de: 'Kundenadresse', nl: 'Klantadres',
+      es: 'Dirección del cliente', it: 'Indirizzo cliente', pt: 'Endereço do cliente'
+    },
+
+    /* Sections du canevas */
+    'Synthèse': { en: 'Summary', de: 'Zusammenfassung', nl: 'Samenvatting', es: 'Resumen', it: 'Sintesi', pt: 'Resumo' },
+    'Synthèse du technicien': {
+      en: "Technician's summary", de: 'Zusammenfassung des Technikers', nl: 'Samenvatting van de technicus',
+      es: 'Resumen del técnico', it: 'Sintesi del tecnico', pt: 'Resumo do técnico'
+    },
+    'Évènements': { en: 'Events', de: 'Ereignisse', nl: 'Gebeurtenissen', es: 'Eventos', it: 'Eventi', pt: 'Eventos' },
+    'Événements': { en: 'Events', de: 'Ereignisse', nl: 'Gebeurtenissen', es: 'Eventos', it: 'Eventi', pt: 'Eventos' },
+    'Texte': { en: 'Text', de: 'Text', nl: 'Tekst', es: 'Texto', it: 'Testo', pt: 'Texto' },
+    'Photos': { en: 'Photos', de: 'Fotos', nl: "Foto's", es: 'Fotos', it: 'Foto', pt: 'Fotos' },
+    'Validation': { en: 'Validation', de: 'Bestätigung', nl: 'Validatie', es: 'Validación', it: 'Convalida', pt: 'Validação' },
+    'Catégorie': { en: 'Category', de: 'Kategorie', nl: 'Categorie', es: 'Categoría', it: 'Categoria', pt: 'Categoria' },
+    'Nombre': { en: 'Number', de: 'Anzahl', nl: 'Aantal', es: 'Número', it: 'Numero', pt: 'Número' },
+    'Photos jointes': {
+      en: 'Attached photos', de: 'Beigefügte Fotos', nl: "Bijgevoegde foto's",
+      es: 'Fotos adjuntas', it: 'Foto allegate', pt: 'Fotos anexadas'
+    },
+    'Points de sécurité / urgence': {
+      en: 'Safety / urgent points', de: 'Sicherheits- / Notfallpunkte', nl: 'Veiligheids- / urgentiepunten',
+      es: 'Puntos de seguridad / urgencia', it: 'Punti di sicurezza / urgenza', pt: 'Pontos de segurança / urgência'
+    },
+
+    /* Titres de sections du canevas standard (numérotés) */
+    "1. Synthèse de l'intervention": {
+      en: '1. Summary of the service call', de: '1. Zusammenfassung des Einsatzes', nl: '1. Samenvatting van de interventie',
+      es: '1. Resumen de la intervención', it: "1. Sintesi dell'intervento", pt: '1. Resumo da intervenção'
+    },
+    '2. Sécurité et urgences': {
+      en: '2. Safety and emergencies', de: '2. Sicherheit und Notfälle', nl: '2. Veiligheid en urgenties',
+      es: '2. Seguridad y urgencias', it: '2. Sicurezza e urgenze', pt: '2. Segurança e urgências'
+    },
+    '3. Points de priorité haute': {
+      en: '3. High-priority points', de: '3. Punkte hoher Priorität', nl: '3. Punten met hoge prioriteit',
+      es: '3. Puntos de prioridad alta', it: '3. Punti di priorità alta', pt: '3. Pontos de prioridade alta'
+    },
+    '4. Points de priorité basse': {
+      en: '4. Low-priority points', de: '4. Punkte niedriger Priorität', nl: '4. Punten met lage prioriteit',
+      es: '4. Puntos de prioridad baja', it: '4. Punti di priorità bassa', pt: '4. Pontos de prioridade baixa'
+    },
+    '5. Informations complémentaires': {
+      en: '5. Additional information', de: '5. Zusätzliche Informationen', nl: '5. Aanvullende informatie',
+      es: '5. Información adicional', it: '5. Informazioni aggiuntive', pt: '5. Informações complementares'
+    },
+    '6. Travaux réalisés': {
+      en: '6. Work performed', de: '6. Durchgeführte Arbeiten', nl: '6. Uitgevoerde werkzaamheden',
+      es: '6. Trabajos realizados', it: '6. Lavori eseguiti', pt: '6. Trabalhos realizados'
+    },
+    '7. Travaux à prévoir': {
+      en: '7. Work to be planned', de: '7. Geplante Arbeiten', nl: '7. Gepland werk',
+      es: '7. Trabajos a prever', it: '7. Lavori da prevedere', pt: '7. Trabalhos a prever'
+    },
+    '8. Photos complémentaires': {
+      en: '8. Additional photos', de: '8. Zusätzliche Fotos', nl: "8. Aanvullende foto's",
+      es: '8. Fotos complementarias', it: '8. Foto aggiuntive', pt: '8. Fotos complementares'
+    },
+    '9. Validation': {
+      en: '9. Validation', de: '9. Bestätigung', nl: '9. Validatie',
+      es: '9. Validación', it: '9. Convalida', pt: '9. Validação'
+    },
+
+    /* Domaines et catégories par défaut */
+    'Mécanique': { en: 'Mechanical', de: 'Mechanik', nl: 'Mechanisch', es: 'Mecánica', it: 'Meccanica', pt: 'Mecânica' },
+    'Électrique': { en: 'Electrical', de: 'Elektrik', nl: 'Elektrisch', es: 'Eléctrica', it: 'Elettrica', pt: 'Elétrica' },
+    'Automatisme': {
+      en: 'Automation', de: 'Automatisierung', nl: 'Automatisering',
+      es: 'Automatización', it: 'Automazione', pt: 'Automação'
+    },
+    'Sécurité': { en: 'Safety', de: 'Sicherheit', nl: 'Veiligheid', es: 'Seguridad', it: 'Sicurezza', pt: 'Segurança' },
+    'Problème de sécurité': {
+      en: 'Safety issue', de: 'Sicherheitsproblem', nl: 'Veiligheidsprobleem',
+      es: 'Problema de seguridad', it: 'Problema di sicurezza', pt: 'Problema de segurança'
+    },
+    'Priorité basse': {
+      en: 'Low priority', de: 'Niedrige Priorität', nl: 'Lage prioriteit',
+      es: 'Prioridad baja', it: 'Priorità bassa', pt: 'Prioridade baixa'
+    },
+    'Urgent': { en: 'Urgent', de: 'Dringend', nl: 'Urgent', es: 'Urgente', it: 'Urgente', pt: 'Urgente' },
+    'Priorité haute': {
+      en: 'High priority', de: 'Hohe Priorität', nl: 'Hoge prioriteit',
+      es: 'Prioridad alta', it: 'Priorità alta', pt: 'Prioridade alta'
+    },
+    'Basse': { en: 'Low', de: 'Niedrig', nl: 'Laag', es: 'Baja', it: 'Bassa', pt: 'Baixa' },
+    'Informatif': {
+      en: 'Informational', de: 'Informativ', nl: 'Informatief',
+      es: 'Informativo', it: 'Informativo', pt: 'Informativo'
+    },
+
+    /* Signatures et validation */
+    'Le client (bon pour accord)': {
+      en: 'The customer (approved)', de: 'Der Kunde (Genehmigung)', nl: 'De klant (voor akkoord)',
+      es: 'El cliente (conforme)', it: 'Il cliente (per approvazione)', pt: 'O cliente (de acordo)'
+    },
+    'Le technicien': {
+      en: 'The technician', de: 'Der Techniker', nl: 'De technicus',
+      es: 'El técnico', it: 'Il tecnico', pt: 'O técnico'
+    },
+    'Signature non recueillie': {
+      en: 'Signature not obtained', de: 'Unterschrift nicht erhalten', nl: 'Handtekening niet verkregen',
+      es: 'Firma no recogida', it: 'Firma non raccolta', pt: 'Assinatura não recolhida'
+    },
+    'Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.': {
+      en: "The customer acknowledges having read this report, having received the technician's explanations, and accepts the findings and the work described.",
+      de: 'Der Kunde bestätigt, diesen Bericht zur Kenntnis genommen, die Erläuterungen des Technikers erhalten zu haben und die beschriebenen Feststellungen und Arbeiten zu akzeptieren.',
+      nl: 'De klant verklaart kennis te hebben genomen van dit verslag, de uitleg van de technicus te hebben ontvangen en de beschreven vaststellingen en werkzaamheden te aanvaarden.',
+      es: 'El cliente reconoce haber leído el presente informe, haber recibido las explicaciones del técnico y acepta las observaciones y los trabajos descritos.',
+      it: "Il cliente dichiara di aver preso visione del presente rapporto, di aver ricevuto le spiegazioni del tecnico e accetta le constatazioni e i lavori descritti.",
+      pt: 'O cliente reconhece ter tomado conhecimento do presente relatório, ter recebido as explicações do técnico e aceita os factos e os trabalhos descritos.'
+    },
+    'Le client reconnaît avoir pris connaissance du présent rapport et accepte les constats et travaux décrits.': {
+      en: 'The customer acknowledges having read this report and accepts the findings and the work described.',
+      de: 'Der Kunde bestätigt, diesen Bericht zur Kenntnis genommen zu haben, und akzeptiert die beschriebenen Feststellungen und Arbeiten.',
+      nl: 'De klant verklaart kennis te hebben genomen van dit verslag en de beschreven vaststellingen en werkzaamheden te aanvaarden.',
+      es: 'El cliente reconoce haber leído el presente informe y acepta las observaciones y los trabajos descritos.',
+      it: 'Il cliente dichiara di aver preso visione del presente rapporto e accetta le constatazioni e i lavori descritti.',
+      pt: 'O cliente reconhece ter tomado conhecimento do presente relatório e aceita os factos e os trabalhos descritos.'
+    },
+
+    /* Divers */
+    'en cours': { en: 'in progress', de: 'läuft noch', nl: 'loopt nog', es: 'en curso', it: 'in corso', pt: 'em curso' },
+    '(aucune annotation)': {
+      en: '(no comment)', de: '(keine Anmerkung)', nl: '(geen opmerking)',
+      es: '(sin anotación)', it: '(nessuna annotazione)', pt: '(sem anotação)'
+    },
+    'Aucun point de sécurité ou d\'urgence relevé.': {
+      en: 'No safety or urgent point reported.', de: 'Keine Sicherheits- oder Notfallpunkte gemeldet.',
+      nl: 'Geen veiligheids- of urgentiepunten gemeld.', es: 'No se ha detectado ningún punto de seguridad o urgencia.',
+      it: "Nessun punto di sicurezza o urgenza rilevato.", pt: 'Nenhum ponto de segurança ou urgência detetado.'
+    },
+    "Siège social et site de production n°1": {
+      en: 'Head office and production site no. 1', de: 'Firmensitz und Produktionsstätte Nr. 1',
+      nl: 'Hoofdzetel en productiesite nr. 1', es: 'Sede social y planta de producción n.º 1',
+      it: 'Sede legale e stabilimento n. 1', pt: 'Sede social e unidade de produção n.º 1'
+    },
+    'Site de production n°2': {
+      en: 'Production site no. 2', de: 'Produktionsstätte Nr. 2', nl: 'Productiesite nr. 2',
+      es: 'Planta de producción n.º 2', it: 'Stabilimento n. 2', pt: 'Unidade de produção n.º 2'
+    },
+    'Siège social et site de production n°1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, France': {
+      en: 'Head office and production site no. 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, France',
+      de: 'Firmensitz und Produktionsstätte Nr. 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, Frankreich',
+      nl: 'Hoofdzetel en productiesite nr. 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, Frankrijk',
+      es: 'Sede social y planta de producción n.º 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, Francia',
+      it: 'Sede legale e stabilimento n. 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, Francia',
+      pt: 'Sede social e unidade de produção n.º 1 – 1, rue du Jariel, ZAC Les Longs Sillons, 77120 Coulommiers, França'
+    },
+    'Site de production n°2 – 50 allée des érables, 01150 Blyes, France': {
+      en: 'Production site no. 2 – 50 allée des érables, 01150 Blyes, France',
+      de: 'Produktionsstätte Nr. 2 – 50 allée des érables, 01150 Blyes, Frankreich',
+      nl: 'Productiesite nr. 2 – 50 allée des érables, 01150 Blyes, Frankrijk',
+      es: 'Planta de producción n.º 2 – 50 allée des érables, 01150 Blyes, Francia',
+      it: 'Stabilimento n. 2 – 50 allée des érables, 01150 Blyes, Francia',
+      pt: 'Unidade de produção n.º 2 – 50 allée des érables, 01150 Blyes, França'
+    },
+    'Rapport': {
+      en: 'Report', de: 'Bericht', nl: 'Verslag', es: 'Informe', it: 'Rapporto', pt: 'Relatório'
+    }
+  };
+
+  /* --- Libellés qui peuvent être traduits en début de chaîne ------------ */
+  /* (« Mécanique : 3 », « Sécurité : 1 »). On ne touche jamais au reste :
+     un texte saisi par le technicien n'est pas modifié par le dictionnaire. */
+  const PREFIXABLES = [
+    'mécanique', 'électrique', 'automatisme', 'sécurité', 'urgent', 'priorité haute',
+    'basse', 'informatif', 'catégorie', 'nombre', 'photos', 'date', 'client', 'technicien',
+    'machine', 'modèle', 'lieu', 'intervention'
+  ];
+
+  /* --- Règles de traduction des libellés composés ----------------------- */
+  /* [motif, remplacement] — appliquées dans l'ordre. */
+  const REGLES = {
+    en: [
+      [/^N° (.*)$/, 'No. $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Date: $1 at $2'],
+      [/^Date : (.*)$/, 'Date: $1'],
+      [/^Édité le (.*)$/, 'Generated on $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Page $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 event(s)'],
+      [/^(\d+) photo\(s\)$/, '$1 photo(s)'],
+      [/^Photo (\d+)$/, 'Photo $1'],
+      [/^À l'attention de (.*),$/, 'For the attention of $1,'],
+      [/^À (.+), le (.+),$/, 'In $1, on $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Hours spent on site: $1'],
+      [/^Photos : (.*)$/, 'Photos: $1'],
+      [/^Siège social et site de production n°1 – (.*)$/, 'Head office and production site no. 1 – $1'],
+      [/^Site de production n°2 – (.*)$/, 'Production site no. 2 – $1'],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Service report No. $1']
+    ],
+    de: [
+      [/^N° (.*)$/, 'Nr. $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Datum: $1 um $2'],
+      [/^Date : (.*)$/, 'Datum: $1'],
+      [/^Édité le (.*)$/, 'Erstellt am $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Seite $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 Ereignis(se)'],
+      [/^(\d+) photo\(s\)$/, '$1 Foto(s)'],
+      [/^Photo (\d+)$/, 'Foto $1'],
+      [/^À l'attention de (.*),$/, 'z. Hd. $1,'],
+      [/^À (.+), le (.+),$/, '$1, den $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Vor Ort verbrachte Stunden: $1'],
+      [/^Photos : (.*)$/, 'Fotos: $1'],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Servicebericht Nr. $1']
+    ],
+    nl: [
+      [/^N° (.*)$/, 'Nr. $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Datum: $1 om $2'],
+      [/^Date : (.*)$/, 'Datum: $1'],
+      [/^Édité le (.*)$/, 'Aangemaakt op $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 gebeurtenis(sen)'],
+      [/^(\d+) photo\(s\)$/, "$1 foto('s)"],
+      [/^Photo (\d+)$/, 'Foto $1'],
+      [/^À l'attention de (.*),$/, 'Ter attentie van $1,'],
+      [/^À (.+), le (.+),$/, '$1, $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Uren ter plaatse: $1'],
+      [/^Photos : (.*)$/, "Foto's: $1"],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Serviceverslag nr. $1']
+    ],
+    es: [
+      [/^N° (.*)$/, 'N.º $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Fecha: $1 a las $2'],
+      [/^Date : (.*)$/, 'Fecha: $1'],
+      [/^Édité le (.*)$/, 'Emitido el $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
+      [/^Photo (\d+)$/, 'Foto $1'],
+      [/^À l'attention de (.*),$/, 'A la atención de $1,'],
+      [/^À (.+), le (.+),$/, 'En $1, a $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Horas en planta: $1'],
+      [/^Photos : (.*)$/, 'Fotos: $1'],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Informe de intervención n.º $1']
+    ],
+    it: [
+      [/^N° (.*)$/, 'N. $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Data: $1 alle $2'],
+      [/^Date : (.*)$/, 'Data: $1'],
+      [/^Édité le (.*)$/, 'Creato il $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Pagina $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 evento/i'],
+      [/^(\d+) photo\(s\)$/, '$1 foto'],
+      [/^Photo (\d+)$/, 'Foto $1'],
+      [/^À l'attention de (.*),$/, "All'attenzione di $1,"],
+      [/^À (.+), le (.+),$/, 'A $1, il $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Ore passate in loco: $1'],
+      [/^Photos : (.*)$/, 'Foto: $1'],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Rapporto di intervento n. $1']
+    ],
+    pt: [
+      [/^N° (.*)$/, 'N.º $1'],
+      [/^Tél\. (.*)$/, 'Tel. $1'],
+      [/^Date : (.*) à (.*)$/, 'Data: $1 às $2'],
+      [/^Date : (.*)$/, 'Data: $1'],
+      [/^Édité le (.*)$/, 'Emitido em $1'],
+      [/^Page (\d+) \/ (\d+)$/, 'Página $1 / $2'],
+      [/^(\d+) év[èé]nement\(s\)$/, '$1 evento(s)'],
+      [/^(\d+) photo\(s\)$/, '$1 foto(s)'],
+      [/^Photo (\d+)$/, 'Foto $1'],
+      [/^À l'attention de (.*),$/, 'À atenção de $1,'],
+      [/^À (.+), le (.+),$/, 'Em $1, a $2,'],
+      [/^Heures passées sur site : (.*)$/, 'Horas no local: $1'],
+      [/^Photos : (.*)$/, 'Fotos: $1'],
+      [/^Compte rendu d'intervention N° (.*)$/, 'Relatório de intervenção n.º $1']
+    ]
+  };
+
+  /* --- Phrase bilingue ajoutée au mail quand la traduction est active --- */
+  const PHRASES = {
+    en: 'Please find attached the service report in French and its English version.',
+    de: 'Im Anhang finden Sie den Servicebericht auf Französisch und die deutsche Fassung.',
+    nl: 'In bijlage vindt u het serviceverslag in het Frans en de Nederlandse versie.',
+    es: 'Adjunto encontrará el informe de intervención en francés y su versión en español.',
+    it: 'In allegato il rapporto di intervento in francese e la versione in italiano.',
+    pt: 'Em anexo o relatório de intervenção em francês e a respetiva versão em português.'
+  };
+
+  /* ===================== Moteur de traduction ========================== */
+  function normaliser(txt) {
+    return String(txt == null ? '' : txt)
+      .replace(/[\u2018\u2019\u02BC]/g, "'")      // apostrophes typographiques
+      .replace(/\u00A0|\u202F|\u2009/g, ' ')        // espaces insécables
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function cle(txt) {
+    return normaliser(txt).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  /* Index du dictionnaire : clé normalisée -> entrée d'origine. */
+  const INDEX = {};
+  Object.keys(DICO).forEach(function (fr) { INDEX[cle(fr)] = fr; });
+  /* Libellés traduisibles en début de chaîne : on retrouve l'entrée exacte du
+     dictionnaire (« mecanique » -> « Mécanique »). */
+  const INDEX_PREFIXES = {};
+  PREFIXABLES.forEach(function (mot) {
+    const ref = INDEX[cle(mot)];
+    if (ref) INDEX_PREFIXES[cle(mot)] = ref;
+  });
+
+  function majusculesSiBesoin(origine, traduit) {
+    const brut = normaliser(origine);
+    /* « [INFORMATIF] », « SÉCURITÉ »… : on garde la casse du rapport. */
+    const lettres = brut.replace(/[^A-Za-zÀ-ÿ]/g, '');
+    if (lettres && lettres === lettres.toUpperCase()) return traduit.toUpperCase();
+    return traduit;
+  }
+
+  const I18N = {
+    langues: LANGUES,
+    dico: DICO,
+
+    /* Langue par son code, ou null. */
+    langue: function (code) {
+      return LANGUES.filter(function (l) { return l.code === code; })[0] || null;
+    },
+    nom: function (code) {
+      const l = this.langue(code);
+      return l ? l.nom : '';
+    },
+    natif: function (code) {
+      const l = this.langue(code);
+      return l ? l.natif : '';
+    },
+    /* « français + English », pour les libellés d'interface. */
+    duo: function (code) {
+      const l = this.langue(code);
+      return l ? 'français + ' + l.natif : 'français';
+    },
+
+    /* Traduit un libellé du rapport. Renvoie le texte inchangé si :
+       — la langue est le français, ou
+       — le texte n'est pas un libellé connu (c'est une donnée du terrain). */
+    traduire: function (txt, code) {
+      if (!code || code === 'fr') return txt;
+      const s = normaliser(txt);
+      if (!s) return txt;
+
+      /* 1. libellé exact */
+      const ref = INDEX[cle(s)];
+      if (ref) {
+        const t = DICO[ref][code];
+        if (t) return majusculesSiBesoin(txt, t);
+      }
+
+      /* 2. libellés composés (numéro, téléphone, date, page, destinataire…) */
+      const regles = REGLES[code] || [];
+      for (let k = 0; k < regles.length; k++) {
+        if (regles[k][0].test(s)) return s.replace(regles[k][0], regles[k][1]);
+      }
+
+      /* 3. libellé en début de chaîne suivi d'un séparateur
+            (« Mécanique : 3 », « Sécurité — … ») : seul le libellé est traduit. */
+      const m = /^([^:—•]{2,40}?)\s*(: | — | • )/.exec(s);
+      if (m && INDEX_PREFIXES[cle(m[1])]) {
+        const t = DICO[INDEX_PREFIXES[cle(m[1])]][code];
+        if (t) return t + s.slice(m[1].length);
+      }
+
+      return txt;
+    },
+
+    /* Vérifie que le pack de langue est complet pour toutes les entrées. */
+    complet: function (code) {
+      const manquants = [];
+      Object.keys(DICO).forEach(function (fr) {
+        if (!DICO[fr][code]) manquants.push(fr);
+      });
+      return manquants;
+    },
+
+    /* Phrase bilingue pour le mail (null si la langue n'en a pas). */
+    phraseTraduction: function (code) {
+      return PHRASES[code] || null;
+    }
+  };
+
+  global.LANGUES_BFR = LANGUES;
+  global.I18N = I18N;
+})(window);
+</script>
+<script>/* =========================================================================
+   traduction.js — Traduction du rapport dans la langue du client
+   -------------------------------------------------------------------------
+   • Les libellés du rapport (titres, tableaux, mentions, pied de page) sont
+     traduits par les packs de langue embarqués (langues.js) : toujours
+     disponibles, hors connexion.
+
+   • Les textes SAISIS par le technicien (objet, actions, observations,
+     synthèse) sont traduits par le traducteur intégré du téléphone :
+       - API « Translator » de Chrome (Android, Chrome 138+) : gratuite,
+         aucune clé, et HORS CONNEXION une fois la langue téléchargée ;
+       - repli sur l'API précédente « self.translation ».
+     Si le traducteur n'est pas disponible (navigateur plus ancien, modèle
+     non téléchargeable sans réseau), l'application le dit clairement et
+     laisse le choix : envoyer seulement le français, ou la version traduite
+     avec les libellés traduits et les commentaires en français.
+   ========================================================================= */
+(function (global) {
+  'use strict';
+
+  const SRC = 'fr';
+
+  function api() {
+    if (typeof global.Translator !== 'undefined' && global.Translator && global.Translator.create) {
+      return { type: 'moderne', obj: global.Translator };
+    }
+    if (global.ai && global.ai.translator && global.ai.translator.create) {
+      return { type: 'moderne', obj: global.ai.translator };
+    }
+    if (global.translation && global.translation.createTranslator) {
+      return { type: 'ancienne', obj: global.translation };
+    }
+    return null;
+  }
+
+  const Traduction = {
+    /* ---------- Disponibilité ------------------------------------------- */
+    /* Le téléphone sait-il traduire ? (sans rien télécharger) */
+    utilisable: function () { return !!api(); },
+    explication: function () {
+      const a = api();
+      if (!a) return "Ce téléphone ne propose pas la traduction automatique : les libellés du rapport seront traduits, les commentaires resteront en français.";
+      return '';
+    },
+
+    /* État du modèle de langue : 'available', 'downloadable', 'downloading',
+       'unavailable' ou 'inconnu' (API indisponible). */
+    etatModele: function (code) {
+      const a = api();
+      if (!a) return Promise.resolve('inconnu');
+      const p = a.type === 'moderne'
+        ? a.obj.availability({ sourceLanguage: SRC, targetLanguage: code })
+        : a.obj.canTranslate({ sourceLanguage: SRC, targetLanguage: code });
+      return Promise.resolve(p).then(function (r) {
+        return r === 'readily' ? 'available' : (r === 'after-download' ? 'downloadable' : (r === 'no' ? 'unavailable' : r));
+      }).catch(function () { return 'unavailable'; });
+    },
+
+    /* ---------- Préparation du traducteur ------------------------------- */
+    /* Crée le traducteur fr -> code ; télécharge le modèle si nécessaire
+       (une seule fois par langue sur le téléphone). */
+    pret: async function (code, surEtat) {
+      const a = api();
+      if (!a) return { ok: false, motif: 'indisponible' };
+      if (this._code === code && this._moteur) return { ok: true };
+      this.fermer();
+
+      const suivi = function (m) {
+        if (!m || !m.addEventListener || !surEtat) return;
+        m.addEventListener('downloadprogress', function (e) {
+          const pct = e.total ? Math.round(e.loaded / e.total * 100) : Math.round((e.loaded || 0) * 100);
+          surEtat({ etape: 'telechargement', pct: Math.max(0, Math.min(100, pct)) });
+        });
+      };
+      try {
+        const moteur = a.type === 'moderne'
+          ? await a.obj.create({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi })
+          : await a.obj.createTranslator({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi });
+        this._moteur = moteur;
+        this._code = code;
+        this._cache = this._cache || {};
+        return { ok: true };
+      } catch (e) {
+        const msg = (e && e.message) ? e.message : String(e);
+        /* Cas courant : pas de réseau au premier usage d'une langue. */
+        return { ok: false, motif: /download|fetch|network|réseau/i.test(msg) ? 'modele' : 'refus', detail: msg };
+      }
+    },
+
+    fermer: function () {
+      if (this._moteur && this._moteur.destroy) { try { this._moteur.destroy(); } catch (e) {} }
+      this._moteur = null;
+      this._code = null;
+    },
+
+    /* ---------- Traduction d'un texte ----------------------------------- */
+    /* Découpe par paragraphes (les sauts de ligne du rapport sont conservés). */
+    texte: async function (txt, code, surEtat) {
+      const brut = String(txt == null ? '' : txt);
+      if (!brut.trim()) return brut;
+      const res = await this.pret(code, surEtat);
+      if (!res.ok) throw new Error(res.motif);
+      this._cache = this._cache || {};
+      const cleTexte = code + '\u0000' + brut;
+      if (this._cache[cleTexte]) return this._cache[cleTexte];
+
+      const lignes = brut.split('\n');
+      const sorties = [];
+      for (let i = 0; i < lignes.length; i++) {
+        const l = lignes[i];
+        if (!l.trim()) { sorties.push(l); continue; }
+        const cleLigne = code + '\u0000' + l;
+        if (this._cache[cleLigne]) { sorties.push(this._cache[cleLigne]); continue; }
+        let t;
+        try {
+          t = await this._moteur.translate(l);
+        } catch (e) {
+          t = l;                       // une ligne en échec ne bloque pas le rapport
+        }
+        this._cache[cleLigne] = t;
+        sorties.push(t);
+      }
+      const resultat = sorties.join('\n');
+      this._cache[cleTexte] = resultat;
+      return resultat;
+    },
+
+    /* ---------- Champs du rapport à traduire ---------------------------- */
+    /* Objet, travaux, synthèse, annotations des évènements et légendes.
+       Ne sont JAMAIS traduits : nom du client, adresses, contacts, machine,
+       n° de série, dates, heures et données de signature (données du terrain). */
+    champs: function (i) {
+      const taches = [];
+      const ajouter = function (obj, champ, etiquette) {
+        if (obj && typeof obj[champ] === 'string' && obj[champ].trim()) {
+          taches.push({ obj: obj, champ: champ, etiquette: etiquette, texte: obj[champ] });
+        }
+      };
+      ajouter(i, 'objet', "Objet / demande");
+      ajouter(i, 'actions', 'Travaux réalisés');
+      ajouter(i, 'aPrevoir', 'Travaux à prévoir');
+      ajouter(i, 'resumeTechnicien', 'Synthèse');
+      ajouter(i, 'travauxTermines', 'Travaux terminés');
+      (i.evenements || []).forEach(function (ev, k) {
+        ajouter(ev, 'texte', 'Évènement ' + (k + 1));
+        (ev.photos || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
+      });
+      (i.photosLibres || []).forEach(function (ph) { ajouter(ph, 'legende', 'Légende de photo'); });
+      return taches;
+    },
+
+    /* ---------- Traduction complète d'un rapport ------------------------ */
+    /* Renvoie une COPIE du rapport : le rapport français n'est jamais modifié.
+       { ok, rapport, nb, erreurs } ou { ok:false, motif }. */
+    rapport: async function (i, code, surEtat) {
+      const taches = this.champs(i);
+      if (!this.utilisable()) {
+        return { ok: false, motif: 'indisponible', taches: taches.length };
+      }
+      const copie = Object.assign({}, i, {
+        evenements: (i.evenements || []).map(function (ev) {
+          return Object.assign({}, ev, { photos: (ev.photos || []).map(function (ph) { return Object.assign({}, ph); }) });
+        }),
+        photosLibres: (i.photosLibres || []).map(function (ph) { return Object.assign({}, ph); })
+      });
+      /* on retraduit les mêmes champs sur la copie */
+      const copieTaches = this.champs(copie);
+      const total = copieTaches.length;
+      let fait = 0, erreurs = 0;
+      if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
+      for (let k = 0; k < copieTaches.length; k++) {
+        const t = copieTaches[k];
+        if (surEtat) surEtat({ etape: 'traduction', etiquette: t.etiquette, fait: fait, total: total, pct: total ? Math.round(fait / total * 100) : 0 });
+        try {
+          t.obj[t.champ] = await this.texte(t.texte, code, surEtat);
+        } catch (e) {
+          erreurs++;                                   // texte laissé en français
+        }
+        fait++;
+      }
+      if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
+      return { ok: true, rapport: copie, nb: total - erreurs, total: total, erreurs: erreurs };
+    }
+  };
+
+  global.Traduction = Traduction;
+})(window);
+</script>
+<script>/* =========================================================================
    pdf.js — Moteur de génération PDF minimaliste (aucune dépendance externe)
    Écrit pour être embarqué dans un seul fichier HTML, fonctionne hors-ligne.
    Coordonnées exprimées en points (1 pt = 1/72"), origine en HAUT-GAUCHE
@@ -464,7 +1145,14 @@ ul.liste li { margin-bottom: 6px; }
       else if (c >= 32 && c <= 0x7E) out.push(c);
       else if (c >= 0xA0 && c <= 0xFF) out.push(c);
       else if (c < 32) out.push(32);
-      else out.push(63); // '?' pour ce que WinAnsi ne sait pas représenter (emoji…)
+      /* Pictogrammes (emoji des domaines et catégories, flèches, puces…)
+         absents de WinAnsi : on les laisse de côté plutôt que d'imprimer un
+         « ? » au milieu du rapport. Les lettres non représentables (autres
+         alphabets) continuent, elles, d'être signalées par un « ? ». */
+      else if (c === 0x200D || (c >= 0xFE00 && c <= 0xFE0F) || c === 0x20E3 ||
+               (c >= 0x2100 && c <= 0x214F) || (c >= 0x2190 && c <= 0x2BFF) ||
+               (c >= 0x1F000 && c <= 0x1FAFF)) continue;
+      else out.push(63); // '?' : caractère non représentable en WinAnsi
     }
     return out;
   }
@@ -481,6 +1169,14 @@ ul.liste li { margin-bottom: 6px; }
   }
 
   function pdfString(str) { return escBytes(toBytes(str)); }
+
+  /* Traduction des libellés du rapport (langues.js). Un texte qui n'est pas
+     un libellé connu — donc une donnée saisie par le technicien — est rendu
+     tel quel : le dictionnaire ne touche jamais aux données du terrain. */
+  function traduire(str, langue) {
+    if (!langue || langue === 'fr' || !global.I18N) return str;
+    return global.I18N.traduire(str, langue);
+  }
 
   function charWidth(code) {
     if (W[code]) return W[code];
@@ -546,6 +1242,9 @@ ul.liste li { margin-bottom: 6px; }
       this.W = opts.width || 595.28;   // A4 portrait
       this.H = opts.height || 841.89;
       this.margin = opts.margin != null ? opts.margin : 34;
+      /* Langue du rapport : les libellés connus sont traduits par les packs
+         de langue (langues.js). En français, rien n'est modifié. */
+      this.langue = opts.langue || 'fr';
       this.pages = [];
       this.newPage();
     }
@@ -588,6 +1287,7 @@ ul.liste li { margin-bottom: 6px; }
     /** Texte sur une ligne. y = ligne de base. */
     text(str, x, y, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const font = opt.font || 'F1';
       const color = opt.color || [0.1, 0.1, 0.12];
@@ -603,6 +1303,7 @@ ul.liste li { margin-bottom: 6px; }
     /** Paragraphe avec retour à la ligne automatique. Renvoie le nouveau y. */
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);          // traduit avant le calcul des lignes
       const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lines = wrap(str, width, size, opt.bold);
@@ -614,6 +1315,7 @@ ul.liste li { margin-bottom: 6px; }
 
     paragraphHeight(str, width, size, bold) {
       size = size || 9;
+      str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }
 
@@ -741,6 +1443,7 @@ ul.liste li { margin-bottom: 6px; }
       this.W = opts.width || 595.28;
       this.H = opts.height || 841.89;
       this.margin = opts.margin != null ? opts.margin : 34;
+      this.langue = opts.langue || 'fr';        // comme le PDF : mêmes libellés
       this.pages = [];
       this.newPage();
     }
@@ -765,6 +1468,7 @@ ul.liste li { margin-bottom: 6px; }
     }
     text(str, x, y, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const texte = String(str == null ? '' : str);
       const largeur = measure(texte, size, opt.bold);       // largeur de référence (Helvetica)
@@ -777,6 +1481,7 @@ ul.liste li { margin-bottom: 6px; }
     }
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
+      str = traduire(str, this.langue);
       const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lignes = wrap(str, width, size, opt.bold);
@@ -785,6 +1490,7 @@ ul.liste li { margin-bottom: 6px; }
     }
     paragraphHeight(str, width, size, bold) {
       size = size || 9;
+      str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }
     /* Les images arrivent ici en octets JPEG (comme dans le PDF) : on les garde
@@ -1036,6 +1742,14 @@ ul.liste li { margin-bottom: 6px; }
     return out;
   }
 
+  /* --- Traduction des libellés (langues.js) ---------------------------- */
+  /* Un texte qui n'est pas un libellé connu — donc une donnée saisie par le
+     technicien — est rendu tel quel. */
+  function traduire(txt, langue) {
+    if (!langue || langue === 'fr' || !global.I18N) return txt;
+    return global.I18N.traduire(txt, langue);
+  }
+
   /* --- Aide XML ------------------------------------------------------- */
   function x(s) {
     return String(s == null ? '' : s)
@@ -1061,6 +1775,9 @@ ul.liste li { margin-bottom: 6px; }
       this.images = [];         // { rid, nom, donnees, ext }
       this.ridSuivant = 10;
       this.idDessin = 1;
+      /* Langue du document : les libellés connus sont traduits par les packs
+         de langue (langues.js). En français, rien n'est modifié. */
+      this.langue = opts.langue || 'fr';
       this.demande = '(' + (opts.auteur || 'Application SAV') + ')';
       /* Mise en page du modèle « Compte rendu d'intervention » BFR :
          A4, marges 1,9 cm (côtés) et 2,5 cm (haut/bas), Open Sans 11 pt. */
@@ -1073,6 +1790,7 @@ ul.liste li { margin-bottom: 6px; }
     /* --- éléments de base --- */
     para(texte, opt) {
       opt = opt || {};
+      const langue = this.langue;
       const props = [];
       const align = { center: 'center', right: 'right', both: 'both' }[opt.align] || 'left';
       if (align !== 'left') props.push(`<w:jc w:val="${align}"/>`);
@@ -1096,7 +1814,7 @@ ul.liste li { margin-bottom: 6px; }
         if (couleur) rpr.push(`<w:color w:val="${couleur}"/>`);
         runs.push(`<w:r>${rpr.length ? '<w:rPr>' + rpr.join('') + '</w:rPr>' : ''}` +
           (m.saut ? '<w:br/>' : '') +
-          `<w:t xml:space="preserve">${x(m.t || '')}</w:t></w:r>`);
+          `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`);
       });
       this.corps.push(`<w:p><w:pPr>${props.join('')}</w:pPr>${runs.join('')}</w:p>`);
       return this;
@@ -1115,6 +1833,8 @@ ul.liste li { margin-bottom: 6px; }
     /** Bandeau de section du modèle : fond cyan BFR, texte blanc en petites
         capitales (style « Titre 1 » du Google Doc de référence). */
     bandeau(texte, couleurFond, droit) {
+      texte = traduire(texte, this.langue);
+      droit = droit ? traduire(droit, this.langue) : droit;
       const fond = couleurFond || '06BAF2';
       this.corps.push('<w:p><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/>' +
         '<w:pBdr><w:top w:val="single" w:sz="4" w:color="' + fond + '"/>' +
@@ -1136,6 +1856,7 @@ ul.liste li { margin-bottom: 6px; }
 
     tableau(lignes, opt) {
       opt = opt || {};
+      const langue = this.langue;
       const largeurs = opt.largeurs || null;      // en pourcentage (somme = 100)
       const bordures = opt.sansBordures
         ? '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (c) {
@@ -1172,7 +1893,7 @@ ul.liste li { margin-bottom: 6px; }
               if (m.taille) r2.push(`<w:sz w:val="${Math.round(m.taille * 2)}"/>`);
               if (m.couleur) r2.push(`<w:color w:val="${m.couleur}"/>`);
               return `<w:r>${r2.length ? '<w:rPr>' + r2.join('') + '</w:rPr>' : ''}` +
-                (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(m.t || '')}</w:t></w:r>`;
+                (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`;
             }).join('');
             return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${c.align && c.align !== 'left' ? `<w:jc w:val="${c.align}"/>` : ''}</w:pPr>${runsCellule}</w:p>`;
           }).join('');
@@ -1606,17 +2327,28 @@ ul.liste li { margin-bottom: 6px; }
       this.i = intervention;
       this.s = reglages || {};
       this.opts = opts || {};
+      /* Langue du rapport : 'fr' (défaut) ou le code de la langue du client.
+         Les libellés du modèle sont traduits par langues.js, à l'écriture. */
+      this.langue = this.opts.langue || (intervention.langue && intervention.langue.code) || 'fr';
       this.canevas = (this.s.canevas && this.s.canevas.sections) ? this.s.canevas.sections : canevasDefaut().sections;
       this.etat = etat(intervention, reglages);
       /* Aperçu à l'écran : même mise en page, dessinée sur des canvas
          (aucune visionneuse PDF n'est nécessaire dans le navigateur). */
-      this.pdf = this.opts.apercu ? new Pdf.Apercu({ margin: M.margin }) : new Pdf.Doc({ margin: M.margin });
+      this.pdf = this.opts.apercu
+        ? new Pdf.Apercu({ margin: M.margin, langue: this.langue })
+        : new Pdf.Doc({ margin: M.margin, langue: this.langue });
       this.M = this.pdf.margin;
       this.W = this.pdf.W;
       this.H = this.pdf.H;
       this.CW = this.pdf.contentWidth;
       this.C = COULEURS_PDF;
       this.numeroPhoto = 0;
+    }
+
+    /* Traduction d'un libellé du catalogue (domaines, catégories) : ce sont
+       des libellés, pas des données du terrain. */
+    L(txt) {
+      return (global.I18N ? global.I18N.traduire(txt, this.langue) : txt);
     }
 
     /* --- structure de page (modèle « Compte rendu d'intervention ») --- */
@@ -1862,8 +2594,9 @@ ul.liste li { margin-bottom: 6px; }
           this.saut(26 + 2 * lh);
           p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
           p.rect(this.M, p.y, 3, 15, { fill: couleur });
-          p.text(dom.icone ? dom.icone + ' ' + dom.libelle : dom.libelle, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
-          p.text(cat.libelle.toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
+          const libDom = this.L(dom.libelle);
+          p.text(dom.icone ? dom.icone + ' ' + libDom : libDom, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
+          p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
           p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
           p.y += 15;
         }
@@ -1893,7 +2626,7 @@ ul.liste li { margin-bottom: 6px; }
           const x = this.M + k * (caseW + 5);
           p.rect(x, y, caseW, 30, { fill: hexClair(c.couleur, 0.88), stroke: hexRgb(c.couleur), lineWidth: 0.5 });
           p.text(String(e.parCategorie[c.id]), x + caseW / 2, y + 15, { size: 15, font: 'F2', color: hexRgb(c.couleur), align: 'center' });
-          p.text(Pdf.trunc(c.libelle, caseW - 6, 6.6), x + caseW / 2, y + 25, { size: 6.6, color: C.gris, align: 'center' });
+          p.text(Pdf.trunc(this.L(c.libelle), caseW - 6, 6.6), x + caseW / 2, y + 25, { size: 6.6, color: C.gris, align: 'center' });
         }, this);
         p.y = y + 38;
       }
@@ -2041,15 +2774,19 @@ ul.liste li { margin-bottom: 6px; }
         d.text('Page ' + num + ' / ' + total, d.W - d.margin, y - 8, { size: 7, font: 'F2', color: COULEURS_PDF.gris, align: 'right' });
       });
 
-      if (this.opts.apercu) return { apercu: doc, filename: nomFichier(this.i, 'pdf') };
-      return { blob: doc.blob(), filename: nomFichier(this.i, 'pdf') };
+      if (this.opts.apercu) return { apercu: doc, filename: nomFichier(this.i, 'pdf', this.opts.suffixe ? this.langue : null) };
+      return { blob: doc.blob(), filename: nomFichier(this.i, 'pdf', this.opts.suffixe ? this.langue : null) };
     }
   }
 
-  function nomFichier(i, ext) {
+  /* Nom du fichier : « Rapport_20260921_260921-01_CLIENT.pdf ». Quand le
+     rapport existe en deux langues, chacune porte son code (_FR / _NL…) pour
+     que le client et le SAV s'y retrouvent dans la pièce jointe. */
+  function nomFichier(i, ext, langue) {
     const d = (i.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
     const morceaux = ['Rapport', d, i.numero ? slug(i.numero) : '', slug(i.client && i.client.nom),
       slug(i.machine && i.machine.designation)];
+    if (langue) morceaux.push(String(langue).toUpperCase());
     return morceaux.filter(Boolean).join('_') + '.' + ext;
   }
 
@@ -2057,20 +2794,29 @@ ul.liste li { margin-bottom: 6px; }
      WORD (.docx)
      ====================================================================== */
   class RapportWord {
-    constructor(intervention, reglages) {
+    constructor(intervention, reglages, opts) {
       this.i = intervention;
       this.s = reglages || {};
+      this.opts = opts || {};
+      this.langue = this.opts.langue || (intervention.langue && intervention.langue.code) || 'fr';
       this.canevas = (this.s.canevas && this.s.canevas.sections) ? this.s.canevas.sections : canevasDefaut().sections;
       this.etat = etat(intervention, reglages);
       this.doc = new Docx.Doc({
+        langue: this.langue,
         auteur: (this.s.societe && this.s.societe.nom) || 'Application SAV',
         /* Pied de page du modèle : nom + adresses des deux sites, et numérotation. */
         pied: [(this.s.societe && this.s.societe.nom) || 'BFR SYSTEMS']
           .concat([valeur(this.s.societe && this.s.societe.siege1) || SIEGES_BFR[0],
                    valeur(this.s.societe && this.s.societe.siege2) || SIEGES_BFR[1]])
       });
-      this.doc.titreDoc = 'Compte rendu d\'intervention N° ' + valeur(intervention.numero);
+      this.doc.titreDoc = (global.I18N ? global.I18N.traduire("Compte rendu d'intervention", this.langue) : "Compte rendu d'intervention") +
+        (this.langue === 'fr' ? ' N° ' : ' No. ') + valeur(intervention.numero);
       this.numeroPhoto = 0;
+    }
+
+    /* Traduction d'un libellé du catalogue (domaines, catégories). */
+    L(txt) {
+      return (global.I18N ? global.I18N.traduire(txt, this.langue) : txt);
     }
 
     async generer() {
@@ -2149,11 +2895,11 @@ ul.liste li { margin-bottom: 6px; }
         if (section.type === 'synthese') {
           d.bandeau(section.titre || 'Synthèse');
           const lignes = (this.s.categories || []).filter(c => this.etat.parCategorie[c.id])
-            .map(c => [{ texte: c.libelle }, { texte: String(this.etat.parCategorie[c.id]), align: 'center', gras: true }]);
+            .map(c => [{ texte: this.L(c.libelle) }, { texte: String(this.etat.parCategorie[c.id]), align: 'center', gras: true }]);
           if (lignes.length) d.tableau([[{ texte: 'Catégorie', gras: true }, { texte: 'Nombre', gras: true, align: 'center' }]].concat(lignes),
             { largeurs: [70, 30], enteteFond: 'E8EFFA' });
           const dom = (this.s.domaines || []).filter(x => this.etat.parDomaine[x.id])
-            .map(x => x.libelle + ' : ' + this.etat.parDomaine[x.id]);
+            .map(x => this.L(x.libelle) + ' : ' + this.etat.parDomaine[x.id]);
           if (dom.length) d.para(dom.join('   •   '), { taille: 10, couleur: '334155', apres: 60 });
           d.para('Heures passées sur site : ' + (formatDuree(this.etat.duree) || '—') +
             (this.etat.duree ? ' (' + dureeDecimale(this.etat.duree) + ' h)' : '') + '   •   Photos : ' + this.etat.nbPhotos,
@@ -2170,8 +2916,8 @@ ul.liste li { margin-bottom: 6px; }
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
             d.para([
-              { t: (dom.icone ? dom.icone + ' ' : '') + dom.libelle, gras: true, taille: 11, couleur: '0B3D91' },
-              { t: '   [' + cat.libelle.toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
+              { t: (dom.icone ? dom.icone + ' ' : '') + this.L(dom.libelle), gras: true, taille: 11, couleur: '0B3D91' },
+              { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
               { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
             ], { avant: 160, apres: 40 });
             d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 60, encadre: true });
@@ -2206,7 +2952,7 @@ ul.liste li { margin-bottom: 6px; }
           if (cli.dataUrl) d.image(cli.dataUrl, 6, { hauteurMaxCm: 3 });
         }
       }
-      return { blob: this.doc.blob(), filename: nomFichier(this.i, 'docx') };
+      return { blob: this.doc.blob(), filename: nomFichier(this.i, 'docx', this.opts.suffixe ? this.langue : null) };
     }
   }
 
@@ -2264,8 +3010,12 @@ ul.liste li { margin-bottom: 6px; }
   function objetMail(i, s) {
     return appliquer((s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}', variables(i, s));
   }
-  function corpsMail(i, s) {
-    return appliquer((s.mail && s.mail.corps) || defaultCorpsMail(), variables(i, s));
+  function corpsMail(i, s, langue) {
+    const corps = appliquer((s.mail && s.mail.corps) || defaultCorpsMail(), variables(i, s));
+    /* Rapport envoyé en deux langues : on le dit au client, dans sa langue,
+       à la fin du message (le corps du mail reste en français pour le SAV). */
+    const phrase = (langue && langue !== 'fr' && global.I18N) ? global.I18N.phraseTraduction(langue) : null;
+    return phrase ? corps + '\n\n' + phrase : corps;
   }
   function defaultCorpsMail() {
     return [
@@ -2294,14 +3044,16 @@ ul.liste li { margin-bottom: 6px; }
   }
 
   global.Report = {
-    genererPDF: function (i, s) { return new RapportPDF(i, s).generer(); },
+    /* opts : { langue: 'en', suffixe: true } pour la version traduite. */
+    genererPDF: function (i, s, opts) { return new RapportPDF(i, s, opts).generer(); },
     /* Aperçu dans l'application : renvoie un canvas par page. */
     apercu: async function (i, s, opts) {
-      const r = await new RapportPDF(i, s, { apercu: true }).generer();
-      const pages = await Pdf.rendrePages(r.apercu, opts || {});
+      opts = opts || {};
+      const r = await new RapportPDF(i, s, Object.assign({}, opts, { apercu: true })).generer();
+      const pages = await Pdf.rendrePages(r.apercu, opts);
       return { pages: pages, doc: r.apercu, filename: r.filename };
     },
-    genererDOCX: function (i, s) { return new RapportWord(i, s).generer(); },
+    genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
     etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, formatDuree: formatDuree,
     dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
@@ -3035,6 +3787,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         fonction: client.fonction || avant.fonction || '', tel: client.tel || avant.tel || '',
         email: client.email || avant.email || '', logo: client.logo || avant.logo || '',
         numeroClient: client.numeroClient || avant.numeroClient || '',
+        /* Langue retenue pour ce client : le rapport bilingue est reproposé
+           à l'intervention suivante (le technicien garde la main). */
+        langue: client.langue || avant.langue || '',
         maj: new Date().toISOString()
       };
       memo[cle] = apres;
@@ -3291,7 +4046,10 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
       id: uid('r'), cree: new Date().toISOString(), maj: new Date().toISOString(), statut: 'brouillon',
       numero: numeroSuggere(), date: todayISO(),
       client: { nom: '', reference: '', numeroClient: '', contact: '', fonction: '', tel: '', email: '',
-                lieu: '', adresse: '', logo: '', noteContacts: '' },
+                lieu: '', adresse: '', logo: '', noteContacts: '', langue: '' },
+      /* Rapport bilingue : désactivé = un seul rapport en français ;
+         activé = deux rapports (français + langue choisie). */
+      langue: { active: false, code: '' },
       machine: { designation: '', marque: '', modele: '', serie: '', compteur: '', parc: '' },
       objet: '', technicien: Report.nomComplet(S.technicien),
       chrono: { debut: null, fin: null, pauses: [], enPause: false, debutPause: null },
@@ -3304,6 +4062,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   let R = fusion(nouvelleIntervention(), Store.get(K.rapport, null) || {});
   if (!R.evenements) R.evenements = [];
+  /* Rapports enregistrés avant l'option de traduction : valeurs par défaut. */
+  if (!R.langue || typeof R.langue !== 'object') R.langue = { active: false, code: '' };
+  if (R.client && R.client.langue == null) R.client.langue = '';
 
   let dirty = false, saveTimer;
   function sauver(silencieux) {
@@ -3425,6 +4186,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
               <div><span>N° série</span><strong>${esc(m.serie || '—')}</strong></div>
               <div><span>Contact</span><strong>${esc(c.contact || '—')}</strong></div>
               <div><span>Objet</span><strong>${esc(R.objet || '—')}</strong></div>
+              <div><span>Langue du rapport</span><strong>${R.langue.active && R.langue.code
+                ? 'français + ' + esc(I18N.natif(R.langue.code))
+                : 'français'}</strong></div>
             </div>`
           : `<p class="hint">Renseignez le client et la machine : ces informations se retrouvent dans le rapport.</p>
              <button class="btn wide" data-a="editer-client">Client & machine</button>`}
@@ -3593,6 +4357,21 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         <div class="grid2">${f('machine.modele', 'Modèle', { ph: 'Ex. PH-120/4D' })}${f('machine.serie', 'N° de série', { ph: 'Ex. PH1204D-2011-0387' })}</div>
         <p class="small">Marque, compteur et n° de parc ne sont plus demandés : nos machines et notre marque sont connues.</p>
       </div>
+      <div class="card"><h2>Langue du client</h2>
+        <div class="agreement"><input type="checkbox" id="langActive" ${R.langue.active ? 'checked' : ''}>
+          <label for="langActive">Traduire le rapport dans la langue du client</label></div>
+        <div class="field" id="langChoix" ${R.langue.active ? '' : 'hidden'}>
+          <label>Langue du rapport envoyé au client</label>
+          <select id="langCode">
+            ${I18N.langues.map(l => `<option value="${l.code}" ${R.langue.code === l.code ? 'selected' : ''}>${l.nom} — ${l.natif}</option>`).join('')}
+          </select>
+        </div>
+        <div class="btnrow" id="langPretBloc" ${R.langue.active ? '' : 'hidden'}>
+          <button class="btn grey" type="button" id="langPret">Préparer la langue sur ce téléphone</button>
+        </div>
+        <p class="small" id="langResume">${texteLangue(R)}</p>
+        <p class="small" id="langEtat">${texteEtatTraduction()}</p>
+      </div>
       <div class="card"><h2>Intervention</h2>
         <div class="grid2">${f('numero', 'N° de rapport')}<div class="field"><label>Date</label><input type="date" data-fk="date" value="${esc(R.date)}"></div></div>
         ${f('technicien', 'Technicien', { ph: Report.nomComplet(S.technicien) })}
@@ -3604,6 +4383,67 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     </div>`, (panneau) => {
       $$('[data-fk]', panneau).forEach(el => {
         el.addEventListener('input', () => { setPath(R, el.dataset.fk, el.value); planifier(); rendreEntete(); rendreTout(); });
+      });
+
+      /* ---------- Rapport bilingue (langue du client) ------------------- */
+      const caseLangue = $('#langActive', panneau);
+      const selLangue = $('#langCode', panneau);
+
+      function majLangue() {
+        R.langue.active = !!(caseLangue && caseLangue.checked);
+        if (R.langue.active && !R.langue.code) {
+          R.langue.code = R.client.langue || (I18N.langues[0] && I18N.langues[0].code) || 'en';
+        }
+        if (!R.langue.active) R.langue.code = R.langue.code || R.client.langue || 'en';
+        if (selLangue) selLangue.value = R.langue.code;
+        const choix = $('#langChoix', panneau);
+        if (choix) choix.hidden = !R.langue.active;
+        const blocPret = $('#langPretBloc', panneau);
+        if (blocPret) blocPret.hidden = !R.langue.active;
+        const zoneEtat = $('#langEtat', panneau);
+        const btn = $('#langPret', panneau);
+        if (zoneEtat && (!btn || !btn.disabled)) zoneEtat.textContent = texteEtatTraduction();
+        const resume = $('#langResume', panneau);
+        if (resume) resume.textContent = texteLangue(R);
+        if (R.langue.active) {
+          R.client.langue = R.langue.code;      // retenu pour ce client
+          if (R.client.nom) Clients.retenir(R.client);
+        }
+        Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = '';
+        planifier(); rendreEntete(); rendreTout();
+      }
+      if (caseLangue) caseLangue.addEventListener('change', majLangue);
+      if (selLangue) selLangue.addEventListener('change', () => { R.langue.code = selLangue.value; majLangue(); });
+
+      /* Téléchargement de la langue, à faire une fois (au bureau ou en Wi-Fi)
+         pour que la traduction fonctionne ensuite même sans réseau. */
+      const btnPret = $('#langPret', panneau);
+      if (btnPret) btnPret.addEventListener('click', async () => {
+        const zone = $('#langEtat', panneau);
+        const dire = (t) => { if (zone) zone.textContent = t; };
+        const l = I18N.langue(R.langue.code);
+        const nom = l ? l.natif : R.langue.code;
+        if (!Traduction.utilisable()) { dire(texteEtatTraduction()); return; }
+        btnPret.disabled = true;
+        dire('Préparation de la langue ' + nom + '…');
+        let res;
+        try {
+          res = await Traduction.pret(R.langue.code, (e) => {
+            if (e && e.etape === 'telechargement') {
+              dire('Téléchargement de la langue ' + nom + ' : ' + e.pct + ' % (une seule fois, avec du réseau).');
+            }
+          });
+        } catch (e) { res = { ok: false, motif: 'refus' }; }
+        btnPret.disabled = false;
+        if (res.ok) {
+          dire('Langue ' + nom + ' prête sur ce téléphone : la traduction fonctionnera même sans réseau.');
+        } else if (res.motif === 'modele') {
+          dire('Téléchargement impossible : ce téléphone n\'a pas de réseau pour le moment. À refaire une fois connecté (bureau, Wi-Fi de l\'atelier) — le rapport reste envoyable en attendant.');
+        } else if (res.motif === 'refus') {
+          dire("La langue " + nom + " n'est pas disponible sur ce téléphone : les libellés du rapport seront traduits, les commentaires resteront en français.");
+        } else {
+          dire(texteEtatTraduction());
+        }
       });
       /* Toute correction saisie ici (téléphone, e-mail, contact, logo) est
          mémorisée pour les prochaines interventions chez ce client. */
@@ -3644,6 +4484,16 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         if (c.logo) R.client.logo = c.logo;
         if (c.numeroClient) R.client.numeroClient = c.numeroClient;
         R.client.noteContacts = c.autresContacts || R.client.noteContacts || '';
+        /* Langue déjà utilisée chez ce client : proposée d'office (l'option
+           reste à cocher par le technicien, elle n'est jamais activée seule). */
+        if (c.langue) {
+          R.client.langue = c.langue;
+          R.langue.code = c.langue;
+          const sel = $('#langCode', panneau);
+          if (sel) sel.value = c.langue;
+          const resume = $('#langResume', panneau);
+          if (resume) resume.textContent = texteLangue(R);
+        }
         planifier();
         champ.value = c.nom;
         $$('[data-fk]', panneau).forEach(el => { el.value = getPath(R, el.dataset.fk) || ''; });
@@ -3684,6 +4534,9 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
 
   const Ouvrir = {
     ouvrir: function (e, html, branche) {
+      /* Une seule feuille à l'écran : un double appui ne doit pas superposer
+         deux panneaux (le second resterait inerte). */
+      document.querySelectorAll('.sheet').forEach((x) => x.remove());
       const overlay = document.createElement('div');
       overlay.className = 'sheet open';
       overlay.innerHTML = html;
@@ -3815,19 +4668,28 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
   }
 
   /* ===================== Génération & envoi =========================== */
-  const Cache = { pdf: null, docx: null, cle: '' };
-  function cleCache() { return JSON.stringify([R.id, R.maj, (S.canevas && S.canevas.nom) || '']); }
-  async function pdf() {
-    if (Cache.pdf && Cache.cle === cleCache()) return Cache.pdf;
-    toast('Mise en forme du rapport…', 1600);
-    const res = await Report.genererPDF(R, S);
-    Cache.pdf = res; Cache.cle = cleCache();
+  const Cache = { pdf: null, docx: null, clePdf: '', cleDocx: '', cleTrad: '' };
+  function cleCache(rapport, langue) {
+    rapport = rapport || R;
+    return JSON.stringify([rapport.id, rapport.maj, (S.canevas && S.canevas.nom) || '', langue || 'fr']);
+  }
+  /* Génère le PDF : français par défaut, ou dans la langue demandée
+     (suffixe : nom de fichier « …_EN.pdf » quand les deux langues cohabitent). */
+  async function pdf(rapport, langue, suffixe) {
+    rapport = rapport || R; langue = langue || 'fr';
+    const cle = cleCache(rapport, langue);
+    if (Cache.pdf && Cache.clePdf === cle) return Cache.pdf;
+    toast(langue === 'fr' ? 'Mise en forme du rapport…' : 'Mise en forme de la version ' + I18N.natif(langue) + '…', 1800);
+    const res = await Report.genererPDF(rapport, S, { langue: langue, suffixe: !!suffixe });
+    Cache.pdf = res; Cache.clePdf = cle;
     return res;
   }
-  async function docx() {
-    if (Cache.docx && Cache.cle === cleCache()) return Cache.docx;
-    const res = await Report.genererDOCX(R, S);
-    Cache.docx = res;
+  async function docx(rapport, langue, suffixe) {
+    rapport = rapport || R; langue = langue || 'fr';
+    const cle = cleCache(rapport, langue);
+    if (Cache.docx && Cache.cleDocx === cle) return Cache.docx;
+    const res = await Report.genererDOCX(rapport, S, { langue: langue, suffixe: !!suffixe });
+    Cache.docx = res; Cache.cleDocx = cle;
     return res;
   }
   function urlObjet(blob) {
@@ -3845,8 +4707,12 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
      (Chrome bloque l'affichage d'un PDF dans un cadre, surtout hors connexion
      ou dans un onglet « sandbox »). Le rendu est identique au PDF final. */
   async function apercuPDF() {
+    const bilingue = !!(R.langue && R.langue.active && R.langue.code);
     const panneau = Ouvrir.ouvrir(null, `<div class="panel" style="max-height:92vh">
       <div class="grab"></div><h3>Aperçu du rapport</h3>
+      ${bilingue ? `<div class="btnrow" style="margin:2px 0 8px">
+        <button class="btn" data-ap="fr">Français</button>
+        <button class="btn ghost" data-ap="trad">${esc(I18N.natif(R.langue.code))}</button></div>` : ''}
       <p class="sub" id="apInfo">Préparation de l'aperçu…</p>
       <div id="apPages" class="apercu-zone"><p class="hint">Mise en page en cours…</p></div>
       <div class="btnrow" style="margin-top:10px">
@@ -3854,13 +4720,29 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         <button class="btn ghost" id="apOuvrir" hidden>Ouvrir dans un onglet</button>
         <button class="btn" id="apTel" disabled>Télécharger</button></div></div>`);
 
-    try {
-      const res = await pdf();
-      const rendu = await Report.apercu(R, S, { echelle: 1.5 });
+    let langueAffichee = 'fr';
+
+    function erreurApercu(e) {
+      $('#apInfo', panneau).textContent = 'Aperçu impossible : ' + (e && e.message ? e.message : e);
+      $('#apPages', panneau).innerHTML = '<p class="hint">Le rapport reste téléchargeable ci-dessous.</p>';
+    }
+
+    async function dessiner() {
+      const zone = $('#apPages', panneau);
+      zone.innerHTML = '<p class="hint">Mise en page en cours…</p>';
+      $('#apInfo', panneau).textContent = "Préparation de l'aperçu…";
+      let rapport = R, langue = langueAffichee;
+      /* Version traduite : traduction (ou repli annoncé) avant la mise en page. */
+      if (langue !== 'fr') {
+        const trad = await traduireRapport(surEtatTraduction);
+        if (trad.actif && trad.ok) rapport = trad.rapport;
+        else { langue = 'fr'; langueAffichee = 'fr'; }
+      }
+      const res = (langue === 'fr') ? await pdf() : await pdf(rapport, langue, true);
+      const rendu = await Report.apercu(rapport, S, { echelle: 1.5, langue: langue, suffixe: langue !== 'fr' });
       const pages = rendu.pages;
       $('#apInfo', panneau).textContent = rendu.filename + ' — ' + pages.length + ' page(s) — ' +
         (res.blob.size / 1024).toFixed(0) + ' Ko';
-      const zone = $('#apPages', panneau);
       zone.innerHTML = '';
       pages.forEach((c, n) => {
         const bloc = document.createElement('div');
@@ -3872,24 +4754,74 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         bloc.appendChild(num);
         zone.appendChild(bloc);
       });
+      $('#apTel', panneau).disabled = false;
+      $('#apTel', panneau).onclick = () => { telecharger(res.blob, res.filename); toast('Rapport enregistré'); };
       const url = urlObjet(res.blob);
-      const boutonTel = $('#apTel', panneau);
-      boutonTel.disabled = false;
-      boutonTel.addEventListener('click', () => { telecharger(res.blob, res.filename); toast('Rapport enregistré'); });
       if (url) {
         const ouvrir = $('#apOuvrir', panneau);
         ouvrir.hidden = false;
-        ouvrir.addEventListener('click', () => {
+        ouvrir.onclick = () => {
           const fenetre = window.open(url, '_blank');
           if (!fenetre) toast('Onglet bloqué : utilisez « Télécharger » puis ouvrez le fichier', 4000);
-        });
+        };
         setTimeout(() => { if (url.indexOf('blob:') === 0) URL.revokeObjectURL(url); }, 120000);
       }
-    } catch (e) {
-      $('#apInfo', panneau).textContent = 'Aperçu impossible : ' + (e && e.message ? e.message : e);
-      $('#apPages', panneau).innerHTML = '<p class="hint">Le rapport reste téléchargeable ci-dessous.</p>';
+      panneau.querySelectorAll('[data-ap]').forEach(function (b) {
+        const actif = (b.dataset.ap === 'fr') === (langue === 'fr');
+        b.className = actif ? 'btn' : 'btn ghost';
+      });
     }
+
+    panneau.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ap]');
+      if (!b) return;
+      langueAffichee = b.dataset.ap === 'fr' ? 'fr' : R.langue.code;
+      dessiner().catch(erreurApercu);
+    });
+
+    dessiner().catch(erreurApercu);
   }
+
+  /* ---------- Langue du client (rapport bilingue) ---------------------- */
+  function texteLangue(r) {
+    if (!r.langue || !r.langue.active) {
+      return "Un seul rapport est créé, en français. Cochez la case si le client a besoin du rapport dans sa langue.";
+    }
+    const l = I18N.langue(r.langue.code);
+    return 'Deux rapports sont créés : un en français et un en ' + (l ? l.natif : '?') +
+      " (libellés et commentaires traduits). Numéro, dates et heures sont identiques sur les deux, et le français reste la version de référence.";
+  }
+  function texteEtatTraduction() {
+    if (!Traduction.utilisable()) {
+      return "Sur ce téléphone, la traduction automatique n'est pas disponible : les libellés du rapport seront traduits, mais les commentaires saisis resteront en français.";
+    }
+    return "Traduction faite par le téléphone : gratuit, et hors connexion une fois la langue téléchargée (une seule fois). La version traduite peut être relue dans l'aperçu avant l'envoi.";
+  }
+
+  /* Traduit le rapport si l'option est active. Renvoie :
+     { actif:false }                          → rien à traduire
+     { actif:true, ok:true, rapport, partiel} → version traduite à mettre en page
+     { actif:true, ok:false, annule:true }    → le technicien a renoncé        */
+  async function traduireRapport(surEtat) {
+    if (!R.langue || !R.langue.active || !R.langue.code) return { actif: false };
+    const code = R.langue.code;
+    const nom = I18N.natif(code);
+    if (surEtat) surEtat({ etape: 'debut', langue: nom });
+    const res = await Traduction.rapport(R, code, surEtat);
+    if (res.ok) {
+      return { actif: true, ok: true, rapport: res.rapport, code: code, nb: res.nb, total: res.total, erreurs: res.erreurs };
+    }
+    /* Traduction automatique impossible : on demande quoi faire, sans jamais
+       bloquer l'envoi du rapport français. */
+    const explication = res.motif === 'indisponible'
+      ? "Ce téléphone ne peut pas traduire les commentaires automatiquement."
+      : "La langue n'a pas pu être préparée (le modèle se télécharge au premier usage : il faut du réseau).";
+    const poursuivre = confirm(explication + "\n\nCréer quand même le rapport en " + nom +
+      " (libellés traduits, commentaires laissés en français) ?\n\n« Annuler » = n'envoyer que le rapport français.");
+    if (!poursuivre) return { actif: true, ok: false, annule: true, motif: res.motif };
+    return { actif: true, ok: true, rapport: R, code: code, partiel: true, motif: res.motif };
+  }
+
   function destinataires() {
     const to = [];
     if (S.mail.envoyerClient && R.client.email) to.push(R.client.email.trim());
@@ -3897,43 +4829,85 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
     if (S.mail.destinatairesCopie) S.mail.destinatairesCopie.split(/[;,]/).forEach(x => { if (x.trim()) to.push(x.trim()); });
     return to;
   }
+  /* Suivi de la traduction à l'écran (téléchargement du modèle, avancement). */
+  function surEtatTraduction(e) {
+    if (!e) return;
+    if (e.etape === 'debut') toast('Préparation de la traduction (' + e.langue + ')…', 2200);
+    else if (e.etape === 'telechargement') toast('Téléchargement de la langue : ' + (e.pct || 0) + ' %', 1400);
+    else if (e.etape === 'traduction' && e.total && (e.fait === e.total || e.fait === 0)) {
+      toast(e.fait === 0 ? 'Traduction des commentaires…' : 'Traduction terminée ✔', 1600);
+    }
+  }
+
   async function soumettre() {
     if (!R.client.nom) { toast('Renseignez d\'abord le client'); feuilleClient(); return; }
     if (!R.signatureClient.dataUrl && !confirm('Le client n\'a pas signé. Soumettre quand même le rapport ?')) return;
     if (!R.chrono.fin && R.chrono.debut && !confirm('Le chrono n\'est pas terminé. Continuer ?')) return;
+
+    /* 1. Rapport français : toujours créé, c'est la version de référence. */
     const res = await pdf();
     let resWord = null;
     try { resWord = await docx(); } catch (e) { resWord = null; }
-    const fichier = new File([res.blob], res.filename, { type: 'application/pdf' });
+
+    /* 2. Version dans la langue du client, si l'option est activée. */
+    let trad = { actif: false }, resTrad = null, resWordTrad = null;
+    if (R.langue && R.langue.active && R.langue.code) {
+      trad = await traduireRapport(surEtatTraduction);
+      if (trad.actif && trad.ok) {
+        resTrad = await pdf(trad.rapport, trad.code, true);
+        try { resWordTrad = await docx(trad.rapport, trad.code, true); } catch (e) { resWordTrad = null; }
+      }
+    }
+
+    const lots = { fr: { pdf: res, word: resWord }, trad: (resTrad ? { code: trad.code, pdf: resTrad, word: resWordTrad } : null), partiel: !!(trad.partiel) };
+    const fichiers = fichiersEnvoi(lots);
     const message = Report.valeur(S.mail.messagePartage).replace(/\{\{(\w+)\}\}/g, (m, k) => {
       const v = Report.variables(R, S);
       return v[k] !== undefined ? v[k] : m;
     });
-    const envoi = [];
-    if (resWord) envoi.push(new File([resWord.blob], resWord.filename, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-    envoi.unshift(fichier);
+    const langueMail = lots.trad ? lots.trad.code : null;
 
-    if (navigator.canShare && navigator.canShare({ files: envoi })) {
+    if (navigator.canShare && navigator.canShare({ files: fichiers })) {
       try {
-        await navigator.share({ files: envoi, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S) });
-        R.statut = 'transmis'; planifier(); rendreTout();
-        toast('Rapport transmis ✔');
+        await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S, langueMail) });
+        R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
+        planifier(); rendreTout();
+        toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ') ✔' : 'Rapport transmis ✔', 2600);
         return;
       } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     telecharger(res.blob, res.filename);
-    feuilleEnvoi(res, resWord);
+    feuilleEnvoi(lots);
   }
 
-  function feuilleEnvoi(res, resWord) {
+  /* Fichiers joints au mail : le rapport français, puis sa version traduite. */
+  function fichiersEnvoi(lots) {
+    const PDF = 'application/pdf';
+    const WORD = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const fichiers = [new File([lots.fr.pdf.blob], lots.fr.pdf.filename, { type: PDF })];
+    if (lots.fr.word) fichiers.push(new File([lots.fr.word.blob], lots.fr.word.filename, { type: WORD }));
+    if (lots.trad) {
+      fichiers.push(new File([lots.trad.pdf.blob], lots.trad.pdf.filename, { type: PDF }));
+      if (lots.trad.word) fichiers.push(new File([lots.trad.word.blob], lots.trad.word.filename, { type: WORD }));
+    }
+    return fichiers;
+  }
+
+  function feuilleEnvoi(lots) {
     const to = destinataires().join(';');
+    const res = lots.fr.pdf, resWord = lots.fr.word;
+    const t = lots.trad;
+    const langueMail = t ? t.code : null;
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Envoyer le rapport</h3>
       <p class="sub">Le PDF a été enregistré sur le téléphone. Choisissez le mode d'envoi :</p>
+      ${t ? `<div class="sticky-note">Deux rapports : français + ${esc(I18N.natif(t.code))}${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
       <button class="menu-item" data-a="partager"><span class="ico">📤</span><span>Partager le rapport<small>Gmail / Outlook — PDF (et Word) déjà joints</small></span></button>
       <button class="menu-item" data-a="mailto"><span class="ico">✉️</span><span>Ouvrir l'application e-mail<small>Destinataires et texte pré-remplis</small></span></button>
-      <button class="menu-item" data-a="dl"><span class="ico">⬇️</span><span>Télécharger le PDF</span></button>
-      <button class="menu-item" data-a="dlw"><span class="ico">📄</span><span>Télécharger la version Word</span></button>
+      <button class="menu-item" data-a="dl"><span class="ico">⬇️</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
+      ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">⬇️</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
+      <button class="menu-item" data-a="dlw"><span class="ico">📄</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
+      ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">📄</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
       <button class="menu-item" data-a="copier"><span class="ico">📋</span><span>Copier le texte du rapport</span></button>
       <div class="sticky-note">Destinataires : ${esc(to || 'non renseignés')}</div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
@@ -3942,16 +4916,16 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         if (!b) return;
         const a = b.dataset.a;
         if (a === 'partager') {
-          const fichiers = [new File([res.blob], res.filename, { type: 'application/pdf' })];
-          if (resWord) fichiers.push(new File([resWord.blob], resWord.filename, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-          if (navigator.share) { try { await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: Report.corpsMail(R, S) }); } catch (err) {} }
+          if (navigator.share) { try { await navigator.share({ files: fichiersEnvoi(lots), title: Report.objetMail(R, S), text: Report.corpsMail(R, S, langueMail) }); } catch (err) {} }
           else toast('Partage indisponible');
         } else if (a === 'mailto') {
           window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(Report.objetMail(R, S)) +
-            '&body=' + encodeURIComponent(Report.corpsMail(R, S));
+            '&body=' + encodeURIComponent(Report.corpsMail(R, S, langueMail));
         } else if (a === 'dl') telecharger(res.blob, res.filename);
+        else if (a === 'dlt' && t) telecharger(t.pdf.blob, t.pdf.filename);
         else if (a === 'dlw' && resWord) telecharger(resWord.blob, resWord.filename);
-        else if (a === 'copier') copier(Report.corpsMail(R, S));
+        else if (a === 'dlwt' && t && t.word) telecharger(t.word.blob, t.word.filename);
+        else if (a === 'copier') copier(Report.corpsMail(R, S, langueMail));
       });
     });
   }
@@ -4223,7 +5197,7 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         if (a === 'reglages') feuilleReglages();
         else if (a === 'nouveau') {
           if (!confirm('Créer une nouvelle intervention ?')) return;
-          sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null;
+          sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
           Store.set(K.rapport, R); rendreTout(); toast('Nouvelle intervention — N° ' + R.numero);
         } else if (a === 'historique') feuilleHistorique();
         else if (a === 'aide') feuilleAide();
@@ -4279,7 +5253,7 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
           if (!r || !confirm('Rouvrir ce rapport ? Le rapport en cours sera conservé au préalable.')) return;
           sauver(true);
           R = fusion(nouvelleIntervention(), r);
-          Cache.pdf = Cache.docx = null;
+          Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
           Store.set(K.rapport, R);
           e.target.closest('.sheet').remove(); rendreTout();
           toast('Rapport ' + R.numero + ' chargé');
@@ -4300,6 +5274,7 @@ window.LOGO_BFR = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAg
         <li><strong>Soumettre le rapport</strong> — le PDF (et la version Word) partent par e-mail au client et au responsable SAV. Vos nom et coordonnées figurent dans le bloc de signature.</li>
       </ol>
       <div class="sep"></div>
+      <p class="small"><strong>Client étranger :</strong> dans <em>Client &amp; machine</em>, cochez « Traduire le rapport dans la langue du client » et choisissez la langue (anglais, allemand, néerlandais, espagnol, italien, portugais). Le mail part alors avec <strong>deux rapports</strong> : le français et la version traduite. La langue est retenue pour ce client. Un appui sur « Préparer la langue sur ce téléphone » (au bureau, en Wi-Fi) rend la traduction disponible même hors connexion.</p>
       <p class="small">Un évènement reste modifiable à tout moment : appuyez dessus pour reprendre l'assistant.</p>
       <p class="small"><strong>Installation :</strong> dans Chrome, menu ⋮ → « Ajouter à l'écran d'accueil ». L'application fonctionne ensuite hors connexion.</p>
       <button class="btn grey wide" data-a="fermer">Fermer</button></div>`);

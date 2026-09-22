@@ -107,6 +107,9 @@
         fonction: client.fonction || avant.fonction || '', tel: client.tel || avant.tel || '',
         email: client.email || avant.email || '', logo: client.logo || avant.logo || '',
         numeroClient: client.numeroClient || avant.numeroClient || '',
+        /* Langue retenue pour ce client : le rapport bilingue est reproposé
+           à l'intervention suivante (le technicien garde la main). */
+        langue: client.langue || avant.langue || '',
         maj: new Date().toISOString()
       };
       memo[cle] = apres;
