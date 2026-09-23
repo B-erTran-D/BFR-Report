@@ -687,6 +687,49 @@ input:focus, select:focus, textarea:focus {
   padding: 0 12px 10px;
 }
 
+.ev-actions-pied {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ev-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.btn-ev-pill.apercu {
+  background: #e0f2fe;
+  color: var(--bfr-secondary);
+  border-color: rgba(6, 186, 242, 0.45);
+}
+
+.btn-ev-pill.apercu:active {
+  background: var(--bfr-primary);
+  color: #fff;
+}
+
+.btn-ev-pill.modifier {
+  background: #f1f5f9;
+  color: var(--bfr-primary);
+  border-color: #cbd5e1;
+}
+
+.btn-ev-pill.modifier:active {
+  background: #e2e8f0;
+}
+
 .ev-modifier {
   margin-left: auto;
   color: var(--bfr-primary);
@@ -1744,6 +1787,368 @@ ul.liste li { margin-bottom: 6px; }
   display: inline-block;
   margin-top: 4px;
   line-height: 1.35;
+}
+
+/* =========================================================================
+   APERÇU ÉVÈNEMENT / MODE DÉBRIEF CLIENT (TYPE PAGE PDF)
+   ========================================================================= */
+.debrief-overlay {
+  z-index: 105;
+  background: #1e293b;
+}
+
+.debrief-corps {
+  padding: 12px 14px 30px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.debrief-bandeau-aide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.debrief-zoom-text-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debrief-zoom-lbl {
+  color: #cbd5e1;
+  font-size: 11.5px;
+  margin-right: 4px;
+}
+
+.btn-zoom-t {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-t.actif {
+  background: var(--bfr-primary);
+  color: #ffffff;
+  border-color: var(--bfr-primary);
+}
+
+/* Feuille style papier A4 / PDF */
+.debrief-page-papier {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  padding: 16px;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  animation: monte 0.2s ease-out;
+}
+
+.debrief-pdf-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--bfr-primary);
+  margin-bottom: 14px;
+}
+
+.debrief-pdf-logo img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.debrief-pdf-meta {
+  text-align: right;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.debrief-pdf-num {
+  font-family: var(--font-heading);
+  color: var(--bfr-secondary);
+  font-size: 12.5px;
+}
+
+.debrief-pdf-client {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.debrief-pdf-machine {
+  color: #64748b;
+}
+
+/* Bandeau coloré type PDF */
+.debrief-ev-bandeau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--f, #f1f5f9);
+  border: 1px solid var(--c, #cbd5e1);
+  border-left: 4px solid var(--c, #06baf2);
+  margin-bottom: 14px;
+}
+
+.debrief-ev-dom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--c, #332e72);
+}
+
+.debrief-ev-heure {
+  font-size: 12px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.debrief-ev-cat {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 11.5px;
+  letter-spacing: 0.5px;
+  color: var(--c, #332e72);
+}
+
+/* Commentaire avec zoom dynamique */
+.debrief-commentaire-zone {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  line-height: 1.55;
+  transition: font-size 0.2s ease;
+}
+
+.debrief-commentaire-zone.font-small { font-size: 13px; }
+.debrief-commentaire-zone.font-medium { font-size: 16px; }
+.debrief-commentaire-zone.font-large { font-size: 20px; font-weight: 500; }
+
+.debrief-comm-label {
+  font-family: var(--font-heading);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: var(--bfr-secondary);
+  margin-bottom: 6px;
+}
+
+.debrief-comm-contenu {
+  color: #1e293b;
+  word-break: break-word;
+}
+
+/* Section photos */
+.debrief-photos-section {
+  margin-top: 14px;
+}
+
+.debrief-photos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.debrief-photos-titre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--bfr-secondary);
+}
+
+.debrief-photos-hint {
+  font-size: 11px;
+  color: var(--bfr-primary);
+  font-weight: 600;
+}
+
+.debrief-photos-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.debrief-photo-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.debrief-photo-item:active {
+  transform: scale(0.98);
+}
+
+.debrief-photo-cadre {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0f172a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.debrief-photo-cadre img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.debrief-photo-loupe {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.debrief-photo-legende {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.35;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.debrief-photos-vide {
+  text-align: center;
+  padding: 18px 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+/* Visionneuse plein écran de photo (Lightbox) */
+.debrief-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.94);
+  display: flex;
+  flex-direction: column;
+  touch-action: none;
+  user-select: none;
+  animation: monte 0.15s ease-out;
+}
+
+.debrief-lightbox-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  z-index: 10;
+}
+
+.debrief-lightbox-titre {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.debrief-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-lightbox {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-lightbox:active {
+  background: var(--bfr-primary);
+  border-color: var(--bfr-primary);
+}
+
+.debrief-lightbox-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.debrief-lightbox-viewport.dragging {
+  cursor: grabbing;
+}
+
+.debrief-lightbox-img {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  transform-origin: center center;
+  transition: transform 0.12s ease-out;
+  pointer-events: auto;
+}
+
+.debrief-lightbox-legende {
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.4;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
 }
 
 

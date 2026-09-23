@@ -426,7 +426,10 @@
       <div class="ev-pied">
         ${(ev.photos || []).length ? `<span class="pill">${ev.photos.length} photo(s)</span>` : '<span class="pill">sans photo</span>'}
         ${!ev.texte ? '<span class="pill surv">texte manquant</span>' : ''}
-        <span class="ev-modifier">Modifier ›</span>
+        <div class="ev-actions-pied">
+          <button type="button" class="btn-ev-pill apercu" data-a="apercu-ev" data-id="${ev.id}" title="Aperçu débrief client">${(ICO.eye && ICO.eye(13)) || ''} Aperçu</button>
+          <button type="button" class="btn-ev-pill modifier" data-a="modifier-ev" data-id="${ev.id}" title="Modifier cet évènement">${(ICO.pen && ICO.pen(13)) || ''} Modifier</button>
+        </div>
       </div>
     </div>`;
   }
@@ -631,6 +634,234 @@
       onSupprimer: (x) => { R.evenements = R.evenements.filter(e => e.id !== x.id); planifier(); rendreTout(); },
       onFermer: () => { planifier(); rendreTout(); }
     });
+  }
+
+  /* ===================== Aperçu Évènement / Débrief Client ============ */
+  function apercuEvenement(id) {
+    synchroniserEntites();
+    const ev = (R.evenements || []).find(e => e.id === id);
+    if (!ev) return;
+    const evs = (R.evenements || []).slice().sort((a, b) => new Date(a.heure || 0) - new Date(b.heure || 0));
+    const index = evs.findIndex(e => e.id === id) + 1;
+    const total = evs.length;
+    const cat = catDe(ev.categorie), dom = domDe(ev.domaine);
+    const texte = Report.valeur(ev.texte) || '';
+    const photos = (ev.photos || []).filter(p => p && p.dataUrl);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'assistant debrief-overlay';
+    overlay.innerHTML = `
+      <div class="assistant-bar">
+        <button type="button" class="btn sm grey" data-a="fermer">${(ICO.close && ICO.close(16)) || ''} Fermer</button>
+        <div class="assistant-titre">Aperçu Évènement ${index}/${total}</div>
+        <button type="button" class="btn sm or" data-a="modifier-direct">${(ICO.pen && ICO.pen(14)) || ''} Modifier</button>
+      </div>
+
+      <div class="assistant-corps debrief-corps">
+        <div class="debrief-bandeau-aide">
+          <span style="font-weight:600">Mode débrief client (vue PDF)</span>
+          <div class="debrief-zoom-text-controls">
+            <span class="debrief-zoom-lbl">Zoom texte :</span>
+            <button type="button" class="btn-zoom-t" data-zoom="small" title="Texte compact">A-</button>
+            <button type="button" class="btn-zoom-t actif" data-zoom="medium" title="Grand texte">A</button>
+            <button type="button" class="btn-zoom-t" data-zoom="large" title="Très grand texte">A+</button>
+          </div>
+        </div>
+
+        <div class="debrief-page-papier">
+          <div class="debrief-pdf-entete">
+            <div class="debrief-pdf-logo">
+              <img src="${window.LOGO_BFR_TOPBAR || 'uploads/logo_bfr.png'}" alt="BFR SYSTEMS">
+            </div>
+            <div class="debrief-pdf-meta">
+              <div class="debrief-pdf-num">Compte rendu N° <strong>${esc(R.numero || '—')}</strong></div>
+              <div class="debrief-pdf-client">${esc(R.client.nom || 'Client non renseigné')}${R.client.lieu ? ' (' + esc(R.client.lieu) + ')' : ''}</div>
+              <div class="debrief-pdf-machine">${esc(R.machine.designation || 'Machine')}${R.machine.serie ? ' — N° ' + esc(R.machine.serie) : ''}</div>
+            </div>
+          </div>
+
+          <div class="debrief-ev-bandeau" style="--c:${cat.couleur};--f:${cat.fond}">
+            <div class="debrief-ev-dom">${(ICO.domaine && ICO.domaine(dom.id || dom.icone, 16)) || ''} ${esc(dom.libelle)}${ev.machineNom ? ' — [' + esc(ev.machineNom) + ']' : ''}</div>
+            <div class="debrief-ev-heure">${esc(Report.heureFr(ev.heure))}</div>
+            <div class="debrief-ev-cat">${esc(cat.libelle).toUpperCase()}</div>
+          </div>
+
+          <div class="debrief-commentaire-zone font-medium" id="debriefTexteBox">
+            <div class="debrief-comm-label">Observations &amp; Travaux réalisés :</div>
+            <div class="debrief-comm-contenu">${texte ? esc(texte).replace(/\\n/g, '<br>') : '<em style="color:#94a3b8">Aucune annotation rédigée pour cet évènement.</em>'}</div>
+          </div>
+
+          <div class="debrief-photos-section">
+            <div class="debrief-photos-header">
+              <div class="debrief-photos-titre">${(ICO.image && ICO.image(16)) || ''} Photos de l'évènement (${photos.length})</div>
+              ${photos.length ? `<span class="debrief-photos-hint">🔍 Toucher pour zoomer en plein écran</span>` : ''}
+            </div>
+
+            ${photos.length ? `
+              <div class="debrief-photos-grille">
+                ${photos.map((ph, idx) => `
+                  <div class="debrief-photo-item" data-photo-idx="${idx}">
+                    <div class="debrief-photo-cadre">
+                      <img src="${ph.dataUrl}" alt="Photo ${idx + 1}" loading="lazy">
+                      <div class="debrief-photo-loupe">🔍 Zoomer</div>
+                    </div>
+                    ${ph.legende ? `<div class="debrief-photo-legende">${esc(ph.legende)}</div>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="debrief-photos-vide">
+                <span style="opacity:0.6">${(ICO.camera && ICO.camera(28)) || ''}</span>
+                <p>Aucune photo prise pour cet évènement.</p>
+              </div>
+            `}
+          </div>
+        </div>
+
+        <div class="btnrow" style="margin-top:16px;padding-bottom:16px">
+          <button type="button" class="btn grey" data-a="fermer">Fermer l'aperçu</button>
+          <button type="button" class="btn or" data-a="modifier-direct">${(ICO.pen && ICO.pen(14)) || ''} Modifier l'évènement</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Zoom interactif du texte des commentaires
+    const texteBox = overlay.querySelector('#debriefTexteBox');
+    const zoomBtns = overlay.querySelectorAll('.btn-zoom-t');
+    zoomBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        zoomBtns.forEach(b => b.classList.remove('actif'));
+        btn.classList.add('actif');
+        const z = btn.getAttribute('data-zoom');
+        texteBox.className = 'debrief-commentaire-zone font-' + z;
+      });
+    });
+
+    // Clics boutons dans l'aperçu
+    overlay.addEventListener('click', (evClick) => {
+      const bFermer = evClick.target.closest('[data-a="fermer"]');
+      if (bFermer) {
+        overlay.remove();
+        return;
+      }
+      const bModifier = evClick.target.closest('[data-a="modifier-direct"]');
+      if (bModifier) {
+        overlay.remove();
+        editerEvenement(id);
+        return;
+      }
+      const itemPhoto = evClick.target.closest('[data-photo-idx]');
+      if (itemPhoto) {
+        const pIdx = parseInt(itemPhoto.getAttribute('data-photo-idx'), 10);
+        ouvrirVisionneusePhoto(pIdx);
+      }
+    });
+
+    // Visionneuse photo interactive Lightbox avec zoom fluide et pan tactile
+    function ouvrirVisionneusePhoto(photoIdx) {
+      const ph = photos[photoIdx];
+      if (!ph) return;
+
+      let zoom = 1.0;
+      let tx = 0, ty = 0;
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let lastTap = 0;
+
+      const lb = document.createElement('div');
+      lb.className = 'debrief-lightbox';
+      lb.innerHTML = `
+        <div class="debrief-lightbox-bar">
+          <div class="debrief-lightbox-titre">Photo ${photoIdx + 1} / ${photos.length}</div>
+          <div class="debrief-lightbox-actions">
+            <button type="button" class="btn-lightbox" data-lb="zoom-moins" title="Dézoomer">−</button>
+            <button type="button" class="btn-lightbox" data-lb="reset" title="Taille normale"><span id="lbZoomVal">100%</span></button>
+            <button type="button" class="btn-lightbox" data-lb="zoom-plus" title="Zoomer">+</button>
+            <button type="button" class="btn-lightbox" data-lb="fermer" style="background:#e11d48;border-color:#be123c">✕</button>
+          </div>
+        </div>
+        <div class="debrief-lightbox-viewport" id="lbViewport">
+          <img src="${ph.dataUrl}" class="debrief-lightbox-img" id="lbImg" alt="Photo plein écran">
+        </div>
+        ${ph.legende ? `<div class="debrief-lightbox-legende">${esc(ph.legende)}</div>` : ''}
+      `;
+
+      document.body.appendChild(lb);
+
+      const img = lb.querySelector('#lbImg');
+      const vp = lb.querySelector('#lbViewport');
+      const lblZoom = lb.querySelector('#lbZoomVal');
+
+      function appliquerTrans() {
+        img.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + zoom + ')';
+        if (lblZoom) lblZoom.textContent = Math.round(zoom * 100) + '%';
+      }
+
+      function modifierZoom(delta, reset) {
+        if (reset) {
+          zoom = 1.0; tx = 0; ty = 0;
+        } else {
+          zoom = Math.max(1.0, Math.min(4.0, zoom + delta));
+          if (zoom === 1.0) { tx = 0; ty = 0; }
+        }
+        appliquerTrans();
+      }
+
+      lb.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-lb]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-lb');
+        if (action === 'fermer') {
+          lb.remove();
+        } else if (action === 'zoom-plus') {
+          modifierZoom(0.5);
+        } else if (action === 'zoom-moins') {
+          modifierZoom(-0.5);
+        } else if (action === 'reset') {
+          modifierZoom(0, true);
+        }
+      });
+
+      // Double-tap pour zoomer / dézoomer rapidement
+      vp.addEventListener('click', (e) => {
+        if (e.target.closest('.debrief-lightbox-bar')) return;
+        const now = Date.now();
+        if (now - lastTap < 300) {
+          if (zoom > 1.2) modifierZoom(0, true);
+          else modifierZoom(1.5);
+        }
+        lastTap = now;
+      });
+
+      // Drag / Pan tactile et pointeur
+      vp.addEventListener('pointerdown', (e) => {
+        if (zoom <= 1.0) return;
+        isDragging = true;
+        startX = e.clientX - tx;
+        startY = e.clientY - ty;
+        vp.classList.add('dragging');
+        vp.setPointerCapture(e.pointerId);
+      });
+
+      vp.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        tx = e.clientX - startX;
+        ty = e.clientY - startY;
+        appliquerTrans();
+      });
+
+      const stopperDrag = (e) => {
+        if (isDragging) {
+          isDragging = false;
+          vp.classList.remove('dragging');
+          try { vp.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+      vp.addEventListener('pointerup', stopperDrag);
+      vp.addEventListener('pointercancel', stopperDrag);
+    }
   }
 
   /* ===================== Client & machine ============================= */
@@ -2230,6 +2461,18 @@
     });
 
     document.addEventListener('click', (e) => {
+      const bApercu = e.target.closest('[data-a="apercu-ev"]');
+      if (bApercu) {
+        e.stopPropagation();
+        apercuEvenement(bApercu.dataset.id);
+        return;
+      }
+      const bModifier = e.target.closest('[data-a="modifier-ev"]');
+      if (bModifier) {
+        e.stopPropagation();
+        editerEvenement(bModifier.dataset.id);
+        return;
+      }
       const carte = e.target.closest('[data-ev]');
       if (carte) { editerEvenement(carte.dataset.ev); return; }
       const b = e.target.closest('[data-a]');
@@ -2562,6 +2805,7 @@
     pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
     destinatairesMail: destinatairesMail, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
-    feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp
+    feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
+    apercuEvenement: apercuEvenement
   };
 })();
