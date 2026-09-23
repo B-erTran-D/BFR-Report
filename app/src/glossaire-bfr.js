@@ -362,5 +362,6 @@
     }
   };
 
+  if (typeof module !== 'undefined' && module.exports) module.exports = GlossaireBFR;
   global.GlossaireBFR = GlossaireBFR;
 })(typeof window !== 'undefined' ? window : global);

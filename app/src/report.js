@@ -444,44 +444,103 @@
       p.y += 4;
     }
 
-    /** Photos côte à côte, légende optionnelle. Numérotation continue dans le rapport. */
-    async photos(liste, avecNumero) {
+    /** Photos avec dimensions harmonisées et centrage propre dans le cadre */
+    async photos(liste, avecNumero, estEvenement) {
       const p = this.pdf, C = this.C;
-      const gap = 8;
+      if (!liste || !liste.length) return;
+      const self = this;
+      const gap = 10;
       const colW = (this.CW - gap) / 2;
+      const hHarmoniseeGrille = 165;       // Hauteur standardisée uniforme pour grille 2 colonnes
+      const wHarmoniseeSeule = Math.min(this.CW, 360);  // Format héro pour photo unique
+      const hHarmoniseeSeule = 220;        // Hauteur standardisée pour photo unique
+
+      // Cas 1 : Photo unique -> centrée en format standardisé héro
+      if (liste.length === 1) {
+        const item = liste[0];
+        const bytes = Pdf.dataUrlToBytes(item.dataUrl);
+        const dims = Pdf.jpegDims(bytes);
+        const rImg = (dims.w && dims.h) ? (dims.w / dims.h) : (4 / 3);
+        const rBox = (wHarmoniseeSeule - 4) / (hHarmoniseeSeule - 4);
+
+        let imgW, imgH;
+        if (rImg >= rBox) {
+          imgW = wHarmoniseeSeule - 4;
+          imgH = imgW / rImg;
+        } else {
+          imgH = hHarmoniseeSeule - 4;
+          imgW = imgH * rImg;
+        }
+
+        const cadreX = this.M + (this.CW - wHarmoniseeSeule) / 2;
+        const legendeTexte = avecNumero ? ('Photo ' + (++this.numeroPhoto) + (item.legende ? ' — ' + item.legende : '')) : (item.legende || '');
+        const placeRequise = hHarmoniseeSeule + (legendeTexte ? 16 : 0) + 10;
+        if (!estEvenement) {
+          this.saut(placeRequise);
+        }
+        const cadreY = p.y;
+
+        p.rect(cadreX, cadreY, wHarmoniseeSeule, hHarmoniseeSeule, { stroke: C.bord, lineWidth: 0.5 });
+        const imgX = cadreX + 2 + (wHarmoniseeSeule - 4 - imgW) / 2;
+        const imgY = cadreY + 2 + (hHarmoniseeSeule - 4 - imgH) / 2;
+        p.image(bytes, imgX, imgY, imgW, imgH);
+
+        if (legendeTexte) {
+          p.text(Pdf.trunc(legendeTexte, wHarmoniseeSeule, 7.6), cadreX + wHarmoniseeSeule / 2, cadreY + hHarmoniseeSeule + 10, { size: 7.6, color: C.gris, align: 'center' });
+        }
+        p.y = cadreY + placeRequise;
+        return;
+      }
+
+      // Cas 2 : Deux photos ou plus -> grille 2 colonnes avec dimensions harmonisées
       let i = 0;
       for (const item of liste) {
         if (i % 2 === 0) this.lotEnCours = [];
         this.lotEnCours.push(item);
         if (this.lotEnCours.length === 2 || i === liste.length - 1) {
           const lot = this.lotEnCours;
-          const dims = lot.map(function (it) {
-            const b = Pdf.dataUrlToBytes(it.dataUrl);
-            return Pdf.jpegDims(b);
-          });
-          const hauteurs = dims.map(function (d) { return Math.min(colW * 1.2, colW * (d.h / d.w)); });
-          const hMax = Math.max.apply(null, hauteurs.concat([60]));
           const legende = avecNumero || lot.some(it => valeur(it.legende));
-          this.saut(hMax + (legende ? 12 : 0) + 10);
+          const placeRequise = hHarmoniseeGrille + (legende ? 16 : 0) + 10;
+          if (!estEvenement) {
+            this.saut(placeRequise);
+          }
           const y = p.y;
-          const self = this;
+
           lot.forEach(function (it, k) {
-            const hauteur = hauteurs[k];
-            const x = M.margin + k * (colW + gap);
-            p.rect(x, y, colW, hauteur, { stroke: C.bord, lineWidth: 0.5 });
-            p.image(Pdf.dataUrlToBytes(it.dataUrl), x + 1, y + 1, colW - 2, hauteur - 2);
+            const bytes = Pdf.dataUrlToBytes(it.dataUrl);
+            const dims = Pdf.jpegDims(bytes);
+            const rImg = (dims.w && dims.h) ? (dims.w / dims.h) : (4 / 3);
+            const rBox = (colW - 4) / (hHarmoniseeGrille - 4);
+
+            let imgW, imgH;
+            if (rImg >= rBox) {
+              imgW = colW - 4;
+              imgH = imgW / rImg;
+            } else {
+              imgH = hHarmoniseeGrille - 4;
+              imgW = imgH * rImg;
+            }
+
+            const x = self.M + k * (colW + gap);
+            // Cadre uniforme identique pour toutes les photos
+            p.rect(x, y, colW, hHarmoniseeGrille, { stroke: C.bord, lineWidth: 0.5 });
+            const imgX = x + 2 + (colW - 4 - imgW) / 2;
+            const imgY = y + 2 + (hHarmoniseeGrille - 4 - imgH) / 2;
+            p.image(bytes, imgX, imgY, imgW, imgH);
+
             if (legende) {
-              const texte = avecNumero ? 'Photo ' + (++self.numeroPhoto) + (it.legende ? ' — ' + it.legende : '') : (it.legende || '');
-              p.text(Pdf.trunc(texte, colW, 7.2), x, y + hauteur + 9, { size: 7.2, color: C.gris });
+              const texte = avecNumero ? ('Photo ' + (++self.numeroPhoto) + (it.legende ? ' — ' + it.legende : '')) : (it.legende || '');
+              p.text(Pdf.trunc(texte, colW, 7.2), x, y + hHarmoniseeGrille + 9, { size: 7.2, color: C.gris });
             }
           });
-          p.y = y + hMax + (legende ? 12 : 0) + 10;
+          p.y = y + placeRequise;
         }
         i++;
       }
     }
 
-    /** Un évènement : bandeau coloré (catégorie + domaine + heure), texte, photos. */
+    /** Un évènement : bandeau coloré (catégorie + domaine + heure), texte, photos.
+        Règle stricte : 1 seul évènement avec ses photos et commentaires par page. */
     async blocEvenement(ev, index) {
       const { domaines, categories } = this.etat;
       const cat = categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
@@ -490,42 +549,33 @@
       const couleur = hexRgb(cat.couleur);
       const fond = hexClair(cat.couleur, 0.9);
       const texte = valeur(ev.texte) || '(aucune annotation)';
-      const lh = 11.2;
+      const lh = 11.5;
       const lignes = Pdf.wrap(texte, this.CW - 16, 8.8);
-      // on réserve la place du texte + de la première photo pour ne pas les séparer
       const photosEv = (ev.photos || []).filter(ph => ph.dataUrl);
-      const placeTexte = Math.min(lignes.length, 6) * lh + 24;
-      const placePhoto = photosEv.length ? (this.CW - 8) / 2 * 0.9 + 30 : 0;
-      this.saut(placeTexte + Math.min(placePhoto, 240));
-      let idx = 0;
-      let premier = true;
-      while (idx < lignes.length) {
-        const place = Math.floor((p.H - this.M - 16 - p.y - 26) / lh);
-        if (place < 2) { p.newPage(); this.enteteSuite(); continue; }
-        const n = Math.min(place, lignes.length - idx);
-        const y0 = p.y;
-        if (premier) {
-          this.saut(26 + 2 * lh);
-          p.rect(this.M, p.y, this.CW, 15, { fill: fond, stroke: couleur, lineWidth: 0.5 });
-          p.rect(this.M, p.y, 3, 15, { fill: couleur });
-          const libDom = this.L(dom.libelle);
-          const libMach = ev.machineNom ? ' — [' + ev.machineNom + ']' : '';
-          p.text(libDom + libMach, this.M + 8, p.y + 10.4, { size: 8.4, font: 'F2', color: couleur });
-          p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 10.4, { size: 8, font: 'F2', color: couleur, align: 'right' });
-          p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 10.4, { size: 7.6, color: C.gris, align: 'center' });
-          p.y += 15;
-        }
-        p.rect(this.M, p.y, this.CW, n * lh + 6, { stroke: C.bord, lineWidth: 0.5 });
-        for (let j = 0; j < n; j++) p.text(lignes[idx + j], this.M + 8, p.y + 9 + j * lh, { size: 8.8, color: C.texte });
-        p.y += n * lh + 8;
-        idx += n;
-        premier = false;
-        if (y0 === p.y) break;
+
+      // 1. Bandeau de domaine / machine / heure / catégorie
+      p.rect(this.M, p.y, this.CW, 16, { fill: fond, stroke: couleur, lineWidth: 0.5 });
+      p.rect(this.M, p.y, 3.5, 16, { fill: couleur });
+      const libDom = this.L(dom.libelle);
+      const libMach = ev.machineNom ? ' — [' + ev.machineNom + ']' : '';
+      p.text(libDom + libMach, this.M + 8, p.y + 11.2, { size: 8.6, font: 'F2', color: couleur });
+      p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 11.2, { size: 7.8, color: C.gris, align: 'center' });
+      p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 11.2, { size: 8.2, font: 'F2', color: couleur, align: 'right' });
+      p.y += 21;
+
+      // 2. Encadré de texte / commentaire
+      const nbLignes = Math.max(lignes.length, 1);
+      const hBoite = nbLignes * lh + 8;
+      p.rect(this.M, p.y, this.CW, hBoite, { stroke: C.bord, lineWidth: 0.5 });
+      for (let j = 0; j < lignes.length; j++) {
+        p.text(lignes[j], this.M + 8, p.y + 9 + j * lh, { size: 8.8, color: C.texte });
       }
+      p.y += hBoite + 14;
+
+      // 3. Photos harmonisées de l'évènement
       if (photosEv.length) {
-        await this.photos(photosEv.map(ph => ({ dataUrl: ph.dataUrl, legende: ph.legende || '' })), true);
+        await this.photos(photosEv.map(ph => ({ dataUrl: ph.dataUrl, legende: ph.legende || '' })), true, true);
       }
-      p.y += 2;
     }
 
     async blocSynthese() {
@@ -844,44 +894,80 @@
       }
 
       let piecesRendues = false;
+      let dernierTypeEtaitEvenement = false;
       // Sections du canevas
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
           this.titre(section.titre || 'Synthèse');
           await this.blocSynthese();
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'evenements') {
           const evs = evenementsDe(i, section);
           if (!evs.length) continue;
-          this.titre(section.titre || 'Évènements', evs.length + ' évènement(s)', 150);
           let idx = 0;
-          for (const ev of evs) { await this.blocEvenement(ev, ++idx); }
+          for (const ev of evs) {
+            idx++;
+            // 1 seul évènement avec photos et commentaires par page.
+            // Interdiction formelle d'avoir un autre évènement sur la même page.
+            this.pdf.newPage();
+            this.enteteSuite();
+            const sousTitre = evs.length > 1 ? (this.L('Évènement') + ' ' + idx + ' / ' + evs.length) : null;
+            this.titre(section.titre || 'Évènements', sousTitre);
+            await this.blocEvenement(ev, idx);
+          }
+          dernierTypeEtaitEvenement = true;
         } else if (section.type === 'texte') {
           const contenu = valeur(i[section.champ]);
           if (!contenu) continue;
+          if (dernierTypeEtaitEvenement) {
+            this.pdf.newPage();
+            this.enteteSuite();
+          }
           this.titre(section.titre || 'Texte');
           this.blocTexte(null, contenu);
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'pieces') {
           piecesRendues = true;
           const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
           if (!pcs.length) continue;
+          if (dernierTypeEtaitEvenement) {
+            this.pdf.newPage();
+            this.enteteSuite();
+          }
           this.titre(section.titre || 'Pièces de rechange', pcs.length + ' pièce(s)', 120);
           await this.blocPieces(pcs);
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
+          if (dernierTypeEtaitEvenement) {
+            this.pdf.newPage();
+            this.enteteSuite();
+          }
           this.titre(section.titre || 'Photos', libres.length + ' photo(s)', 220);
-          await this.photos(libres.map(ph => ({ dataUrl: ph.dataUrl, legende: valeur(ph.legende) })), true);
+          await this.photos(libres.map(ph => ({ dataUrl: ph.dataUrl, legende: valeur(ph.legende) })), true, false);
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'signature') {
           if (!piecesRendues) {
             const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
             if (pcs.length) {
+              if (dernierTypeEtaitEvenement) {
+                this.pdf.newPage();
+                this.enteteSuite();
+              }
               this.titre('Pièces de rechange', pcs.length + ' pièce(s)', 120);
               await this.blocPieces(pcs);
               piecesRendues = true;
+              dernierTypeEtaitEvenement = false;
             }
+          }
+          if (dernierTypeEtaitEvenement) {
+            this.pdf.newPage();
+            this.enteteSuite();
           }
           this.titre(section.titre || 'Validation', null, 170);
           await this.blocSignatures();
+          dernierTypeEtaitEvenement = false;
         }
       }
 
@@ -1107,6 +1193,7 @@
       }
 
       let piecesRendues = false;
+      let dernierTypeEtaitEvenement = false;
       for (const section of this.canevas) {
         if (section.type === 'synthese') {
           d.bandeau(section.titre || 'Synthèse');
@@ -1124,11 +1211,19 @@
             d.para(i.resumeTechnicien, { taille: 10, apres: 120 });
           if (valeur(i.objet)) d.para('Objet / demande du client', { gras: true, taille: 11, apres: 40 }),
             d.para(i.objet, { taille: 10, apres: 120 });
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'evenements') {
           const evs = evenementsDe(i, section);
           if (!evs.length) continue;
-          d.bandeau(section.titre || 'Évènements');
+          let idx = 0;
           for (const ev of evs) {
+            idx++;
+            // 1 seul évènement avec photos et commentaires par page.
+            // Interdiction d'avoir le début d'un autre évènement sur la fin de la page précédente.
+            d.sautDePage();
+            const sousTitre = evs.length > 1 ? (' — ' + this.L('Évènement') + ' ' + idx + ' / ' + evs.length) : '';
+            d.bandeau((section.titre || 'Évènements') + sousTitre);
+
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
             const morc = [
@@ -1141,22 +1236,33 @@
               { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
               { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
             );
-            d.para(morc, { avant: 160, apres: 40 });
-            d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 60, encadre: true });
-            for (const ph of (ev.photos || []).filter(x => x.dataUrl)) {
+            d.para(morc, { avant: 140, apres: 50 });
+            d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 80, encadre: true });
+
+            const phs = (ev.photos || []).filter(x => x.dataUrl);
+            if (phs.length === 1) {
               this.numeroPhoto++;
-              d.image(ph.dataUrl, 13, { legende: 'Photo ' + this.numeroPhoto });
+              d.image(phs[0].dataUrl, 14, { hauteurMaxCm: 9.5, legende: 'Photo ' + this.numeroPhoto + (phs[0].legende ? ' — ' + phs[0].legende : '') });
+            } else if (phs.length > 1) {
+              for (const ph of phs) {
+                this.numeroPhoto++;
+                d.image(ph.dataUrl, 11.5, { hauteurMaxCm: 7.5, legende: 'Photo ' + this.numeroPhoto + (ph.legende ? ' — ' + ph.legende : '') });
+              }
             }
           }
+          dernierTypeEtaitEvenement = true;
         } else if (section.type === 'texte') {
           const contenu = valeur(i[section.champ]);
           if (!contenu) continue;
+          if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Texte');
           d.para(contenu, { taille: 10, apres: 120 });
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'pieces') {
           piecesRendues = true;
           const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
           if (!pcs.length) continue;
+          if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Pièces de rechange');
           const enteteTab = [
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
@@ -1170,15 +1276,19 @@
           ]);
           d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
           d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
           if (!libres.length) continue;
+          if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Photos');
-          libres.forEach(function (ph, k) { d.image(ph.dataUrl, 13, { legende: valeur(ph.legende) || ('Photo ' + (k + 1)) }); });
+          libres.forEach(function (ph, k) { d.image(ph.dataUrl, 13, { hauteurMaxCm: 8.5, legende: valeur(ph.legende) || ('Photo ' + (k + 1)) }); });
+          dernierTypeEtaitEvenement = false;
         } else if (section.type === 'signature') {
           if (!piecesRendues) {
             const pcs = (i.pieces || []).filter(p => (p.denomination || p.designation || p.reference || p.quantite));
             if (pcs.length) {
+              if (dernierTypeEtaitEvenement) d.sautDePage();
               d.bandeau('Pièces de rechange');
               const enteteTab = [
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
@@ -1193,8 +1303,10 @@
               d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
               d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
               piecesRendues = true;
+              dernierTypeEtaitEvenement = false;
             }
           }
+          if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Validation');
           let mention = valeur(this.s.impression && this.s.impression.mentionClient) ||
             "Le client reconnaît avoir pris connaissance du présent rapport, avoir reçu les explications du technicien et accepte les constats et travaux décrits.";
@@ -1292,21 +1404,13 @@
     return [
       'Bonjour,',
       '',
-      'Veuillez trouver ci-joint le rapport d\'intervention N° {{numero}} du {{date}}, concernant {{client}} ({{lieu}}) — {{machine}}.',
+      'Veuillez trouver ci-joint le compte rendu d\'intervention N° {{numero}} du {{date}}, concernant {{client}} ({{lieu}}) — {{machine}}.',
       '',
-      'Temps passé sur site : {{duree}} (de {{debut}} à {{fin}}).',
-      '{{nbEvenements}} point(s) ont été relevés : {{nbSecurite}} sécurité, {{nbUrgent}} urgent(s), {{nbHaute}} priorité haute, {{nbBasse}} priorité basse, {{nbInfo}} informatif(s).',
+      'Temps passé sur site : {{duree}}.',
       '',
-      'Points clés :',
-      '{{pointsCles}}',
+      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.',
       '',
-      'Synthèse :',
-      '{{resume}}',
-      '',
-      'Travaux réalisés :',
-      '{{actions}}',
-      '',
-      'Restant à votre disposition pour tout complément d\'information.',
+      'Restant à votre entière disposition pour tout renseignement complémentaire.',
       '',
       'Cordialement,',
       '{{technicien}}',
