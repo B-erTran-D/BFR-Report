@@ -1366,13 +1366,17 @@
       date: frDate(i.date),
       machine: (function () {
         const ms = listeMachines(i);
-        return ms.length > 1
-          ? ms.map(m => m.designation).filter(Boolean).join(' ; ')
-          : (valeur(i.machine && i.machine.designation) || '');
+        if (ms.length > 1) {
+          return ms.map(m => [m.designation, m.modele].filter(Boolean).join(' ')).filter(Boolean).join(' ; ');
+        }
+        if (ms.length === 1) {
+          return [ms[0].designation, ms[0].modele].filter(Boolean).join(' ') || ms[0].designation || ms[0].modele || '';
+        }
+        return [i.machine && i.machine.designation, i.machine && i.machine.modele].filter(Boolean).join(' ') || (i.machine && i.machine.designation) || '';
       })(),
       serie: valeur(i.machine && i.machine.serie),
-      technicien: nomTechnicien(i, reglages),
-      societe: valeur(reglages.societe && reglages.societe.nom),
+      technicien: nomTechnicien(i, reglages) || 'Technicien SAV',
+      societe: valeur(reglages && reglages.societe && reglages.societe.nom) || 'BFR SYSTEMS',
       debut: heureFr(i.chrono && i.chrono.debut), fin: heureFr(i.chrono && i.chrono.fin),
       duree: formatDuree(e.duree) || '—',
       nbEvenements: String(e.evenements.length),
@@ -1394,7 +1398,14 @@
     return appliquer((s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}', variables(i, s));
   }
   function corpsMail(i, s, langue) {
-    const corps = appliquer((s.mail && s.mail.corps) || defaultCorpsMail(), variables(i, s));
+    let tpl = (s && s.mail && s.mail.corps) || '';
+    if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1) {
+      tpl = defaultCorpsMail();
+    }
+    const vars = variables(i, s);
+    let corps = appliquer(tpl, vars);
+    // Nettoyer les parenthèses vides si le lieu n'est pas renseigné (ex: "CLIENT () — MACHINE" -> "CLIENT — MACHINE")
+    corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
     /* Rapport envoyé en deux langues : on le dit au client, dans sa langue,
        à la fin du message (le corps du mail reste en français pour le SAV). */
     const phrase = (langue && langue !== 'fr' && global.I18N) ? global.I18N.phraseTraduction(langue) : null;

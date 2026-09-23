@@ -5,7 +5,7 @@
    met le cache à jour en arrière-plan.
    Le nom du cache contient l'empreinte du build : chaque publication remplace
    la précédente et vide les anciens caches. */
-const CACHE = 'bfr-fiche-sav-d6ba0c8b43';
+const CACHE = 'bfr-fiche-sav-fdd0e70ee2';
 const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png', './apple-touch-icon.png', './icon-opt1-192.png', './icon-opt1-512.png', './icon-opt2-192.png', './icon-opt2-512.png', './icon-opt3-192.png', './icon-opt3-512.png'];
 const DELAI_RESEAU = 3500;
 
@@ -38,7 +38,7 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((noms) => Promise.all(noms.filter((n) => n !== CACHE).map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((c) => c.postMessage({ type: 'NOUVELLE_VERSION', version: 'd6ba0c8b43' }));
+        clients.forEach((c) => c.postMessage({ type: 'NOUVELLE_VERSION', version: 'fdd0e70ee2' }));
       }))
   );
 });

@@ -104,6 +104,18 @@
   }
 
   let S = fusion(settingsDefaut, Store.get(K.settings, {}));
+  // Migration / assainissement : si le corps de mail en cache contient les anciens champs d'évènements, on le réinitialise
+  if (S.mail && S.mail.corps && (
+    S.mail.corps.indexOf('pointsCles') !== -1 ||
+    S.mail.corps.indexOf('Points clés') !== -1 ||
+    S.mail.corps.indexOf('actions') !== -1 ||
+    S.mail.corps.indexOf('Travaux réalisés') !== -1 ||
+    S.mail.corps.indexOf('nbEvenements') !== -1 ||
+    S.mail.corps.indexOf('Synthèse :') !== -1
+  )) {
+    S.mail.corps = '';
+    Store.set(K.settings, S);
+  }
   if (!S.canevas) S.canevas = Report.canevasDefaut();
 
   /* ---------- Gestion de l'icône de l'application (Écran d'accueil) ---------- */
@@ -472,17 +484,17 @@
                ${R.signatureClient.heure ? 'à ' + esc(R.signatureClient.heure) : ''}
                <img src="${R.signatureClient.dataUrl}" alt="signature"></div>
              <div class="btnrow" style="margin-top:8px">
-               <button class="btn sm grey" data-a="signer">Refaire signer</button>
+               <button class="btn sm grey" id="btnSigner" data-a="signer">Refaire signer</button>
                <button class="btn sm grey" data-a="effacer-signature">Effacer</button>
              </div>`
           : `<p class="hint">En fin d'intervention : présentez le déroulé au client, puis faites-le signer directement sur l'écran.</p>
-             <button class="btn wide" data-a="signer">${(ICO.signature && ICO.signature(18)) || ''} Faire signer le client</button>`}
+             <button class="btn wide" id="btnSigner" data-a="signer">${(ICO.signature && ICO.signature(18)) || ''} Faire signer le client</button>`}
       </div>
 
       <div class="card">
         <h2>Soumettre le rapport</h2>
         <p class="hint">Le rapport est mis en forme selon le canevas « ${esc((S.canevas && S.canevas.nom) || 'standard')} » : ${e.evenements.length} évènement(s), ${e.nbPhotos} photo(s), ${Report.formatDuree(e.duree) || 'durée non mesurée'}.</p>
-        <button class="btn or wide" data-a="soumettre">${(ICO.send && ICO.send(18)) || ''} Soumettre le rapport</button>
+        <button class="btn or wide" id="btnSoumettre" data-a="soumettre">${(ICO.send && ICO.send(18)) || ''} Soumettre le rapport</button>
         <div class="btnrow" style="margin-top:8px">
           <button class="btn ghost" data-a="apercu">${(ICO.eye && ICO.eye(18)) || ''} Aperçu PDF</button>
           <button class="btn grey" data-a="word">${(ICO.fileText && ICO.fileText(18)) || ''} Word</button>
@@ -1498,34 +1510,43 @@
 
     const lots = { fr: { pdf: res, word: resWord }, trad: (resTrad ? { code: trad.code, pdf: resTrad, word: resWordTrad } : null), partiel: !!(trad.partiel) };
     const fichiers = fichiersEnvoi(lots);
-    const message = Report.valeur(S.mail.messagePartage).replace(/\{\{(\w+)\}\}/g, (m, k) => {
-      const v = Report.variables(R, S);
-      return v[k] !== undefined ? v[k] : m;
-    });
     const langueMail = lots.trad ? lots.trad.code : null;
+    const corpsTexte = Report.corpsMail(R, S, langueMail);
 
-    if (navigator.canShare && navigator.canShare({ files: fichiers })) {
-      try {
-        await navigator.share({ files: fichiers, title: Report.objetMail(R, S), text: message + '\n\n' + Report.corpsMail(R, S, langueMail) });
-        R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
-        planifier(); rendreTout();
-        toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ')' : 'Rapport transmis', 2600);
-        return;
-      } catch (e) { if (e && e.name === 'AbortError') return; }
+    if (navigator.canShare && fichiers.length) {
+      let peutPartager = false;
+      try { peutPartager = navigator.canShare({ files: fichiers }); } catch (e) { peutPartager = false; }
+      if (peutPartager) {
+        try {
+          await navigator.share({
+            files: fichiers,
+            title: Report.objetMail(R, S),
+            text: corpsTexte
+          });
+          R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
+          planifier(); rendreTout();
+          toast(langueMail ? 'Rapports transmis (français + ' + I18N.natif(langueMail) + ')' : 'Rapport transmis avec succès', 2600);
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') {
+            feuilleEnvoi(lots);
+            return;
+          }
+        }
+      }
     }
-    telecharger(res.blob, res.filename);
     feuilleEnvoi(lots);
   }
 
-  /* Fichiers joints au mail : le rapport français, puis sa version traduite. */
+  /* Fichiers joints au partage natif : uniquement les rapports PDF (le format Word n'est pas autorisé par Web Share) */
   function fichiersEnvoi(lots) {
     const PDF = 'application/pdf';
-    const WORD = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    const fichiers = [new File([lots.fr.pdf.blob], lots.fr.pdf.filename, { type: PDF })];
-    if (lots.fr.word) fichiers.push(new File([lots.fr.word.blob], lots.fr.word.filename, { type: WORD }));
-    if (lots.trad) {
-      fichiers.push(new File([lots.trad.pdf.blob], lots.trad.pdf.filename, { type: PDF }));
-      if (lots.trad.word) fichiers.push(new File([lots.trad.word.blob], lots.trad.word.filename, { type: WORD }));
+    const fichiers = [];
+    if (lots && lots.fr && lots.fr.pdf && lots.fr.pdf.blob) {
+      fichiers.push(new File([lots.fr.pdf.blob], lots.fr.pdf.filename, { type: PDF, lastModified: Date.now() }));
+    }
+    if (lots && lots.trad && lots.trad.pdf && lots.trad.pdf.blob) {
+      fichiers.push(new File([lots.trad.pdf.blob], lots.trad.pdf.filename, { type: PDF, lastModified: Date.now() }));
     }
     return fichiers;
   }
@@ -1567,17 +1588,45 @@
         if (!b) return;
         const a = b.dataset.a;
         if (a === 'partager') {
-          if (navigator.share) {
+          const fichiers = fichiersEnvoi(lots);
+          const corpsTexte = Report.corpsMail(R, S, langueMail);
+          const objet = Report.objetMail(R, S);
+          let peutPartagerFichiers = false;
+          if (navigator.canShare && fichiers.length) {
+            try { peutPartagerFichiers = navigator.canShare({ files: fichiers }); } catch (e) { peutPartagerFichiers = false; }
+          }
+          if (peutPartagerFichiers) {
             try {
-              await navigator.share({ files: fichiersEnvoi(lots), title: Report.objetMail(R, S), text: Report.corpsMail(R, S, langueMail) });
+              await navigator.share({
+                files: fichiers,
+                title: objet,
+                text: corpsTexte
+              });
               R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
               planifier(); rendreTout();
               toast('Rapport partagé avec succès');
             } catch (err) {
-              if (err && err.name !== 'AbortError') toast('Partage indisponible');
+              if (err && err.name !== 'AbortError') {
+                console.warn('Erreur lors du partage avec fichiers :', err);
+                toast('Partage annulé ou non pris en charge');
+              }
+            }
+          } else if (navigator.share) {
+            telecharger(res.blob, res.filename);
+            try {
+              await navigator.share({
+                title: objet,
+                text: corpsTexte
+              });
+              toast('PDF téléchargé : texte partagé');
+            } catch (err) {
+              if (err && err.name !== 'AbortError') {
+                toast('Partage direct indisponible sur ce navigateur : utilisez « Ouvrir l\'application e-mail »', 3500);
+              }
             }
           } else {
-            toast('Partage natif indisponible : utilisez "Ouvrir l\'application e-mail"');
+            telecharger(res.blob, res.filename);
+            toast('Partage direct indisponible sur ce navigateur : PDF téléchargé, utilisez « Ouvrir l\'application e-mail »', 3500);
           }
         } else if (a === 'mailto') {
           // Téléchargement préalable du PDF pour qu'il soit dans Téléchargements
@@ -1774,7 +1823,7 @@
         ${f('mail.objet', 'Objet du mail')}
         <label style="font-size:12.5px;font-weight:600">Corps du mail</label>
         <textarea id="setCorps" rows="8" style="width:100%">${esc(S.mail.corps || Report.defaultCorpsMail())}</textarea>
-        <p class="small">Variables : {{numero}} {{client}} {{lieu}} {{contact}} {{date}} {{machine}} {{serie}} {{technicien}} {{societe}} {{debut}} {{fin}} {{duree}} {{nbEvenements}} {{nbSecurite}} {{nbUrgent}} {{nbHaute}} {{nbBasse}} {{nbInfo}} {{nbPhotos}} {{pointsCles}} {{resume}} {{actions}}</p>
+        <p class="small">Variables : {{numero}} {{client}} {{lieu}} {{contact}} {{date}} {{machine}} {{serie}} {{technicien}} {{societe}} {{duree}}</p>
       </div>
 
       <div class="card"><h2>Canevas du rapport (avancé)</h2>
@@ -1865,7 +1914,8 @@
          'societe.email', 'societe.siteWeb', 'societe.siret', 'societe.tva',
          'mail.destinataireSAV', 'mail.destinatairesCopie', 'mail.objet'
         ].forEach(k => { const el = $('[data-sk="' + k + '"]', panneau); if (el) setPath(S, k, el.value.trim()); });
-        S.mail.corps = $('#setCorps', panneau).value;
+        const saisieCorps = ($('#setCorps', panneau).value || '').trim();
+        S.mail.corps = (saisieCorps === Report.defaultCorpsMail().trim()) ? '' : saisieCorps;
         S.impression.mentionClient = $('#setMention', panneau).value;
         S.mail.envoyerClient = $('#chkClient', panneau).checked;
         S.mail.envoyerSAV = $('#chkSAV', panneau).checked;
@@ -1980,6 +2030,8 @@
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Menu</h3>
       <p class="sub">Rapport N° ${esc(R.numero || '—')} — ${esc(R.client.nom || 'client non renseigné')}</p>
+      <button class="menu-item" data-a="signer"><span class="ico">${(ICO.signature && ICO.signature(18)) || ''}</span><span>Faire signer le client<small>${R.signatureClient && R.signatureClient.dataUrl ? 'Signé par ' + esc(R.signatureClient.nom || 'le client') : 'Signature tactile sur écran'}</small></span></button>
+      <button class="menu-item" data-a="soumettre"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Soumettre le rapport<small>Transmission PDF par e-mail</small></span></button>
       <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
       <button class="menu-item" data-a="icones"><span class="ico">${(ICO.palette && ICO.palette(18)) || (ICO.gear && ICO.gear(18)) || ''}</span><span>Icône de l'application<small>Changer l'icône sur l'écran d'accueil Android</small></span></button>
       <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
@@ -1997,7 +2049,9 @@
         if (!b) return;
         const a = b.dataset.a;
         e.target.closest('.sheet').remove();
-        if (a === 'identite') feuilleIdentite();
+        if (a === 'signer') signerClient();
+        else if (a === 'soumettre') soumettre();
+        else if (a === 'identite') feuilleIdentite();
         else if (a === 'icones') feuilleIcones();
         else if (a === 'reglages') feuilleReglages();
         else if (a === 'actualiser') actualiserApp();
@@ -2142,10 +2196,20 @@
       else if (a === 'photos-libres') feuillePhotosLibres();
     });
 
-    $('#btnAjouter').addEventListener('click', ajouterEvenement);
-    $('#btnSigner').addEventListener('click', signerClient);
-    $('#btnSoumettre').addEventListener('click', soumettre);
-    $('#btnMenu').addEventListener('click', feuilleMenu);
+    const bAjouter = $('#btnAjouter');
+    if (bAjouter) bAjouter.addEventListener('click', ajouterEvenement);
+
+    const bAjouterPiece = $('#btnAjouterPiece');
+    if (bAjouterPiece) bAjouterPiece.addEventListener('click', () => feuillePiece(null));
+
+    const bSigner = $('#btnSigner');
+    if (bSigner) bSigner.addEventListener('click', signerClient);
+
+    const bSoumettre = $('#btnSoumettre');
+    if (bSoumettre) bSoumettre.addEventListener('click', soumettre);
+
+    const bMenu = $('#btnMenu');
+    if (bMenu) bMenu.addEventListener('click', feuilleMenu);
 
     window.addEventListener('beforeunload', () => { if (dirty) sauver(true); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && dirty) sauver(true); });
@@ -2423,6 +2487,6 @@
     pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
     destinatairesMail: destinatairesMail, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
-    actualiserApp: actualiserApp
+    fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp
   };
 })();
