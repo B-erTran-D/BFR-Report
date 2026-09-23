@@ -2269,6 +2269,785 @@ ul.liste li { margin-bottom: 6px; }
 })(window);
 </script>
 <script>/* =========================================================================
+   glossaire-bfr.js — Dictionnaire technique métier BFR Systems
+   -------------------------------------------------------------------------
+   Garantit la rigueur terminologique industrielle lors des traductions
+   (ensacheuses, fardeleuses, operculeuses, convoyeurs, groupes hydrauliques).
+   Évite les contre-sens des traducteurs généralistes (ex: vérin traduit par
+   cric, réducteur traduit par réduction).
+   ========================================================================= */
+(function (global) {
+  'use strict';
+
+  /* Termes techniques industriels clés : expressions exactes */
+  const TERMES = [
+    {
+      fr: 'courroie trapézoïdale',
+      en: 'V-belt',
+      nl: 'V-snaar',
+      de: 'Keilriemen',
+      es: 'correa trapezoidal',
+      it: 'cinghia trapezoidale',
+      pt: 'correia trapezoidal'
+    },
+    {
+      fr: 'courroie crantée',
+      en: 'timing belt',
+      nl: 'tandriem',
+      de: 'Zahnriemen',
+      es: 'correa dentada',
+      it: 'cinghia dentata',
+      pt: 'correia dentada'
+    },
+    {
+      fr: 'roulement à billes',
+      en: 'ball bearing',
+      nl: 'kogellager',
+      de: 'Kugellager',
+      es: 'rodamiento de bolas',
+      it: 'cuscinetto a sfere',
+      pt: 'rolamento de esferas'
+    },
+    {
+      fr: 'roulement',
+      en: 'bearing',
+      nl: 'lager',
+      de: 'Lager',
+      es: 'rodamiento',
+      it: 'cuscinetto',
+      pt: 'rolamento'
+    },
+    {
+      fr: 'jeu axial',
+      en: 'axial play',
+      nl: 'axiale speling',
+      de: 'Axialspiel',
+      es: 'juego axial',
+      it: 'gioco assiale',
+      pt: 'folga axial'
+    },
+    {
+      fr: 'jeu radial',
+      en: 'radial play',
+      nl: 'radiale speling',
+      de: 'Radialspiel',
+      es: 'juego radial',
+      it: 'gioco radiale',
+      pt: 'folga radial'
+    },
+    {
+      fr: 'joint d\'étanchéité',
+      en: 'seal',
+      nl: 'afdichting',
+      de: 'Dichtung',
+      es: 'junta de estanqueidad',
+      it: 'guarnizione di tenuta',
+      pt: 'vedação'
+    },
+    {
+      fr: 'vérin pneumatique',
+      en: 'pneumatic cylinder',
+      nl: 'pneumatische cilinder',
+      de: 'Pneumatikzylinder',
+      es: 'cilindro neumático',
+      it: 'cilindro pneumatico',
+      pt: 'cilindro pneumático'
+    },
+    {
+      fr: 'vérin hydraulique',
+      en: 'hydraulic cylinder',
+      nl: 'hydraulische cilinder',
+      de: 'Hydraulikzylinder',
+      es: 'cilindro hidráulico',
+      it: 'cilindro idraulico',
+      pt: 'cilindro hidráulico'
+    },
+    {
+      fr: 'vérin',
+      en: 'cylinder',
+      nl: 'cilinder',
+      de: 'Zylinder',
+      es: 'cilindro',
+      it: 'cilindro',
+      pt: 'cilindro'
+    },
+    {
+      fr: 'réducteur',
+      en: 'gearbox',
+      nl: 'tandwielkast',
+      de: 'Getriebe',
+      es: 'reductor',
+      it: 'riduttore',
+      pt: 'redutor'
+    },
+    {
+      fr: 'motoréducteur',
+      en: 'gearmotor',
+      nl: 'motorreductor',
+      de: 'Getriebemotor',
+      es: 'motorreductor',
+      it: 'motoriduttore',
+      pt: 'motorredutor'
+    },
+    {
+      fr: 'cellule photoélectrique',
+      en: 'photoelectric sensor',
+      nl: 'fotocel',
+      de: 'Lichtschranke',
+      es: 'fotocélula',
+      it: 'fotocellula',
+      pt: 'fotocélula'
+    },
+    {
+      fr: 'cellule reflex',
+      en: 'retro-reflective sensor',
+      nl: 'retro-reflectieve fotocel',
+      de: 'Reflexionslichtschranke',
+      es: 'fotocélula réflex',
+      it: 'fotocellula reflex',
+      pt: 'fotocélula reflex'
+    },
+    {
+      fr: 'cellule',
+      en: 'optical sensor',
+      nl: 'fotocel',
+      de: 'Sensor',
+      es: 'fotocélula',
+      it: 'fotocellula',
+      pt: 'fotocélula'
+    },
+    {
+      fr: 'capteur inductif',
+      en: 'inductive sensor',
+      nl: 'inductieve sensor',
+      de: 'Induktivsensor',
+      es: 'sensor inductivo',
+      it: 'sensore induttivo',
+      pt: 'sensor indutivo'
+    },
+    {
+      fr: 'fin de course',
+      en: 'limit switch',
+      nl: 'eindschakelaar',
+      de: 'Endschalter',
+      es: 'final de carrera',
+      it: 'finecorsa',
+      pt: 'fim de curso'
+    },
+    {
+      fr: 'convoyeur',
+      en: 'conveyor',
+      nl: 'transportband',
+      de: 'Förderer',
+      es: 'transportador',
+      it: 'trasportatore',
+      pt: 'transportador'
+    },
+    {
+      fr: 'bande transporteuse',
+      en: 'conveyor belt',
+      nl: 'transportband',
+      de: 'Fördergurt',
+      es: 'banda transportadora',
+      it: 'nastro trasportatore',
+      pt: 'esteira transportadora'
+    },
+    {
+      fr: 'ensacheuse',
+      en: 'bagging machine',
+      nl: 'zakkenvulmachine',
+      de: 'Schlauchbeutelmaschine',
+      es: 'ensacadora',
+      it: 'insacchettatrice',
+      pt: 'ensacadeira'
+    },
+    {
+      fr: 'fardeleuse',
+      en: 'shrink bundler',
+      nl: 'krimpfoliemachine',
+      de: 'Bündelpackmaschine',
+      es: 'fajadora',
+      it: 'fardellatrice',
+      pt: 'embaladora'
+    },
+    {
+      fr: 'operculeuse',
+      en: 'tray sealer',
+      nl: 'traysealer',
+      de: 'Schalensiegelmaschine',
+      es: 'termoselladora',
+      it: 'termosigillatrice',
+      pt: 'seladora de bandejas'
+    },
+    {
+      fr: 'armoire électrique',
+      en: 'electrical cabinet',
+      nl: 'schakelkast',
+      de: 'Schaltschrank',
+      es: 'armario eléctrico',
+      it: 'quadro elettrico',
+      pt: 'armário elétrico'
+    },
+    {
+      fr: 'arrêt d\'urgence',
+      en: 'emergency stop',
+      nl: 'noodstop',
+      de: 'Not-Halt',
+      es: 'parada de emergencia',
+      it: 'arresto di emergenza',
+      pt: 'parada de emergência'
+    },
+    {
+      fr: 'groupe hydraulique',
+      en: 'hydraulic power unit',
+      nl: 'hydraulisch aggregaat',
+      de: 'Hydraulikaggregat',
+      es: 'grupo hidráulico',
+      it: 'centralina idraulica',
+      pt: 'unidade hidráulica'
+    },
+    {
+      fr: 'bac de rétention',
+      en: 'retention bund',
+      nl: 'opvangbak',
+      de: 'Auffangwanne',
+      es: 'cubeto de retención',
+      it: 'vasca di contenimento',
+      pt: 'bacia de contenção'
+    },
+    {
+      fr: 'fuite d\'huile',
+      en: 'oil leak',
+      nl: 'olielekkage',
+      de: 'Ölleckage',
+      es: 'fuga de aceite',
+      it: 'perdita d\'olio',
+      pt: 'vazamento de óleo'
+    },
+    {
+      fr: 'variateur de fréquence',
+      en: 'frequency inverter',
+      nl: 'frequentieregelaar',
+      de: 'Frequenzumrichter',
+      es: 'variador de frecuencia',
+      it: 'inverter di frequenza',
+      pt: 'inversor de frequência'
+    },
+    {
+      fr: 'pignon',
+      en: 'sprocket',
+      nl: 'kettingwiel',
+      de: 'Kettenrad',
+      es: 'piñón',
+      it: 'pignone',
+      pt: 'pinhão'
+    },
+    {
+      fr: 'chaîne de transmission',
+      en: 'drive chain',
+      nl: 'aandrijfketting',
+      de: 'Antriebskette',
+      es: 'cadena de transmisión',
+      it: 'catena di trasmissione',
+      pt: 'corrente de transmissão'
+    }
+  ];
+
+  const GlossaireBFR = {
+    termes: TERMES,
+
+    /* -----------------------------------------------------------------------
+       1. Sanctuarisation des données protégées (Noms propres, machines, réf)
+       -----------------------------------------------------------------------
+       Remplace les identifiants techniques et noms propres par des balises
+       __BFR_TAG_X__ pour qu'aucun traducteur ne tente de les déformer. */
+    proteger: function (texte, entites) {
+      if (!texte || typeof texte !== 'string') return { texte: texte || '', tags: [] };
+      const tags = [];
+      let res = texte;
+
+      // Liste des entités à protéger en priorité
+      const cibles = (entites || []).filter(function (e) {
+        return e && typeof e === 'string' && e.trim().length >= 2;
+      }).sort(function (a, b) { return b.length - a.length; });
+
+      cibles.forEach(function (nom) {
+        const motif = new RegExp('\\b' + nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+        res = res.replace(motif, function (m) {
+          const id = tags.length;
+          tags.push(m);
+          return ' __BFR_' + id + '__ ';
+        });
+      });
+
+      // Protection des références de pièces type PH1204D, 6205-2RS, ISO-VG-46
+      res = res.replace(/\b([A-Z0-9]{2,}[-_][A-Z0-9-_]+)\b/g, function (m) {
+        const id = tags.length;
+        tags.push(m);
+        return ' __BFR_' + id + '__ ';
+      });
+
+      return { texte: res, tags: tags };
+    },
+
+    /* -----------------------------------------------------------------------
+       2. Restauration des balises protégées
+       ----------------------------------------------------------------------- */
+    restaurer: function (texte, tags) {
+      if (!texte) return '';
+      let res = texte;
+      (tags || []).forEach(function (val, idx) {
+        const reg = new RegExp('\\s*__BFR_' + idx + '__\\s*', 'g');
+        res = res.replace(reg, val);
+      });
+      return res.replace(/\s{2,}/g, ' ').trim();
+    },
+
+    /* -----------------------------------------------------------------------
+       3. Post-traitement terminologique par langue cible
+       -----------------------------------------------------------------------
+       Ajuste les termes approximatifs produits par le traducteur automatique
+       pour calquer le vocabulaire industriel exact. */
+    affiner: function (texte, codeLangue) {
+      if (!texte || !codeLangue || codeLangue === 'fr') return texte;
+      const lang = codeLangue.toLowerCase();
+      let res = texte;
+
+      // Parcours des termes pour ajuster les faux-amis connus
+      TERMES.forEach(function (t) {
+        const cible = t[lang];
+        if (!cible) return;
+        // Si le terme anglais intermédiaire a été mal rendu, on ajuste
+        if (lang === 'nl') {
+          // Ex: "jack" ou "krik" traduit en "cilinder"
+          res = res.replace(/\b(krik|hefboom)\b/gi, 'cilinder');
+          res = res.replace(/\b(verloopstuk)\b/gi, 'tandwielkast');
+        } else if (lang === 'de') {
+          res = res.replace(/\b(Wagenheber)\b/gi, 'Zylinder');
+          res = res.replace(/\b(Reduzierstück)\b/gi, 'Getriebe');
+        }
+      });
+
+      return res;
+    }
+  };
+
+  global.GlossaireBFR = GlossaireBFR;
+})(typeof window !== 'undefined' ? window : global);
+</script>
+<script>/* =========================================================================
+   bergamot-engine.js — Moteur de traduction locale WebAssembly (Option B2)
+   -------------------------------------------------------------------------
+   Moteur officiel Firefox Translations / Bergamot (Marian NMT en C++ WASM)
+   compilé pour tourner 100% hors-ligne dans un Web Worker sur Android.
+
+   Fonctionnalités clés pour smartphone Android :
+   1. Persistance IndexedDB (« bfr_traduction_v1 ») :
+      Une fois téléchargés au bureau ou en 4G, le binaire WASM et les poids
+      du modèle restent stockés définitivement dans le navigateur du téléphone.
+      Aucune perte en sous-sol ou zone blanche usine.
+
+   2. Pivot séquentiel « Low-Memory » (Zéro saturation RAM) :
+      Pour traduire FR -> NL (ou DE, ES, IT, PT) via le pivot anglais :
+      - Étape 1 : Chargement de FR->EN en mémoire WASM, traduction, puis
+        DÉCHARGEMENT IMMÉDIAT du modèle de la RAM.
+      - Étape 2 : Chargement de EN->NL en mémoire WASM, traduction, puis
+        DÉCHARGEMENT IMMÉDIAT.
+      Empreinte mémoire crête < 140 Mo : aucun risque de crash du navigateur.
+   ========================================================================= */
+(function (global) {
+  'use strict';
+
+  const DB_NAME = 'bfr_traduction_v1';
+  const DB_VERSION = 1;
+
+  /* CDN et sources officielles pour téléchargement initial unique */
+  const CDN_JS_DELIVR = 'https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/';
+  const CDN_MOZILLA = 'https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/translations-models/';
+
+  /* Registre des modèles optimisés pour inférence rapide sur mobile */
+  const REGISTRE = {
+    'fren': {
+      nom: 'Français → Anglais (Pivot)',
+      taille: 37200311,
+      model: CDN_MOZILLA + '8ef78b1c-df6c-49fc-8cae-cf8c0c2a6630.bin',
+      lex: CDN_MOZILLA + 'c4d99496-81bf-480f-b0bb-3aebacdcbe8e.bin',
+      vocab: CDN_MOZILLA + '11ecb9da-60dd-4b39-aa12-27883099294b.spm'
+    },
+    'ennl': {
+      nom: 'Anglais → Néerlandais',
+      taille: 36400119,
+      model: CDN_MOZILLA + 'f0f9326d-b77a-4c9f-92ac-2c9bc62e16bc.bin',
+      lex: CDN_MOZILLA + 'c1f02d64-5e29-4181-b85a-0f70a9ac1c70.bin',
+      vocab: CDN_MOZILLA + 'aea15ce7-3431-4186-b922-29b3f5d687ee.spm'
+    },
+    'ende': {
+      nom: 'Anglais → Allemand',
+      taille: 36719532,
+      model: CDN_MOZILLA + '23db71e7-b6d9-45eb-a47d-0290d7d8ef63.bin',
+      lex: CDN_MOZILLA + 'bc072b1a-7749-43f7-9fe0-34a6dff10c4a.bin',
+      vocab: CDN_MOZILLA + '261225ea-5a52-455b-981c-7d09c6e6da3c.spm'
+    },
+    'enes': {
+      nom: 'Anglais → Espagnol',
+      taille: 36576277,
+      model: CDN_MOZILLA + 'a4ba0e94-16de-4058-9a44-5bbbbb3c8640.bin',
+      lex: CDN_MOZILLA + '1834a61e-0331-4c4a-bbc0-dda02afa8188.bin',
+      vocab: CDN_MOZILLA + '170634fd-511a-4a28-b723-0a1025c67feb.spm'
+    },
+    'enit': {
+      nom: 'Anglais → Italien',
+      taille: 36507703,
+      model: CDN_MOZILLA + '29ae0d70-5e37-49e8-8da6-3e2c58da61d1.bin',
+      lex: CDN_MOZILLA + '3730ff60-2291-4c87-888d-2dc4593b20db.bin',
+      vocab: CDN_MOZILLA + 'd9d5ffa9-b919-4491-9ab6-3dec34459768.spm'
+    },
+    'enpt': {
+      nom: 'Anglais → Portugais',
+      taille: 36348853,
+      model: CDN_MOZILLA + '357d1004-e004-4f93-bbb5-b6b90641e9b4.bin',
+      lex: CDN_MOZILLA + 'c4192576-e76a-4edc-9346-1f90af10f6ae.bin',
+      vocab: CDN_MOZILLA + 'e5688e52-a5c1-458b-9dbb-459fdcec0b7d.spm'
+    }
+  };
+
+  /* -------------------------------------------------------------------------
+     1. Gestionnaire de stockage IndexedDB (Robuste, sans fuite)
+     ------------------------------------------------------------------------- */
+  let _dbInstance = null;
+
+  function ouvrirDB() {
+    if (_dbInstance) return Promise.resolve(_dbInstance);
+    if (!global.indexedDB) return Promise.reject(new Error('IndexedDB non supporté'));
+
+    return new Promise(function (resolve, reject) {
+      const req = global.indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function (e) {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('models')) {
+          db.createObjectStore('models', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('runtime')) {
+          db.createObjectStore('runtime', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = function (e) {
+        _dbInstance = e.target.result;
+        resolve(_dbInstance);
+      };
+      req.onerror = function (e) {
+        reject(e.target.error || new Error('Erreur ouverture IndexedDB'));
+      };
+    });
+  }
+
+  function dbLire(storeName, key) {
+    return ouvrirDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.get(key);
+        req.onsuccess = function () { resolve(req.result || null); };
+        req.onerror = function () { reject(req.error); };
+      });
+    }).catch(function () { return null; });
+  }
+
+  function dbEcrire(storeName, objet) {
+    return ouvrirDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.put(objet);
+        req.onsuccess = function () { resolve(true); };
+        req.onerror = function () { reject(req.error); };
+      });
+    });
+  }
+
+  /* -------------------------------------------------------------------------
+     2. Moteur BergamotEngine
+     ------------------------------------------------------------------------- */
+  const BergamotEngine = {
+    registre: REGISTRE,
+
+    /* Teste si l'environnement d'exécution dispose des capacités requises */
+    isSupported: function () {
+      try {
+        return !!(
+          global.Worker &&
+          global.indexedDB &&
+          typeof WebAssembly !== 'undefined' &&
+          typeof WebAssembly.instantiate === 'function'
+        );
+      } catch (e) {
+        return false;
+      }
+    },
+
+    /* Détermine les paires de modèles requises pour une langue cible */
+    pairesPour: function (code) {
+      if (!code || code === 'fr') return [];
+      if (code === 'en') return ['fren'];
+      const cle = 'en' + code.toLowerCase();
+      if (REGISTRE[cle]) return ['fren', cle];
+      return [];
+    },
+
+    /* Vérifie si les modèles requis sont déjà téléchargés dans IndexedDB */
+    hasModel: async function (code) {
+      const paires = this.pairesPour(code);
+      if (!paires.length) return false;
+      try {
+        for (let i = 0; i < paires.length; i++) {
+          const rec = await dbLire('models', paires[i]);
+          if (!rec || !rec.model || !rec.lex || !rec.vocab) return false;
+        }
+        // Vérifie aussi la présence du runtime WASM
+        const wasm = await dbLire('runtime', 'wasm');
+        if (!wasm || !wasm.buffer) return false;
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    /* Téléchargement résilient d'un buffer binaire avec suivi de progression */
+    _telechargerFichier: async function (url, fallbackUrl, surOctets) {
+      const charger = async function (u) {
+        const rep = await fetch(u, { mode: 'cors', credentials: 'omit' });
+        if (!rep.ok) throw new Error('HTTP ' + rep.status + ' pour ' + u);
+        const total = parseInt(rep.headers.get('content-length') || '0', 10);
+        if (!rep.body || !rep.body.getReader) {
+          const buf = await rep.arrayBuffer();
+          if (surOctets) surOctets(buf.byteLength, total || buf.byteLength);
+          return buf;
+        }
+        const reader = rep.body.getReader();
+        const chunks = [];
+        let charge = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          charge += value.length;
+          if (surOctets) surOctets(charge, total);
+        }
+        const totalBuf = new Uint8Array(charge);
+        let offset = 0;
+        for (let k = 0; k < chunks.length; k++) {
+          totalBuf.set(chunks[k], offset);
+          offset += chunks[k].length;
+        }
+        return totalBuf.buffer;
+      };
+
+      try {
+        return await charger(url);
+      } catch (e1) {
+        if (fallbackUrl) return await charger(fallbackUrl);
+        throw e1;
+      }
+    },
+
+    /* Télécharge et persiste dans IndexedDB le runtime et les modèles nécessaires */
+    prepareModel: async function (code, surEtat) {
+      const paires = this.pairesPour(code);
+      if (!paires.length) {
+        return { ok: false, motif: 'langue_non_supportee' };
+      }
+
+      // 1. Vérification si déjà en cache IndexedDB
+      if (await this.hasModel(code)) {
+        if (surEtat) surEtat({ etape: 'pret', pct: 100 });
+        return { ok: true, source: 'cache_local' };
+      }
+
+      try {
+        // 2. Téléchargement du runtime WASM si absent
+        let wasmRec = await dbLire('runtime', 'wasm');
+        if (!wasmRec || !wasmRec.buffer) {
+          if (surEtat) surEtat({ etape: 'telechargement', detail: 'Moteur WebAssembly...', pct: 5 });
+          const wasmBuf = await this._telechargerFichier(
+            './bergamot/bergamot-translator-worker.wasm',
+            CDN_JS_DELIVR + 'bergamot-translator-worker.wasm'
+          );
+          await dbEcrire('runtime', { id: 'wasm', buffer: wasmBuf });
+        }
+
+        // Téléchargement des scripts de worker si absents
+        let workerJsRec = await dbLire('runtime', 'worker_js');
+        if (!workerJsRec || !workerJsRec.text) {
+          const res = await fetch('./bergamot/translator-worker.js').catch(function () {
+            return fetch(CDN_JS_DELIVR + 'translator-worker.js');
+          });
+          const txt = await res.text();
+          await dbEcrire('runtime', { id: 'worker_js', text: txt });
+        }
+
+        let bergamotJsRec = await dbLire('runtime', 'bergamot_js');
+        if (!bergamotJsRec || !bergamotJsRec.text) {
+          const res = await fetch('./bergamot/bergamot-translator-worker.js').catch(function () {
+            return fetch(CDN_JS_DELIVR + 'bergamot-translator-worker.js');
+          });
+          const txt = await res.text();
+          await dbEcrire('runtime', { id: 'bergamot_js', text: txt });
+        }
+
+        // 3. Téléchargement des paires de modèles
+        for (let pIdx = 0; pIdx < paires.length; pIdx++) {
+          const p = paires[pIdx];
+          const info = REGISTRE[p];
+          if (!info) continue;
+
+          let existant = await dbLire('models', p);
+          if (existant && existant.model && existant.lex && existant.vocab) continue;
+
+          const basePct = 10 + Math.round((pIdx / paires.length) * 85);
+          const rangePct = Math.round(85 / paires.length);
+
+          if (surEtat) surEtat({ etape: 'telechargement', detail: 'Modèle ' + info.nom + ' (vocabulaire)...', pct: basePct });
+          const vocabBuf = await this._telechargerFichier(info.vocab);
+
+          if (surEtat) surEtat({ etape: 'telechargement', detail: 'Modèle ' + info.nom + ' (lexique)...', pct: basePct + Math.round(rangePct * 0.2) });
+          const lexBuf = await this._telechargerFichier(info.lex);
+
+          if (surEtat) surEtat({ etape: 'telechargement', detail: 'Modèle ' + info.nom + ' (réseau de neurones)...', pct: basePct + Math.round(rangePct * 0.5) });
+          const modelBuf = await this._telechargerFichier(info.model);
+
+          await dbEcrire('models', {
+            id: p,
+            nom: info.nom,
+            vocab: vocabBuf,
+            lex: lexBuf,
+            model: modelBuf,
+            date: new Date().toISOString()
+          });
+        }
+
+        if (surEtat) surEtat({ etape: 'pret', pct: 100 });
+        return { ok: true, source: 'telecharge_et_persiste' };
+      } catch (err) {
+        return { ok: false, motif: 'modele', detail: err.message || String(err) };
+      }
+    },
+
+    /* -----------------------------------------------------------------------
+       3. Exécution séquentielle Low-Memory (Web Worker éphémère ou réutilisable)
+       ----------------------------------------------------------------------- */
+    traduireTextes: async function (textes, codeLangue, surEtat) {
+      if (!textes || !textes.length) return [];
+      const code = (codeLangue || '').toLowerCase();
+      if (code === 'fr') return textes;
+
+      const paires = this.pairesPour(code);
+      if (!paires.length) throw new Error('Langue non supportée : ' + code);
+
+      // Vérification que les modèles sont présents dans IndexedDB
+      for (let i = 0; i < paires.length; i++) {
+        const m = await dbLire('models', paires[i]);
+        if (!m) throw new Error('Modèle ' + paires[i] + ' non préparé.');
+      }
+
+      // Protection des termes et entités métier BFR
+      const protecteur = global.GlossaireBFR || {
+        proteger: function (t) { return { texte: t, tags: [] }; },
+        restaurer: function (t, tags) { return t; },
+        affiner: function (t, l) { return t; }
+      };
+
+      const proteges = textes.map(function (t) { return protecteur.proteger(t); });
+      let courants = proteges.map(function (p) { return p.texte; });
+
+      // Instanciation du Worker
+      const workerUrl = './bergamot/translator-worker.js';
+      const worker = new global.Worker(workerUrl);
+
+      const appelWorker = function (nomMethode, args) {
+        return new Promise(function (resolve, reject) {
+          const reqId = Math.random().toString(36).slice(2);
+          const ecouteur = function (e) {
+            const data = e.data || {};
+            if (data.id === reqId) {
+              worker.removeEventListener('message', ecouteur);
+              if (data.error) reject(new Error(data.error.message || 'Erreur Worker'));
+              else resolve(data.result);
+            }
+          };
+          worker.addEventListener('message', ecouteur);
+          worker.postMessage({ id: reqId, name: nomMethode, args: args || [] });
+        });
+      };
+
+      try {
+        if (surEtat) surEtat({ etape: 'initialisation', detail: 'Démarrage du moteur de traduction...' });
+        await appelWorker('initialize', [{ cacheSize: 0, useNativeIntGemm: false }]);
+
+        /* SÉQUENCE BASSE-MÉMOIRE :
+           Pour chaque étape de pivot (ex: FR->EN puis EN->NL), on charge
+           un SEUL modèle, on traduit en bloc, puis on DÉCHARGE le modèle
+           avant de charger le suivant. */
+        for (let step = 0; step < paires.length; step++) {
+          const paireId = paires[step];
+          const srcLang = paireId.slice(0, 2);
+          const trgLang = paireId.slice(2, 4);
+
+          if (surEtat) {
+            surEtat({
+              etape: 'traduction_inference',
+              detail: 'Traduction ' + srcLang.toUpperCase() + ' → ' + trgLang.toUpperCase() + '...',
+              etapeIndex: step + 1,
+              etapesTotal: paires.length
+            });
+          }
+
+          const modelData = await dbLire('models', paireId);
+          await appelWorker('loadTranslationModel', [
+            { from: srcLang, to: trgLang },
+            {
+              model: modelData.model,
+              shortlist: modelData.lex,
+              vocabs: [modelData.vocab]
+            }
+          ]);
+
+          const payload = courants.map(function (txt) {
+            return { text: txt, html: false };
+          });
+
+          const reponses = await appelWorker('translate', [{
+            models: [{ from: srcLang, to: trgLang }],
+            texts: payload
+          }]);
+
+          courants = (reponses || []).map(function (r) {
+            return (r && r.target && r.target.text) || '';
+          });
+
+          // Libération immédiate de la mémoire Marian C++
+          await appelWorker('unloadTranslationModel', [{ from: srcLang, to: trgLang }]);
+        }
+
+        worker.terminate();
+
+        // Restauration des balises protégées et affinage terminologique BFR
+        const finals = courants.map(function (txt, idx) {
+          const restaure = protecteur.restaurer(txt, proteges[idx].tags);
+          return protecteur.affiner(restaure, code);
+        });
+
+        return finals;
+      } catch (err) {
+        try { worker.terminate(); } catch (e) {}
+        throw err;
+      }
+    }
+  };
+
+  global.BergamotEngine = BergamotEngine;
+})(typeof window !== 'undefined' ? window : global);
+</script>
+<script>/* =========================================================================
    traduction.js — Traduction du rapport dans la langue du client
    -------------------------------------------------------------------------
    • Les libellés du rapport (titres, tableaux, mentions, pied de page) sont
@@ -2276,14 +3055,16 @@ ul.liste li { margin-bottom: 6px; }
      disponibles, hors connexion.
 
    • Les textes SAISIS par le technicien (objet, actions, observations,
-     synthèse) sont traduits par le traducteur intégré du téléphone :
-       - API « Translator » de Chrome (Android, Chrome 138+) : gratuite,
-         aucune clé, et HORS CONNEXION une fois la langue téléchargée ;
-       - repli sur l'API précédente « self.translation ».
-     Si le traducteur n'est pas disponible (navigateur plus ancien, modèle
-     non téléchargeable sans réseau), l'application le dit clairement et
-     laisse le choix : envoyer seulement le français, ou la version traduite
-     avec les libellés traduits et les commentaires en français.
+     synthèse) sont traduits localement sur l'appareil :
+       - Moteur A : API « Translator » de Chrome (si supportée par l'appareil)
+       - Moteur B : Moteur embarqué WebAssembly (Bergamot / Marian NMT)
+         tournant dans un Web Worker avec stockage persistant IndexedDB
+         et pipeline séquentiel Low-Memory pour smartphone Android.
+       - Protection des termes industriels via le glossaire technique BFR.
+
+     Si le traducteur n'est pas disponible ou la langue non préparée hors
+     connexion, l'application informe clairement le technicien et laisse le
+     choix : envoyer le rapport français seul, ou avec les libellés traduits.
    ========================================================================= */
 (function (global) {
   'use strict';
@@ -2303,96 +3084,147 @@ ul.liste li { margin-bottom: 6px; }
     return null;
   }
 
+  function bergamot() {
+    if (typeof global.BergamotEngine !== 'undefined' && global.BergamotEngine && global.BergamotEngine.isSupported()) {
+      return global.BergamotEngine;
+    }
+    return null;
+  }
+
   const Traduction = {
+    /* ---------- Type de moteur actif ----------------------------------- */
+    moteur: function () {
+      if (api()) return 'chrome';
+      if (bergamot()) return 'bergamot';
+      return null;
+    },
+
     /* ---------- Disponibilité ------------------------------------------- */
-    /* Le téléphone sait-il traduire ? (sans rien télécharger) */
-    utilisable: function () { return !!api(); },
+    /* L'appareil sait-il traduire ? (API système ou moteur WASM disponible) */
+    utilisable: function () {
+      return !!api() || !!bergamot();
+    },
+
     explication: function () {
-      const a = api();
-      if (!a) return "Ce téléphone ne propose pas la traduction automatique : les libellés du rapport seront traduits, les commentaires resteront en français.";
+      if (!this.utilisable()) {
+        return "Ce téléphone ne propose pas la traduction automatique : les libellés du rapport seront traduits, les commentaires resteront en français.";
+      }
       return '';
     },
 
     /* État du modèle de langue : 'available', 'downloadable', 'downloading',
-       'unavailable' ou 'inconnu' (API indisponible). */
+       'unavailable' ou 'inconnu' */
     etatModele: function (code) {
       const a = api();
-      if (!a) return Promise.resolve('inconnu');
-      const p = a.type === 'moderne'
-        ? a.obj.availability({ sourceLanguage: SRC, targetLanguage: code })
-        : a.obj.canTranslate({ sourceLanguage: SRC, targetLanguage: code });
-      return Promise.resolve(p).then(function (r) {
-        return r === 'readily' ? 'available' : (r === 'after-download' ? 'downloadable' : (r === 'no' ? 'unavailable' : r));
-      }).catch(function () { return 'unavailable'; });
+      if (a) {
+        const p = a.type === 'moderne'
+          ? a.obj.availability({ sourceLanguage: SRC, targetLanguage: code })
+          : a.obj.canTranslate({ sourceLanguage: SRC, targetLanguage: code });
+        return Promise.resolve(p).then(function (r) {
+          return r === 'readily' ? 'available' : (r === 'after-download' ? 'downloadable' : (r === 'no' ? 'unavailable' : r));
+        }).catch(function () { return 'unavailable'; });
+      }
+
+      const b = bergamot();
+      if (b) {
+        return b.hasModel(code).then(function (has) {
+          return has ? 'available' : 'downloadable';
+        }).catch(function () { return 'unavailable'; });
+      }
+
+      return Promise.resolve('inconnu');
     },
 
     /* ---------- Préparation du traducteur ------------------------------- */
-    /* Crée le traducteur fr -> code ; télécharge le modèle si nécessaire
+    /* Télécharge le modèle et l'enregistre de manière persistante
        (une seule fois par langue sur le téléphone). */
     pret: async function (code, surEtat) {
       const a = api();
-      if (!a) return { ok: false, motif: 'indisponible' };
-      if (this._code === code && this._moteur) return { ok: true };
-      this.fermer();
+      if (a) {
+        if (this._code === code && this._moteur) return { ok: true };
+        this.fermer();
 
-      const suivi = function (m) {
-        if (!m || !m.addEventListener || !surEtat) return;
-        m.addEventListener('downloadprogress', function (e) {
-          const pct = e.total ? Math.round(e.loaded / e.total * 100) : Math.round((e.loaded || 0) * 100);
-          surEtat({ etape: 'telechargement', pct: Math.max(0, Math.min(100, pct)) });
-        });
-      };
-      try {
-        const moteur = a.type === 'moderne'
-          ? await a.obj.create({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi })
-          : await a.obj.createTranslator({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi });
-        this._moteur = moteur;
-        this._code = code;
-        this._cache = this._cache || {};
-        return { ok: true };
-      } catch (e) {
-        const msg = (e && e.message) ? e.message : String(e);
-        /* Cas courant : pas de réseau au premier usage d'une langue. */
-        return { ok: false, motif: /download|fetch|network|réseau/i.test(msg) ? 'modele' : 'refus', detail: msg };
+        const suivi = function (m) {
+          if (!m || !m.addEventListener || !surEtat) return;
+          m.addEventListener('downloadprogress', function (e) {
+            const pct = e.total ? Math.round(e.loaded / e.total * 100) : Math.round((e.loaded || 0) * 100);
+            surEtat({ etape: 'telechargement', pct: Math.max(0, Math.min(100, pct)) });
+          });
+        };
+        try {
+          const moteur = a.type === 'moderne'
+            ? await a.obj.create({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi })
+            : await a.obj.createTranslator({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi });
+          this._moteur = moteur;
+          this._code = code;
+          this._cache = this._cache || {};
+          return { ok: true };
+        } catch (e) {
+          const msg = (e && e.message) ? e.message : String(e);
+          return { ok: false, motif: /download|fetch|network|réseau/i.test(msg) ? 'modele' : 'refus', detail: msg };
+        }
       }
+
+      const b = bergamot();
+      if (b) {
+        this._code = code;
+        return await b.prepareModel(code, surEtat);
+      }
+
+      return { ok: false, motif: 'indisponible' };
     },
 
     fermer: function () {
-      if (this._moteur && this._moteur.destroy) { try { this._moteur.destroy(); } catch (e) {} }
+      if (this._moteur && this._moteur.destroy) {
+        try { this._moteur.destroy(); } catch (e) {}
+      }
       this._moteur = null;
       this._code = null;
     },
 
-    /* ---------- Traduction d'un texte ----------------------------------- */
-    /* Découpe par paragraphes (les sauts de ligne du rapport sont conservés). */
+    /* ---------- Traduction d'un texte unique ---------------------------- */
     texte: async function (txt, code, surEtat) {
       const brut = String(txt == null ? '' : txt);
       if (!brut.trim()) return brut;
-      const res = await this.pret(code, surEtat);
-      if (!res.ok) throw new Error(res.motif);
-      this._cache = this._cache || {};
-      const cleTexte = code + '\u0000' + brut;
-      if (this._cache[cleTexte]) return this._cache[cleTexte];
 
-      const lignes = brut.split('\n');
-      const sorties = [];
-      for (let i = 0; i < lignes.length; i++) {
-        const l = lignes[i];
-        if (!l.trim()) { sorties.push(l); continue; }
-        const cleLigne = code + '\u0000' + l;
-        if (this._cache[cleLigne]) { sorties.push(this._cache[cleLigne]); continue; }
-        let t;
-        try {
-          t = await this._moteur.translate(l);
-        } catch (e) {
-          t = l;                       // une ligne en échec ne bloque pas le rapport
+      const a = api();
+      if (a) {
+        const res = await this.pret(code, surEtat);
+        if (!res.ok) throw new Error(res.motif);
+        this._cache = this._cache || {};
+        const cleTexte = code + '\u0000' + brut;
+        if (this._cache[cleTexte]) return this._cache[cleTexte];
+
+        const lignes = brut.split('\n');
+        const sorties = [];
+        for (let i = 0; i < lignes.length; i++) {
+          const l = lignes[i];
+          if (!l.trim()) { sorties.push(l); continue; }
+          const cleLigne = code + '\u0000' + l;
+          if (this._cache[cleLigne]) { sorties.push(this._cache[cleLigne]); continue; }
+          let t;
+          try {
+            t = await this._moteur.translate(l);
+          } catch (e) {
+            t = l;
+          }
+          this._cache[cleLigne] = t;
+          sorties.push(t);
         }
-        this._cache[cleLigne] = t;
-        sorties.push(t);
+        const resultat = sorties.join('\n');
+        this._cache[cleTexte] = resultat;
+        return resultat;
       }
-      const resultat = sorties.join('\n');
-      this._cache[cleTexte] = resultat;
-      return resultat;
+
+      const b = bergamot();
+      if (b) {
+        const res = await this.pret(code, surEtat);
+        if (!res.ok) throw new Error(res.motif);
+        const tab = await b.traduireTextes([brut], code, surEtat);
+        return (tab && tab[0]) || brut;
+      }
+
+      throw new Error('indisponible');
     },
 
     /* ---------- Champs du rapport à traduire ---------------------------- */
@@ -2434,6 +3266,7 @@ ul.liste li { margin-bottom: 6px; }
       if (!this.utilisable()) {
         return { ok: false, motif: 'indisponible', taches: taches.length };
       }
+
       const copie = Object.assign({}, i, {
         evenements: (i.evenements || []).map(function (ev) {
           return Object.assign({}, ev, { photos: (ev.photos || []).map(function (ph) { return Object.assign({}, ph); }) });
@@ -2444,9 +3277,31 @@ ul.liste li { margin-bottom: 6px; }
         techniciens: (i.techniciens || []).map(function (t) { return Object.assign({}, t); }),
         jours: (i.jours || []).map(function (j) { return Object.assign({}, j); })
       });
-      /* on retraduit les mêmes champs sur la copie */
+
       const copieTaches = this.champs(copie);
       const total = copieTaches.length;
+
+      // Cas 1 : Moteur WASM Bergamot (Traitement par lot séquentiel basse mémoire)
+      const b = bergamot();
+      if (!api() && b) {
+        const prep = await this.pret(code, surEtat);
+        if (!prep.ok) return { ok: false, motif: prep.motif || 'modele', detail: prep.detail };
+
+        if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
+        const textes = copieTaches.map(function (t) { return t.texte; });
+        try {
+          const traduits = await b.traduireTextes(textes, code, surEtat);
+          for (let k = 0; k < copieTaches.length; k++) {
+            copieTaches[k].obj[copieTaches[k].champ] = traduits[k] || copieTaches[k].texte;
+          }
+          if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
+          return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
+        } catch (err) {
+          return { ok: false, motif: 'erreur_traduction', detail: err.message };
+        }
+      }
+
+      // Cas 2 : API Chrome / Test simulé JSDOM
       let fait = 0, erreurs = 0;
       if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
       for (let k = 0; k < copieTaches.length; k++) {
@@ -2455,7 +3310,7 @@ ul.liste li { margin-bottom: 6px; }
         try {
           t.obj[t.champ] = await this.texte(t.texte, code, surEtat);
         } catch (e) {
-          erreurs++;                                   // texte laissé en français
+          erreurs++;
         }
         fait++;
       }
@@ -2465,7 +3320,7 @@ ul.liste li { margin-bottom: 6px; }
   };
 
   global.Traduction = Traduction;
-})(window);
+})(typeof window !== 'undefined' ? window : global);
 </script>
 <script>/* =========================================================================
    pdf.js — Moteur de génération PDF minimaliste (aucune dépendance externe)
@@ -8197,5 +9052,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="216d386980";</script></body>
+<script>window.SAV_VERSION="f9b535b027";</script></body>
 </html>

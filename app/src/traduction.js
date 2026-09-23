@@ -6,14 +6,16 @@
      disponibles, hors connexion.
 
    • Les textes SAISIS par le technicien (objet, actions, observations,
-     synthèse) sont traduits par le traducteur intégré du téléphone :
-       - API « Translator » de Chrome (Android, Chrome 138+) : gratuite,
-         aucune clé, et HORS CONNEXION une fois la langue téléchargée ;
-       - repli sur l'API précédente « self.translation ».
-     Si le traducteur n'est pas disponible (navigateur plus ancien, modèle
-     non téléchargeable sans réseau), l'application le dit clairement et
-     laisse le choix : envoyer seulement le français, ou la version traduite
-     avec les libellés traduits et les commentaires en français.
+     synthèse) sont traduits localement sur l'appareil :
+       - Moteur A : API « Translator » de Chrome (si supportée par l'appareil)
+       - Moteur B : Moteur embarqué WebAssembly (Bergamot / Marian NMT)
+         tournant dans un Web Worker avec stockage persistant IndexedDB
+         et pipeline séquentiel Low-Memory pour smartphone Android.
+       - Protection des termes industriels via le glossaire technique BFR.
+
+     Si le traducteur n'est pas disponible ou la langue non préparée hors
+     connexion, l'application informe clairement le technicien et laisse le
+     choix : envoyer le rapport français seul, ou avec les libellés traduits.
    ========================================================================= */
 (function (global) {
   'use strict';
@@ -33,96 +35,147 @@
     return null;
   }
 
+  function bergamot() {
+    if (typeof global.BergamotEngine !== 'undefined' && global.BergamotEngine && global.BergamotEngine.isSupported()) {
+      return global.BergamotEngine;
+    }
+    return null;
+  }
+
   const Traduction = {
+    /* ---------- Type de moteur actif ----------------------------------- */
+    moteur: function () {
+      if (api()) return 'chrome';
+      if (bergamot()) return 'bergamot';
+      return null;
+    },
+
     /* ---------- Disponibilité ------------------------------------------- */
-    /* Le téléphone sait-il traduire ? (sans rien télécharger) */
-    utilisable: function () { return !!api(); },
+    /* L'appareil sait-il traduire ? (API système ou moteur WASM disponible) */
+    utilisable: function () {
+      return !!api() || !!bergamot();
+    },
+
     explication: function () {
-      const a = api();
-      if (!a) return "Ce téléphone ne propose pas la traduction automatique : les libellés du rapport seront traduits, les commentaires resteront en français.";
+      if (!this.utilisable()) {
+        return "Ce téléphone ne propose pas la traduction automatique : les libellés du rapport seront traduits, les commentaires resteront en français.";
+      }
       return '';
     },
 
     /* État du modèle de langue : 'available', 'downloadable', 'downloading',
-       'unavailable' ou 'inconnu' (API indisponible). */
+       'unavailable' ou 'inconnu' */
     etatModele: function (code) {
       const a = api();
-      if (!a) return Promise.resolve('inconnu');
-      const p = a.type === 'moderne'
-        ? a.obj.availability({ sourceLanguage: SRC, targetLanguage: code })
-        : a.obj.canTranslate({ sourceLanguage: SRC, targetLanguage: code });
-      return Promise.resolve(p).then(function (r) {
-        return r === 'readily' ? 'available' : (r === 'after-download' ? 'downloadable' : (r === 'no' ? 'unavailable' : r));
-      }).catch(function () { return 'unavailable'; });
+      if (a) {
+        const p = a.type === 'moderne'
+          ? a.obj.availability({ sourceLanguage: SRC, targetLanguage: code })
+          : a.obj.canTranslate({ sourceLanguage: SRC, targetLanguage: code });
+        return Promise.resolve(p).then(function (r) {
+          return r === 'readily' ? 'available' : (r === 'after-download' ? 'downloadable' : (r === 'no' ? 'unavailable' : r));
+        }).catch(function () { return 'unavailable'; });
+      }
+
+      const b = bergamot();
+      if (b) {
+        return b.hasModel(code).then(function (has) {
+          return has ? 'available' : 'downloadable';
+        }).catch(function () { return 'unavailable'; });
+      }
+
+      return Promise.resolve('inconnu');
     },
 
     /* ---------- Préparation du traducteur ------------------------------- */
-    /* Crée le traducteur fr -> code ; télécharge le modèle si nécessaire
+    /* Télécharge le modèle et l'enregistre de manière persistante
        (une seule fois par langue sur le téléphone). */
     pret: async function (code, surEtat) {
       const a = api();
-      if (!a) return { ok: false, motif: 'indisponible' };
-      if (this._code === code && this._moteur) return { ok: true };
-      this.fermer();
+      if (a) {
+        if (this._code === code && this._moteur) return { ok: true };
+        this.fermer();
 
-      const suivi = function (m) {
-        if (!m || !m.addEventListener || !surEtat) return;
-        m.addEventListener('downloadprogress', function (e) {
-          const pct = e.total ? Math.round(e.loaded / e.total * 100) : Math.round((e.loaded || 0) * 100);
-          surEtat({ etape: 'telechargement', pct: Math.max(0, Math.min(100, pct)) });
-        });
-      };
-      try {
-        const moteur = a.type === 'moderne'
-          ? await a.obj.create({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi })
-          : await a.obj.createTranslator({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi });
-        this._moteur = moteur;
-        this._code = code;
-        this._cache = this._cache || {};
-        return { ok: true };
-      } catch (e) {
-        const msg = (e && e.message) ? e.message : String(e);
-        /* Cas courant : pas de réseau au premier usage d'une langue. */
-        return { ok: false, motif: /download|fetch|network|réseau/i.test(msg) ? 'modele' : 'refus', detail: msg };
+        const suivi = function (m) {
+          if (!m || !m.addEventListener || !surEtat) return;
+          m.addEventListener('downloadprogress', function (e) {
+            const pct = e.total ? Math.round(e.loaded / e.total * 100) : Math.round((e.loaded || 0) * 100);
+            surEtat({ etape: 'telechargement', pct: Math.max(0, Math.min(100, pct)) });
+          });
+        };
+        try {
+          const moteur = a.type === 'moderne'
+            ? await a.obj.create({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi })
+            : await a.obj.createTranslator({ sourceLanguage: SRC, targetLanguage: code, monitor: suivi });
+          this._moteur = moteur;
+          this._code = code;
+          this._cache = this._cache || {};
+          return { ok: true };
+        } catch (e) {
+          const msg = (e && e.message) ? e.message : String(e);
+          return { ok: false, motif: /download|fetch|network|réseau/i.test(msg) ? 'modele' : 'refus', detail: msg };
+        }
       }
+
+      const b = bergamot();
+      if (b) {
+        this._code = code;
+        return await b.prepareModel(code, surEtat);
+      }
+
+      return { ok: false, motif: 'indisponible' };
     },
 
     fermer: function () {
-      if (this._moteur && this._moteur.destroy) { try { this._moteur.destroy(); } catch (e) {} }
+      if (this._moteur && this._moteur.destroy) {
+        try { this._moteur.destroy(); } catch (e) {}
+      }
       this._moteur = null;
       this._code = null;
     },
 
-    /* ---------- Traduction d'un texte ----------------------------------- */
-    /* Découpe par paragraphes (les sauts de ligne du rapport sont conservés). */
+    /* ---------- Traduction d'un texte unique ---------------------------- */
     texte: async function (txt, code, surEtat) {
       const brut = String(txt == null ? '' : txt);
       if (!brut.trim()) return brut;
-      const res = await this.pret(code, surEtat);
-      if (!res.ok) throw new Error(res.motif);
-      this._cache = this._cache || {};
-      const cleTexte = code + '\u0000' + brut;
-      if (this._cache[cleTexte]) return this._cache[cleTexte];
 
-      const lignes = brut.split('\n');
-      const sorties = [];
-      for (let i = 0; i < lignes.length; i++) {
-        const l = lignes[i];
-        if (!l.trim()) { sorties.push(l); continue; }
-        const cleLigne = code + '\u0000' + l;
-        if (this._cache[cleLigne]) { sorties.push(this._cache[cleLigne]); continue; }
-        let t;
-        try {
-          t = await this._moteur.translate(l);
-        } catch (e) {
-          t = l;                       // une ligne en échec ne bloque pas le rapport
+      const a = api();
+      if (a) {
+        const res = await this.pret(code, surEtat);
+        if (!res.ok) throw new Error(res.motif);
+        this._cache = this._cache || {};
+        const cleTexte = code + '\u0000' + brut;
+        if (this._cache[cleTexte]) return this._cache[cleTexte];
+
+        const lignes = brut.split('\n');
+        const sorties = [];
+        for (let i = 0; i < lignes.length; i++) {
+          const l = lignes[i];
+          if (!l.trim()) { sorties.push(l); continue; }
+          const cleLigne = code + '\u0000' + l;
+          if (this._cache[cleLigne]) { sorties.push(this._cache[cleLigne]); continue; }
+          let t;
+          try {
+            t = await this._moteur.translate(l);
+          } catch (e) {
+            t = l;
+          }
+          this._cache[cleLigne] = t;
+          sorties.push(t);
         }
-        this._cache[cleLigne] = t;
-        sorties.push(t);
+        const resultat = sorties.join('\n');
+        this._cache[cleTexte] = resultat;
+        return resultat;
       }
-      const resultat = sorties.join('\n');
-      this._cache[cleTexte] = resultat;
-      return resultat;
+
+      const b = bergamot();
+      if (b) {
+        const res = await this.pret(code, surEtat);
+        if (!res.ok) throw new Error(res.motif);
+        const tab = await b.traduireTextes([brut], code, surEtat);
+        return (tab && tab[0]) || brut;
+      }
+
+      throw new Error('indisponible');
     },
 
     /* ---------- Champs du rapport à traduire ---------------------------- */
@@ -164,6 +217,7 @@
       if (!this.utilisable()) {
         return { ok: false, motif: 'indisponible', taches: taches.length };
       }
+
       const copie = Object.assign({}, i, {
         evenements: (i.evenements || []).map(function (ev) {
           return Object.assign({}, ev, { photos: (ev.photos || []).map(function (ph) { return Object.assign({}, ph); }) });
@@ -174,9 +228,31 @@
         techniciens: (i.techniciens || []).map(function (t) { return Object.assign({}, t); }),
         jours: (i.jours || []).map(function (j) { return Object.assign({}, j); })
       });
-      /* on retraduit les mêmes champs sur la copie */
+
       const copieTaches = this.champs(copie);
       const total = copieTaches.length;
+
+      // Cas 1 : Moteur WASM Bergamot (Traitement par lot séquentiel basse mémoire)
+      const b = bergamot();
+      if (!api() && b) {
+        const prep = await this.pret(code, surEtat);
+        if (!prep.ok) return { ok: false, motif: prep.motif || 'modele', detail: prep.detail };
+
+        if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
+        const textes = copieTaches.map(function (t) { return t.texte; });
+        try {
+          const traduits = await b.traduireTextes(textes, code, surEtat);
+          for (let k = 0; k < copieTaches.length; k++) {
+            copieTaches[k].obj[copieTaches[k].champ] = traduits[k] || copieTaches[k].texte;
+          }
+          if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
+          return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
+        } catch (err) {
+          return { ok: false, motif: 'erreur_traduction', detail: err.message };
+        }
+      }
+
+      // Cas 2 : API Chrome / Test simulé JSDOM
       let fait = 0, erreurs = 0;
       if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
       for (let k = 0; k < copieTaches.length; k++) {
@@ -185,7 +261,7 @@
         try {
           t.obj[t.champ] = await this.texte(t.texte, code, surEtat);
         } catch (e) {
-          erreurs++;                                   // texte laissé en français
+          erreurs++;
         }
         fait++;
       }
@@ -195,4 +271,4 @@
   };
 
   global.Traduction = Traduction;
-})(window);
+})(typeof window !== 'undefined' ? window : global);

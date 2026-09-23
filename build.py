@@ -91,6 +91,8 @@ def construire_single_file(avec_pwa):
     contenu = {
         'CSS': lire(os.path.join(SRC, 'style.css')),
         'LANGUES': lire(os.path.join(SRC, 'langues.js')),
+        'GLOSSAIRE': lire(os.path.join(SRC, 'glossaire-bfr.js')),
+        'BERGAMOT': lire(os.path.join(SRC, 'bergamot-engine.js')),
         'TRADUCTION': lire(os.path.join(SRC, 'traduction.js')),
         'PDF': lire(os.path.join(SRC, 'pdf.js')),
         'DOCX': lire(os.path.join(SRC, 'docx.js')),
