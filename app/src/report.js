@@ -613,25 +613,36 @@
     async blocPieces(pcs) {
       const p = this.pdf, C = this.C;
       if (!pcs || !pcs.length) return;
-      const colDenomW = this.CW * 0.54;
-      const colRefW = this.CW * 0.30;
-      const colQteW = this.CW * 0.16;
-      const hLigne = 18;
+      const avecPhotos = pcs.some(it => it && it.photo);
+      const colPhotoW = avecPhotos ? 46 : 0;
+      const colDenomW = avecPhotos ? (this.CW - colPhotoW) * 0.52 : (this.CW * 0.54);
+      const colRefW = avecPhotos ? (this.CW - colPhotoW) * 0.32 : (this.CW * 0.30);
+      const colQteW = avecPhotos ? (this.CW - colPhotoW) * 0.16 : (this.CW * 0.16);
+      const hLigne = avecPhotos ? 44 : 18;
       const hEntete = 18;
 
       this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
       let y = p.y;
 
-      // En-tête du tableau
-      p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
-      p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-      p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-      p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+      const tracerEntete = () => {
+        p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
+        let curX = this.M;
+        if (avecPhotos) {
+          p.text(this.L('Photo'), curX + colPhotoW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+          p.line(curX + colPhotoW, y, curX + colPhotoW, y + hEntete, { color: C.bordFort, width: 0.6 });
+          curX += colPhotoW;
+        }
+        p.text(this.L('Dénomination'), curX + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.line(curX + colDenomW, y, curX + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
+        curX += colDenomW;
+        p.text(this.L('Référence'), curX + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.line(curX + colRefW, y, curX + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
+        curX += colRefW;
+        p.text(this.L('Quantité'), curX + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        y += hEntete;
+      };
 
-      p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
-      p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
-
-      y += hEntete;
+      tracerEntete();
 
       for (let idx = 0; idx < pcs.length; idx++) {
         const item = pcs[idx];
@@ -639,28 +650,56 @@
           p.newPage();
           this.enteteSuite();
           y = p.y + 4;
-          p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
-          p.text(this.L('Dénomination'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-          p.text(this.L('Référence'), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-          p.text(this.L('Quantité'), this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
-          p.line(this.M + colDenomW, y, this.M + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
-          p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
-          y += hEntete;
+          tracerEntete();
         }
 
         const fond = (idx % 2 === 1) ? [0.97, 0.98, 0.99] : [1, 1, 1];
         p.rect(this.M, y, this.CW, hLigne, { fill: fond, stroke: C.bord, lineWidth: 0.4 });
+        let rowX = this.M;
+
+        if (avecPhotos) {
+          if (item.photo) {
+            try {
+              const jp = await toJpeg(item.photo, 400, 0.85);
+              if (jp && jp.bytes) {
+                const rImg = (jp.w && jp.h) ? (jp.w / jp.h) : 1;
+                const maxBox = 36;
+                let imgW = maxBox, imgH = maxBox;
+                if (rImg >= 1) {
+                  imgH = maxBox / rImg;
+                } else {
+                  imgW = maxBox * rImg;
+                }
+                const imgX = rowX + (colPhotoW - imgW) / 2;
+                const imgY = y + (hLigne - imgH) / 2;
+                p.image(jp.bytes, imgX, imgY, imgW, imgH);
+              } else {
+                p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+              }
+            } catch (_) {
+              p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+            }
+          } else {
+            p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+          }
+          p.line(rowX + colPhotoW, y, rowX + colPhotoW, y + hLigne, { color: C.bord, width: 0.4 });
+          rowX += colPhotoW;
+        }
 
         const denom = valeur(item.denomination || item.designation) || '—';
         const ref = valeur(item.reference) || '—';
         const qte = String(valeur(item.quantite) || 1);
+        const textY = avecPhotos ? (y + hLigne / 2 + 3) : (y + 12);
 
-        p.text(Pdf.trunc(denom, colDenomW - 12, 8.5, false), this.M + 6, y + 12, { size: 8.5, color: C.texte });
-        p.text(Pdf.trunc(ref, colRefW - 12, 8.5, false), this.M + colDenomW + 6, y + 12, { size: 8.5, font: 'F2', color: C.texte });
-        p.text(qte, this.M + colDenomW + colRefW + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.texte, align: 'center' });
+        p.text(Pdf.trunc(denom, colDenomW - 12, 8.5, false), rowX + 6, textY, { size: 8.5, color: C.texte });
+        p.line(rowX + colDenomW, y, rowX + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
+        rowX += colDenomW;
 
-        p.line(this.M + colDenomW, y, this.M + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
-        p.line(this.M + colDenomW + colRefW, y, this.M + colDenomW + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
+        p.text(Pdf.trunc(ref, colRefW - 12, 8.5, false), rowX + 6, textY, { size: 8.5, font: 'F2', color: C.texte });
+        p.line(rowX + colRefW, y, rowX + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
+        rowX += colRefW;
+
+        p.text(qte, rowX + colQteW / 2, textY, { size: 8.5, font: 'F2', color: C.texte, align: 'center' });
 
         y += hLigne;
       }
@@ -1264,17 +1303,33 @@
           if (!pcs.length) continue;
           if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Pièces de rechange');
-          const enteteTab = [
+          const avecPhotos = pcs.some(p => p && p.photo);
+          const enteteTab = avecPhotos ? [
+            { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
+            { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+          ] : [
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
           ];
-          const lignesTab = pcs.map(p => [
-            { texte: p.denomination || p.designation || '—' },
-            { texte: p.reference || '—' },
-            { texte: String(p.quantite || 1), align: 'center' }
-          ]);
-          d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+          const lignesTab = pcs.map(p => {
+            if (avecPhotos) {
+              return [
+                p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
+                { texte: p.denomination || p.designation || '—' },
+                { texte: p.reference || '—' },
+                { texte: String(p.quantite || 1), align: 'center' }
+              ];
+            }
+            return [
+              { texte: p.denomination || p.designation || '—' },
+              { texte: p.reference || '—' },
+              { texte: String(p.quantite || 1), align: 'center' }
+            ];
+          });
+          d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
           d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
@@ -1290,17 +1345,33 @@
             if (pcs.length) {
               if (dernierTypeEtaitEvenement) d.sautDePage();
               d.bandeau('Pièces de rechange');
-              const enteteTab = [
+              const avecPhotos = pcs.some(p => p && p.photo);
+              const enteteTab = avecPhotos ? [
+                { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
+                { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
+              ] : [
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
               ];
-              const lignesTab = pcs.map(p => [
-                { texte: p.denomination || p.designation || '—' },
-                { texte: p.reference || '—' },
-                { texte: String(p.quantite || 1), align: 'center' }
-              ]);
-              d.tableau([enteteTab].concat(lignesTab), { largeurs: [55, 30, 15] });
+              const lignesTab = pcs.map(p => {
+                if (avecPhotos) {
+                  return [
+                    p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
+                    { texte: p.denomination || p.designation || '—' },
+                    { texte: p.reference || '—' },
+                    { texte: String(p.quantite || 1), align: 'center' }
+                  ];
+                }
+                return [
+                  { texte: p.denomination || p.designation || '—' },
+                  { texte: p.reference || '—' },
+                  { texte: String(p.quantite || 1), align: 'center' }
+                ];
+              });
+              d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
               d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
               piecesRendues = true;
               dernierTypeEtaitEvenement = false;

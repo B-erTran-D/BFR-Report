@@ -204,6 +204,7 @@
 
     tableau(lignes, opt) {
       opt = opt || {};
+      const self = this;
       const langue = this.langue;
       const largeurs = opt.largeurs || null;      // en pourcentage (somme = 100)
       const bordures = opt.sansBordures
@@ -223,28 +224,42 @@
       lignes.forEach(function (ligne, iL) {
         xml += '<w:tr>';
         (Array.isArray(ligne) ? ligne : [ligne]).forEach(function (cellule, iC) {
-          const c = (cellule && cellule.texte !== undefined) ? cellule : { texte: cellule };
-          const rpr = [];
-          if (c.gras || (iL === 0 && opt.enteteGras)) rpr.push('<w:b/>');
-          if (c.couleur) rpr.push(`<w:color w:val="${c.couleur}"/>`);
-          if (c.taille) rpr.push(`<w:sz w:val="${Math.round(c.taille * 2)}"/>`);
-          /* Une cellule contient soit du texte (multi-lignes), soit des « runs »
-             (tableau d'objets { t, gras, taille, couleur }) comme un paragraphe. */
-          const paragraphes = Array.isArray(c.texte) ? [c.texte] : String(c.texte == null ? '' : c.texte).split('\n');
-          const contenu = paragraphes.map(function (p) {
-            const morceaux = Array.isArray(p) ? p : [{ t: p }];
-            const runsCellule = morceaux.map(function (m) {
-              if (typeof m === 'string') m = { t: m };
-              const r2 = rpr.slice();
-              if (m.gras) r2.push('<w:b/>');
-              if (m.italique) r2.push('<w:i/>');
-              if (m.taille) r2.push(`<w:sz w:val="${Math.round(m.taille * 2)}"/>`);
-              if (m.couleur) r2.push(`<w:color w:val="${m.couleur}"/>`);
-              return `<w:r>${r2.length ? '<w:rPr>' + r2.join('') + '</w:rPr>' : ''}` +
-                (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`;
+          const c = (cellule && (cellule.texte !== undefined || cellule.image !== undefined)) ? cellule : { texte: cellule };
+          let contenu = '';
+          if (c.image) {
+            try {
+              const im = self.ajouterImage(c.image);
+              const cmW = c.imageCm || 1.5;
+              const cmH = cmW * (im.ratio || 1);
+              const CM = 360000;
+              contenu = `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${c.align && c.align !== 'left' ? `<w:jc w:val="${c.align}"/>` : '<w:jc w:val="center"/>'}</w:pPr><w:r>` +
+                self.dessin(im, Math.round(cmW * CM), Math.round(cmH * CM), im.nom, im.idDessin, im.rid) +
+                '</w:r></w:p>';
+            } catch (_) {}
+          }
+          if (!contenu) {
+            const rpr = [];
+            if (c.gras || (iL === 0 && opt.enteteGras)) rpr.push('<w:b/>');
+            if (c.couleur) rpr.push(`<w:color w:val="${c.couleur}"/>`);
+            if (c.taille) rpr.push(`<w:sz w:val="${Math.round(c.taille * 2)}"/>`);
+            /* Une cellule contient soit du texte (multi-lignes), soit des « runs »
+               (tableau d'objets { t, gras, taille, couleur }) comme un paragraphe. */
+            const paragraphes = Array.isArray(c.texte) ? [c.texte] : String(c.texte == null ? '' : c.texte).split('\n');
+            contenu = paragraphes.map(function (p) {
+              const morceaux = Array.isArray(p) ? p : [{ t: p }];
+              const runsCellule = morceaux.map(function (m) {
+                if (typeof m === 'string') m = { t: m };
+                const r2 = rpr.slice();
+                if (m.gras) r2.push('<w:b/>');
+                if (m.italique) r2.push('<w:i/>');
+                if (m.taille) r2.push(`<w:sz w:val="${Math.round(m.taille * 2)}"/>`);
+                if (m.couleur) r2.push(`<w:color w:val="${m.couleur}"/>`);
+                return `<w:r>${r2.length ? '<w:rPr>' + r2.join('') + '</w:rPr>' : ''}` +
+                  (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`;
+              }).join('');
+              return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${c.align && c.align !== 'left' ? `<w:jc w:val="${c.align}"/>` : ''}</w:pPr>${runsCellule}</w:p>`;
             }).join('');
-            return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${c.align && c.align !== 'left' ? `<w:jc w:val="${c.align}"/>` : ''}</w:pPr>${runsCellule}</w:p>`;
-          }).join('');
+          }
           const fond = (c.fond || (iL === 0 && opt.enteteFond)) ? `<w:shd w:val="clear" w:fill="${c.fond || opt.enteteFond}"/>` : '';
           xml += `<w:tc><w:tcPr>${largeurs ? `<w:tcW w:w="${Math.round(largeurs[iC] * 90)}" w:type="dxa"/>` : ''}<w:vAlign w:val="center"/>${fond}</w:tcPr>${contenu}</w:tc>`;
         });

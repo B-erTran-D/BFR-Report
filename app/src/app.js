@@ -524,6 +524,7 @@
       <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--bord);border-radius:8px;overflow:hidden">
         <thead>
           <tr style="background:#f8fafc;border-bottom:1.5px solid var(--bord);text-align:left;color:var(--gris)">
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;width:48px;text-align:center">Photo</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Dénomination</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Référence</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:center">Qté</th>
@@ -533,10 +534,17 @@
         <tbody>
           ${pcs.map((p, idx) => `
             <tr style="border-bottom:1px solid var(--bord);background:${idx % 2 === 1 ? '#fcfdff' : '#fff'}">
-              <td style="padding:7px 9px"><strong>${esc(p.denomination || '—')}</strong></td>
-              <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569">${esc(p.reference || '—')}</td>
-              <td style="padding:7px 9px;text-align:center"><strong>${esc(p.quantite || 1)}</strong></td>
-              <td style="padding:7px 9px;text-align:right;white-space:nowrap">
+              <td style="padding:6px 8px;text-align:center;vertical-align:middle">
+                ${p.photo
+                  ? `<button type="button" data-a="voir-photo-pc" data-id="${esc(p.id)}" style="background:none;border:none;padding:0;cursor:pointer;display:inline-block;vertical-align:middle" title="Agrandir la photo">
+                       <img src="${p.photo}" alt="${esc(p.denomination || 'pièce')}" style="width:38px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--bord);display:block">
+                     </button>`
+                  : '<span style="color:#94a3b8;font-size:11px">—</span>'}
+              </td>
+              <td style="padding:7px 9px;vertical-align:middle"><strong>${esc(p.denomination || '—')}</strong></td>
+              <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569;vertical-align:middle">${esc(p.reference || '—')}</td>
+              <td style="padding:7px 9px;text-align:center;vertical-align:middle"><strong>${esc(p.quantite || 1)}</strong></td>
+              <td style="padding:7px 9px;text-align:right;white-space:nowrap;vertical-align:middle">
                 <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">${(ICO.pen && ICO.pen(12)) || ''}</button>
                 <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">${(ICO.trash && ICO.trash(12)) || ''}</button>
               </td>
@@ -549,7 +557,31 @@
 
   function feuillePiece(pieceExistante) {
     const edit = !!pieceExistante;
-    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1 };
+    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1, photo: null };
+    let photoEnCours = p.photo || null;
+
+    function htmlZonePhoto(dataUrl) {
+      if (dataUrl) {
+        return `<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid var(--bord)">
+          <img src="${dataUrl}" alt="Photo pièce" style="width:68px;height:68px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;cursor:pointer" data-a="zoom-photo-pc" title="Agrandir">
+          <div style="flex:1">
+            <div style="font-size:12.5px;color:#1e293b;font-weight:600;margin-bottom:6px">Photo enregistrée</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button type="button" class="btn sm grey" data-a="changer-photo-pc">${(ICO.camera && ICO.camera(13)) || ''} Remplacer</button>
+              <button type="button" class="btn sm danger" data-a="supprimer-photo-pc">${(ICO.trash && ICO.trash(13)) || ''} Supprimer</button>
+            </div>
+          </div>
+        </div>`;
+      }
+      return `<div style="border:1.5px dashed #cbd5e1;border-radius:8px;padding:12px 10px;text-align:center;background:#f8fafc">
+        <p class="small" style="color:#64748b;margin:0 0 10px 0">Prenez en photo la pièce ou son étiquette / référence.</p>
+        <div class="btnrow" style="margin:0;justify-content:center;gap:8px">
+          <button type="button" class="btn sm" data-a="photo-pc-cam">${(ICO.camera && ICO.camera(14)) || ''} Prendre une photo</button>
+          <button type="button" class="btn sm ghost" data-a="photo-pc-gal">${(ICO.image && ICO.image(14)) || ''} Galerie</button>
+        </div>
+      </div>`;
+    }
+
     const panneau = Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>${edit ? 'Modifier la pièce' : 'Ajouter une pièce de rechange'}</h3>
       <p class="sub">Pièce neuve de remplacement utilisée ou laissée dans le stock du client.</p>
@@ -563,10 +595,69 @@
       <div class="field"><label>Quantité</label>
         <input type="number" id="pcQte" min="1" step="1" value="${esc(p.quantite || 1)}"></div>
 
+      <div class="field">
+        <label>Photo de la pièce / étiquette (facultatif)</label>
+        <div id="pcPhotoZone">${htmlZonePhoto(photoEnCours)}</div>
+        <input type="file" id="pcPhotoCam" accept="image/*" capture="environment" style="display:none">
+        <input type="file" id="pcPhotoGal" accept="image/*" style="display:none">
+      </div>
+
       <div class="btnrow"><button class="btn grey" data-a="fermer">Annuler</button>
         <button class="btn" data-a="sauvegarder-piece">${edit ? 'Enregistrer' : 'Ajouter la pièce'}</button></div></div>`, (pEl) => {
       setTimeout(() => { const el = $('#pcDenom', pEl); if (el) el.focus(); }, 80);
+
+      const zonePhoto = $('#pcPhotoZone', pEl);
+      const inputCam = $('#pcPhotoCam', pEl);
+      const inputGal = $('#pcPhotoGal', pEl);
+
+      function rafraichirPhoto() {
+        if (zonePhoto) zonePhoto.innerHTML = htmlZonePhoto(photoEnCours);
+      }
+
+      async function traiterFichier(f) {
+        if (!f) return;
+        try {
+          toast('Compression de la photo...', 1200);
+          photoEnCours = await compresserImage(f, 1200, 0.82);
+          rafraichirPhoto();
+        } catch (_) {
+          toast('Format d\'image non pris en charge');
+        }
+      }
+
+      if (inputCam) inputCam.addEventListener('change', (e) => {
+        traiterFichier(e.target.files && e.target.files[0]);
+        inputCam.value = '';
+      });
+      if (inputGal) inputGal.addEventListener('change', (e) => {
+        traiterFichier(e.target.files && e.target.files[0]);
+        inputGal.value = '';
+      });
+
       pEl.addEventListener('click', (e) => {
+        if (e.target.closest('[data-a="photo-pc-cam"]')) {
+          if (inputCam) inputCam.click();
+          return;
+        }
+        if (e.target.closest('[data-a="photo-pc-gal"]')) {
+          if (inputGal) inputGal.click();
+          return;
+        }
+        if (e.target.closest('[data-a="changer-photo-pc"]')) {
+          if (inputCam) inputCam.click();
+          return;
+        }
+        if (e.target.closest('[data-a="supprimer-photo-pc"]')) {
+          photoEnCours = null;
+          rafraichirPhoto();
+          return;
+        }
+        if (e.target.closest('[data-a="zoom-photo-pc"]')) {
+          if (photoEnCours) {
+            afficherVisionneusePhoto(photoEnCours, ($('#pcDenom', pEl).value || 'Pièce de rechange'), ($('#pcRef', pEl).value ? 'Réf : ' + $('#pcRef', pEl).value : ''));
+          }
+          return;
+        }
         if (!e.target.closest('[data-a="sauvegarder-piece"]')) return;
         const denom = ($('#pcDenom', pEl).value || '').trim();
         const ref = ($('#pcRef', pEl).value || '').trim();
@@ -580,9 +671,10 @@
           p.denomination = denom;
           p.reference = ref;
           p.quantite = qte;
+          p.photo = photoEnCours || null;
         } else {
           if (!Array.isArray(R.pieces)) R.pieces = [];
-          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte });
+          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte, photo: photoEnCours || null });
         }
         planifier();
         rendreTout();
@@ -634,6 +726,111 @@
       onSupprimer: (x) => { R.evenements = R.evenements.filter(e => e.id !== x.id); planifier(); rendreTout(); },
       onFermer: () => { planifier(); rendreTout(); }
     });
+  }
+
+  /* ===================== Visionneuse Photo Plein Écran (Lightbox) ==== */
+  function afficherVisionneusePhoto(dataUrl, titre, legende) {
+    if (!dataUrl) return null;
+
+    let zoom = 1.0;
+    let tx = 0, ty = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let lastTap = 0;
+
+    const lb = document.createElement('div');
+    lb.className = 'debrief-lightbox';
+    lb.innerHTML = `
+      <div class="debrief-lightbox-bar">
+        <div class="debrief-lightbox-titre">${esc(titre || 'Photo')}</div>
+        <div class="debrief-lightbox-actions">
+          <button type="button" class="btn-lightbox" data-lb="zoom-moins" title="Dézoomer">−</button>
+          <button type="button" class="btn-lightbox" data-lb="reset" title="Taille normale"><span id="lbZoomVal">100%</span></button>
+          <button type="button" class="btn-lightbox" data-lb="zoom-plus" title="Zoomer">+</button>
+          <button type="button" class="btn-lightbox" data-lb="fermer" style="background:#e11d48;border-color:#be123c">✕</button>
+        </div>
+      </div>
+      <div class="debrief-lightbox-viewport" id="lbViewport">
+        <img src="${dataUrl}" class="debrief-lightbox-img" id="lbImg" alt="${esc(titre || 'Photo')}">
+      </div>
+      ${legende ? `<div class="debrief-lightbox-legende">${esc(legende)}</div>` : ''}
+    `;
+
+    document.body.appendChild(lb);
+
+    const img = lb.querySelector('#lbImg');
+    const vp = lb.querySelector('#lbViewport');
+    const lblZoom = lb.querySelector('#lbZoomVal');
+
+    function appliquerTrans() {
+      img.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + zoom + ')';
+      if (lblZoom) lblZoom.textContent = Math.round(zoom * 100) + '%';
+    }
+
+    function modifierZoom(delta, reset) {
+      if (reset) {
+        zoom = 1.0; tx = 0; ty = 0;
+      } else {
+        zoom = Math.max(1.0, Math.min(4.0, zoom + delta));
+        if (zoom === 1.0) { tx = 0; ty = 0; }
+      }
+      appliquerTrans();
+    }
+
+    lb.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-lb]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-lb');
+      if (action === 'fermer') {
+        lb.remove();
+      } else if (action === 'zoom-plus') {
+        modifierZoom(0.5);
+      } else if (action === 'zoom-moins') {
+        modifierZoom(-0.5);
+      } else if (action === 'reset') {
+        modifierZoom(0, true);
+      }
+    });
+
+    // Double-tap pour zoomer / dézoomer rapidement
+    vp.addEventListener('click', (e) => {
+      if (e.target.closest('.debrief-lightbox-bar')) return;
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        if (zoom > 1.2) modifierZoom(0, true);
+        else modifierZoom(1.5);
+      }
+      lastTap = now;
+    });
+
+    // Drag / Pan tactile et pointeur
+    vp.addEventListener('pointerdown', (e) => {
+      if (zoom <= 1.0) return;
+      isDragging = true;
+      startX = e.clientX - tx;
+      startY = e.clientY - ty;
+      vp.classList.add('dragging');
+      vp.setPointerCapture(e.pointerId);
+    });
+
+    vp.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      tx = e.clientX - startX;
+      ty = e.clientY - startY;
+      appliquerTrans();
+    });
+
+    const stopperDrag = (e) => {
+      if (isDragging) {
+        isDragging = false;
+        vp.classList.remove('dragging');
+        try { vp.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    vp.addEventListener('pointerup', stopperDrag);
+    vp.addEventListener('pointercancel', stopperDrag);
+
+    return lb;
   }
 
   /* ===================== Aperçu Évènement / Débrief Client ============ */
@@ -763,104 +960,7 @@
     function ouvrirVisionneusePhoto(photoIdx) {
       const ph = photos[photoIdx];
       if (!ph) return;
-
-      let zoom = 1.0;
-      let tx = 0, ty = 0;
-      let isDragging = false;
-      let startX = 0, startY = 0;
-      let lastTap = 0;
-
-      const lb = document.createElement('div');
-      lb.className = 'debrief-lightbox';
-      lb.innerHTML = `
-        <div class="debrief-lightbox-bar">
-          <div class="debrief-lightbox-titre">Photo ${photoIdx + 1} / ${photos.length}</div>
-          <div class="debrief-lightbox-actions">
-            <button type="button" class="btn-lightbox" data-lb="zoom-moins" title="Dézoomer">−</button>
-            <button type="button" class="btn-lightbox" data-lb="reset" title="Taille normale"><span id="lbZoomVal">100%</span></button>
-            <button type="button" class="btn-lightbox" data-lb="zoom-plus" title="Zoomer">+</button>
-            <button type="button" class="btn-lightbox" data-lb="fermer" style="background:#e11d48;border-color:#be123c">✕</button>
-          </div>
-        </div>
-        <div class="debrief-lightbox-viewport" id="lbViewport">
-          <img src="${ph.dataUrl}" class="debrief-lightbox-img" id="lbImg" alt="Photo plein écran">
-        </div>
-        ${ph.legende ? `<div class="debrief-lightbox-legende">${esc(ph.legende)}</div>` : ''}
-      `;
-
-      document.body.appendChild(lb);
-
-      const img = lb.querySelector('#lbImg');
-      const vp = lb.querySelector('#lbViewport');
-      const lblZoom = lb.querySelector('#lbZoomVal');
-
-      function appliquerTrans() {
-        img.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + zoom + ')';
-        if (lblZoom) lblZoom.textContent = Math.round(zoom * 100) + '%';
-      }
-
-      function modifierZoom(delta, reset) {
-        if (reset) {
-          zoom = 1.0; tx = 0; ty = 0;
-        } else {
-          zoom = Math.max(1.0, Math.min(4.0, zoom + delta));
-          if (zoom === 1.0) { tx = 0; ty = 0; }
-        }
-        appliquerTrans();
-      }
-
-      lb.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-lb]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-lb');
-        if (action === 'fermer') {
-          lb.remove();
-        } else if (action === 'zoom-plus') {
-          modifierZoom(0.5);
-        } else if (action === 'zoom-moins') {
-          modifierZoom(-0.5);
-        } else if (action === 'reset') {
-          modifierZoom(0, true);
-        }
-      });
-
-      // Double-tap pour zoomer / dézoomer rapidement
-      vp.addEventListener('click', (e) => {
-        if (e.target.closest('.debrief-lightbox-bar')) return;
-        const now = Date.now();
-        if (now - lastTap < 300) {
-          if (zoom > 1.2) modifierZoom(0, true);
-          else modifierZoom(1.5);
-        }
-        lastTap = now;
-      });
-
-      // Drag / Pan tactile et pointeur
-      vp.addEventListener('pointerdown', (e) => {
-        if (zoom <= 1.0) return;
-        isDragging = true;
-        startX = e.clientX - tx;
-        startY = e.clientY - ty;
-        vp.classList.add('dragging');
-        vp.setPointerCapture(e.pointerId);
-      });
-
-      vp.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
-        tx = e.clientX - startX;
-        ty = e.clientY - startY;
-        appliquerTrans();
-      });
-
-      const stopperDrag = (e) => {
-        if (isDragging) {
-          isDragging = false;
-          vp.classList.remove('dragging');
-          try { vp.releasePointerCapture(e.pointerId); } catch (_) {}
-        }
-      };
-      vp.addEventListener('pointerup', stopperDrag);
-      vp.addEventListener('pointercancel', stopperDrag);
+      afficherVisionneusePhoto(ph.dataUrl, `Photo ${photoIdx + 1} / ${photos.length}`, ph.legende);
     }
   }
 
@@ -2346,6 +2446,7 @@
       <button class="menu-item" data-a="historique"><span class="ico">${(ICO.folder && ICO.folder(18)) || ''}</span><span>Rapports enregistrés (${liste.length})</span></button>
       <button class="menu-item" data-a="export"><span class="ico">${(ICO.package && ICO.package(18)) || ''}</span><span>Exporter la sauvegarde (JSON)</span></button>
       <button class="menu-item" data-a="import"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Importer une sauvegarde</span></button>
+      <a class="menu-item" href="depot-public.zip" download="depot-public.zip" style="text-decoration:none;color:inherit"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le code source (ZIP)<small>Archive complète du dépôt public</small></span></a>
       <button class="menu-item" data-a="aide"><span class="ico">${(ICO.help && ICO.help(18)) || ''}</span><span>Mode d'emploi</span></button>
       <div class="sticky-note" style="margin-top:8px">${Store.ok ? 'Tout est conservé sur ce téléphone — rien n\'est envoyé sans votre accord.' : 'Stockage local indisponible : pensez à exporter votre travail.'}</div>
       <div style="text-align:center;font-size:11px;color:#64748b;margin:10px 0 4px 0;padding:6px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">Version active : <strong>${esc(ver)}</strong> (23/09/2026)</div>
@@ -2485,6 +2586,13 @@
       else if (a === 'ajouter-ev') ajouterEvenement();
       else if (a === 'editer-client') feuilleClient();
       else if (a === 'ajouter-piece') feuillePiece();
+      else if (a === 'voir-photo-pc') {
+        const id = b.dataset.id;
+        const pc = (R.pieces || []).find(p => p.id === id);
+        if (pc && pc.photo) {
+          afficherVisionneusePhoto(pc.photo, pc.denomination || 'Pièce de rechange', pc.reference ? 'Réf : ' + pc.reference : '');
+        }
+      }
       else if (a === 'editer-piece') {
         const id = b.dataset.id;
         const pc = (R.pieces || []).find(p => p.id === id);
@@ -2806,6 +2914,6 @@
     destinatairesMail: destinatairesMail, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
-    apercuEvenement: apercuEvenement
+    apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto
   };
 })();
