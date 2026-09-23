@@ -232,15 +232,30 @@ def main():
 
     # 2) site déployable (GitHub Pages : docs/)
     os.makedirs(SITE, exist_ok=True)
+    html_pwa = injecter_version(construire_single_file(avec_pwa=True), version)
     with open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8') as f:
-        f.write(injecter_version(construire_single_file(avec_pwa=True), version))
+        f.write(html_pwa)
+    # Également à la racine (au cas où GitHub Pages est configuré sur la racine / au lieu de /docs)
+    with open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(html_pwa)
+
     ecrire_icones(SITE)
+    ecrire_icones(ROOT)
+
+    sw_code = SW.replace('__VERSION__', version)
     with open(os.path.join(SITE, 'sw.js'), 'w', encoding='utf-8') as f:
-        f.write(SW.replace('__VERSION__', version))
+        f.write(sw_code)
+    with open(os.path.join(ROOT, 'sw.js'), 'w', encoding='utf-8') as f:
+        f.write(sw_code)
+
     with open(os.path.join(SITE, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump(MANIFEST, f, ensure_ascii=False, indent=2)
+    with open(os.path.join(ROOT, 'manifest.json'), 'w', encoding='utf-8') as f:
+        json.dump(MANIFEST, f, ensure_ascii=False, indent=2)
+
     # fichier .nojekyll : GitHub Pages ne doit pas filtrer les fichiers
     open(os.path.join(SITE, '.nojekyll'), 'w').close()
+    open(os.path.join(ROOT, '.nojekyll'), 'w').close()
 
     for p in (OUT_SINGLE, os.path.join(SITE, 'index.html')):
         print('%-46s %8.0f Ko' % (os.path.relpath(p, ROOT), os.path.getsize(p) / 1024))

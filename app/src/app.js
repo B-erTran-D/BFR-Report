@@ -1428,9 +1428,11 @@
     const explication = res.motif === 'indisponible'
       ? "Ce téléphone ne peut pas traduire les commentaires automatiquement."
       : "La langue n'a pas pu être préparée (le modèle se télécharge au premier usage : il faut du réseau).";
+    masquerChargement();
     const poursuivre = confirm(explication + "\n\nCréer quand même le rapport en " + nom +
       " (libellés traduits, commentaires laissés en français) ?\n\n« Annuler » = n'envoyer que le rapport français.");
     if (!poursuivre) return { actif: true, ok: false, annule: true, motif: res.motif };
+    afficherChargement('Mise en page des documents…', 'Création de la version ' + nom + '…');
     return { actif: true, ok: true, rapport: R, code: code, partiel: true, motif: res.motif };
   }
 
@@ -1527,22 +1529,34 @@
     }
   }
 
+  let enSoumission = false;
+
   async function soumettre() {
-    if (!R.client.nom) { toast('Renseignez d\'abord le client'); feuilleClient(); return; }
-    if (!R.signatureClient.dataUrl && !confirm('Le client n\'a pas signé. Soumettre quand même le rapport ?')) return;
-    if (!R.chrono.fin && R.chrono.debut && !confirm('Le chrono n\'est pas terminé. Continuer ?')) return;
+    if (enSoumission) return;
+    enSoumission = true;
 
-    const avecTrad = !!(R.langue && R.langue.active && R.langue.code);
-    const nomLangue = avecTrad && global.I18N ? I18N.natif(R.langue.code) : '';
-
-    afficherChargement(
-      avecTrad ? 'Traduction en cours…' : 'Génération du compte rendu…',
-      avecTrad
-        ? 'Veuillez patienter quelques instants, création des versions française et ' + nomLangue + '…'
-        : 'Mise en page du document officiel…'
-    );
+    const btnSoum = (typeof document !== 'undefined') ? document.getElementById('btnSoumettre') : null;
+    const texteOrig = btnSoum ? btnSoum.innerHTML : '';
+    if (btnSoum) {
+      btnSoum.innerHTML = '⏳ Préparation en cours…';
+      btnSoum.disabled = true;
+    }
 
     try {
+      if (!R.client.nom) { toast('Renseignez d\'abord le client'); feuilleClient(); return; }
+      if (!R.signatureClient.dataUrl && !confirm('Le client n\'a pas signé. Soumettre quand même le rapport ?')) return;
+      if (!R.chrono.fin && R.chrono.debut && !confirm('Le chrono n\'est pas terminé. Continuer ?')) return;
+
+      const avecTrad = !!(R.langue && R.langue.active && R.langue.code);
+      const nomLangue = avecTrad && (typeof I18N !== 'undefined') ? I18N.natif(R.langue.code) : '';
+
+      afficherChargement(
+        avecTrad ? 'Traduction en cours…' : 'Génération du compte rendu…',
+        avecTrad
+          ? 'Veuillez patienter quelques instants, création des versions française et ' + nomLangue + '…'
+          : 'Mise en page du document officiel…'
+      );
+
       /* Correction automatique du français (accords, pluriels, accents) avant génération et traduction */
       if (typeof CorrecteurFR !== 'undefined' && CorrecteurFR.corrigerRapport) {
         CorrecteurFR.corrigerRapport(R);
@@ -1573,7 +1587,13 @@
     } catch (err) {
       masquerChargement();
       console.error('Erreur lors de la génération du rapport :', err);
-      toast('Erreur lors de la préparation du rapport');
+      alert('Erreur lors de la préparation du rapport : ' + (err && err.message ? err.message : err));
+    } finally {
+      enSoumission = false;
+      if (btnSoum) {
+        btnSoum.innerHTML = texteOrig;
+        btnSoum.disabled = false;
+      }
     }
   }
 

@@ -62,7 +62,10 @@
 
       try {
         const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(ligne) + '&langpair=' + SRC + '|' + encodeURIComponent(codeCible);
-        const rep = await fetch(url, { mode: 'cors' });
+        const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        const timer = controller ? setTimeout(function () { controller.abort(); }, 2000) : null;
+        const rep = await fetch(url, { mode: 'cors', signal: controller ? controller.signal : undefined });
+        if (timer) clearTimeout(timer);
         if (!rep.ok) throw new Error('HTTP ' + rep.status);
         const json = await rep.json();
         if (json && json.responseData && json.responseData.translatedText) {
@@ -163,11 +166,14 @@
       if (b) {
         this._code = code;
         try {
-          const resB = await b.prepareModel(code, surEtat);
-          if (resB && resB.ok) return resB;
+          const hasLocal = await b.hasModel(code);
+          if (hasLocal) {
+            return { ok: true, source: 'cache_local' };
+          }
         } catch (_) {}
-        // Si le téléchargement lourd WASM échoue (CORS / réseau),
-        // le moteur bascule en mode direct en ligne avec le glossaire BFR.
+        // Si le modèle n'est pas déjà présent en local dans IndexedDB,
+        // on bascule directement en mode rapide en ligne avec le glossaire BFR
+        // sans tenter de gros téléchargement bloquant pendant la soumission.
         this._modeEnLigne = true;
         if (surEtat) surEtat({ etape: 'pret', pct: 100, detail: 'Traduction prête' });
         return { ok: true, source: 'en_ligne' };
@@ -338,18 +344,17 @@
           }
         }
 
-        // Sinon, traduction en ligne de chaque champ avec Glossaire BFR
-        let faitB = 0;
-        for (let k = 0; k < copieTaches.length; k++) {
-          if (surEtat) surEtat({ etape: 'traduction', etiquette: copieTaches[k].etiquette, fait: faitB, total: total, pct: Math.round((faitB / total) * 100) });
+        // Sinon, traduction rapide avec Glossaire BFR (parallélisée avec délai strict de 3s)
+        const promesses = copieTaches.map(async function (tache) {
           try {
-            const trad = await traduireTexteEnLigne(copieTaches[k].texte, code, entites);
-            copieTaches[k].obj[copieTaches[k].champ] = trad || copieTaches[k].texte;
+            const trad = await traduireTexteEnLigne(tache.texte, code, entites);
+            tache.obj[tache.champ] = trad || tache.texte;
           } catch (_) {
-            copieTaches[k].obj[copieTaches[k].champ] = copieTaches[k].texte;
+            tache.obj[tache.champ] = tache.texte;
           }
-          faitB++;
-        }
+        });
+        const timeoutTotal = new Promise(function (resolve) { setTimeout(resolve, 3000); });
+        await Promise.race([Promise.all(promesses), timeoutTotal]);
         if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
         return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
       }
