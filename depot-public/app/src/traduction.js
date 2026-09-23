@@ -42,6 +42,49 @@
     return null;
   }
 
+  /* Traduction en ligne de haute fidélité avec protection du Glossaire BFR */
+  async function traduireTexteEnLigne(texte, codeCible, entites) {
+    if (!texte || typeof texte !== 'string' || !texte.trim()) return texte;
+    const brut = texte.trim();
+    const G = typeof global.GlossaireBFR !== 'undefined' ? global.GlossaireBFR : null;
+
+    let proteges = { texte: brut, tags: [] };
+    if (G && G.proteger) {
+      proteges = G.proteger(brut, entites || []);
+    }
+
+    const lignes = proteges.texte.split('\n');
+    const tradLignes = [];
+
+    for (let i = 0; i < lignes.length; i++) {
+      const ligne = lignes[i];
+      if (!ligne.trim()) { tradLignes.push(ligne); continue; }
+
+      try {
+        const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(ligne) + '&langpair=' + SRC + '|' + encodeURIComponent(codeCible);
+        const rep = await fetch(url, { mode: 'cors' });
+        if (!rep.ok) throw new Error('HTTP ' + rep.status);
+        const json = await rep.json();
+        if (json && json.responseData && json.responseData.translatedText) {
+          tradLignes.push(json.responseData.translatedText);
+        } else {
+          tradLignes.push(ligne);
+        }
+      } catch (e) {
+        tradLignes.push(ligne);
+      }
+    }
+
+    let resultat = tradLignes.join('\n');
+    if (G && G.restaurer) {
+      resultat = G.restaurer(resultat, proteges.tags);
+    }
+    if (G && G.affiner) {
+      resultat = G.affiner(resultat, codeCible);
+    }
+    return resultat;
+  }
+
   const Traduction = {
     /* ---------- Type de moteur actif ----------------------------------- */
     moteur: function () {
@@ -119,7 +162,15 @@
       const b = bergamot();
       if (b) {
         this._code = code;
-        return await b.prepareModel(code, surEtat);
+        try {
+          const resB = await b.prepareModel(code, surEtat);
+          if (resB && resB.ok) return resB;
+        } catch (_) {}
+        // Si le téléchargement lourd WASM échoue (CORS / réseau),
+        // le moteur bascule en mode direct en ligne avec le glossaire BFR.
+        this._modeEnLigne = true;
+        if (surEtat) surEtat({ etape: 'pret', pct: 100, detail: 'Traduction prête' });
+        return { ok: true, source: 'en_ligne' };
       }
 
       return { ok: false, motif: 'indisponible' };
@@ -134,7 +185,7 @@
     },
 
     /* ---------- Traduction d'un texte unique ---------------------------- */
-    texte: async function (txt, code, surEtat) {
+    texte: async function (txt, code, surEtat, entites) {
       const brut = String(txt == null ? '' : txt);
       if (!brut.trim()) return brut;
 
@@ -168,11 +219,28 @@
       }
 
       const b = bergamot();
-      if (b) {
-        const res = await this.pret(code, surEtat);
-        if (!res.ok) throw new Error(res.motif);
-        const tab = await b.traduireTextes([brut], code, surEtat);
-        return (tab && tab[0]) || brut;
+      if (this._modeEnLigne || (!api() && b)) {
+        this._cache = this._cache || {};
+        const cleTexte = code + '\u0000' + brut;
+        if (this._cache[cleTexte]) return this._cache[cleTexte];
+
+        if (b && !this._modeEnLigne && (await b.hasModel(code))) {
+          try {
+            const tab = await b.traduireTextes([brut], code, surEtat);
+            if (tab && tab[0]) {
+              this._cache[cleTexte] = tab[0];
+              return tab[0];
+            }
+          } catch (_) {}
+        }
+
+        try {
+          const resTrad = await traduireTexteEnLigne(brut, code, entites);
+          this._cache[cleTexte] = resTrad;
+          return resTrad;
+        } catch (_) {
+          return brut;
+        }
       }
 
       throw new Error('indisponible');
@@ -232,24 +300,58 @@
       const copieTaches = this.champs(copie);
       const total = copieTaches.length;
 
-      // Cas 1 : Moteur WASM Bergamot (Traitement par lot séquentiel basse mémoire)
+      // Cas 1 : Moteur WASM Bergamot ou Traduction en ligne
       const b = bergamot();
       if (!api() && b) {
         const prep = await this.pret(code, surEtat);
         if (!prep.ok) return { ok: false, motif: prep.motif || 'modele', detail: prep.detail };
 
-        if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
-        const textes = copieTaches.map(function (t) { return t.texte; });
-        try {
-          const traduits = await b.traduireTextes(textes, code, surEtat);
-          for (let k = 0; k < copieTaches.length; k++) {
-            copieTaches[k].obj[copieTaches[k].champ] = traduits[k] || copieTaches[k].texte;
-          }
-          if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
-          return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
-        } catch (err) {
-          return { ok: false, motif: 'erreur_traduction', detail: err.message };
+        const entites = [];
+        if (i.client) {
+          if (i.client.nom) entites.push(i.client.nom);
+          if (i.client.contact) entites.push(i.client.contact);
+          if (i.client.lieu) entites.push(i.client.lieu);
         }
+        if (i.machine) {
+          if (i.machine.designation) entites.push(i.machine.designation);
+          if (i.machine.serie) entites.push(i.machine.serie);
+        }
+        (i.machines || []).forEach(function (m) {
+          if (m.designation) entites.push(m.designation);
+          if (m.serie) entites.push(m.serie);
+        });
+
+        if (surEtat) surEtat({ etape: 'traduction', fait: 0, total: total, pct: 0 });
+
+        // Si modèle local prêt dans Bergamot, tenter en local
+        if (!this._modeEnLigne && (await b.hasModel(code))) {
+          try {
+            const textes = copieTaches.map(function (t) { return t.texte; });
+            const traduits = await b.traduireTextes(textes, code, surEtat);
+            for (let k = 0; k < copieTaches.length; k++) {
+              copieTaches[k].obj[copieTaches[k].champ] = traduits[k] || copieTaches[k].texte;
+            }
+            if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
+            return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
+          } catch (err) {
+            console.warn('Repli traduction en ligne suite erreur WASM:', err);
+          }
+        }
+
+        // Sinon, traduction en ligne de chaque champ avec Glossaire BFR
+        let faitB = 0;
+        for (let k = 0; k < copieTaches.length; k++) {
+          if (surEtat) surEtat({ etape: 'traduction', etiquette: copieTaches[k].etiquette, fait: faitB, total: total, pct: Math.round((faitB / total) * 100) });
+          try {
+            const trad = await traduireTexteEnLigne(copieTaches[k].texte, code, entites);
+            copieTaches[k].obj[copieTaches[k].champ] = trad || copieTaches[k].texte;
+          } catch (_) {
+            copieTaches[k].obj[copieTaches[k].champ] = copieTaches[k].texte;
+          }
+          faitB++;
+        }
+        if (surEtat) surEtat({ etape: 'traduction', fait: total, total: total, pct: 100 });
+        return { ok: true, rapport: copie, nb: total, total: total, erreurs: 0 };
       }
 
       // Cas 2 : API Chrome / Test simulé JSDOM

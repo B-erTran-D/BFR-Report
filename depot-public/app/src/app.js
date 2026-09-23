@@ -1420,13 +1420,45 @@
     return { actif: true, ok: true, rapport: R, code: code, partiel: true, motif: res.motif };
   }
 
-  function destinataires() {
+  function destinatairesMail() {
     const to = [];
-    if (S.mail.envoyerClient && R.client.email) to.push(R.client.email.trim());
-    if (S.mail.destinataireSAV) to.push(S.mail.destinataireSAV.trim());
-    if (S.mail.destinatairesCopie) S.mail.destinatairesCopie.split(/[;,]/).forEach(x => { if (x.trim()) to.push(x.trim()); });
-    return to;
+    const cc = [];
+
+    // Ligne "À :" (Destinataires principaux : client et responsable SAV)
+    if (S.mail.envoyerClient !== false && R.client && R.client.email) {
+      const cl = R.client.email.trim();
+      if (cl && to.indexOf(cl) === -1) to.push(cl);
+    }
+    if (S.mail.envoyerSAV !== false && S.mail.destinataireSAV) {
+      const sav = S.mail.destinataireSAV.trim();
+      if (sav && to.indexOf(sav) === -1) to.push(sav);
+    }
+
+    // Ligne "Cc :" (Copies conformes : technicien systématiquement + adresses configurées)
+    if (S.technicien && S.technicien.email) {
+      const tech = S.technicien.email.trim();
+      if (tech && cc.indexOf(tech) === -1 && to.indexOf(tech) === -1) cc.push(tech);
+    }
+    if (S.mail.destinatairesCopie) {
+      S.mail.destinatairesCopie.split(/[;,]/).forEach(x => {
+        const adr = x.trim();
+        if (adr && cc.indexOf(adr) === -1 && to.indexOf(adr) === -1) cc.push(adr);
+      });
+    }
+
+    return {
+      to: to,
+      cc: cc,
+      toStr: to.join(', '),
+      ccStr: cc.join(', ')
+    };
   }
+
+  function destinataires() {
+    const d = destinatairesMail();
+    return d.to.concat(d.cc);
+  }
+
   /* Suivi de la traduction à l'écran (téléchargement du modèle, avancement). */
   function surEtatTraduction(e) {
     if (!e) return;
@@ -1499,33 +1531,59 @@
   }
 
   function feuilleEnvoi(lots) {
-    const to = destinataires().join(';');
+    const dests = destinatairesMail();
     const res = lots.fr.pdf, resWord = lots.fr.word;
     const t = lots.trad;
     const langueMail = t ? t.code : null;
+
+    // Construction RFC 6068 de l'URL mailto : virgule (,) comme séparateur officiel
+    let mailtoUrl = 'mailto:' + encodeURIComponent(dests.to.join(','));
+    const mailtoParams = [];
+    if (dests.cc.length) mailtoParams.push('cc=' + encodeURIComponent(dests.cc.join(',')));
+    mailtoParams.push('subject=' + encodeURIComponent(Report.objetMail(R, S)));
+    mailtoParams.push('body=' + encodeURIComponent(Report.corpsMail(R, S, langueMail)));
+    mailtoUrl += '?' + mailtoParams.join('&');
+
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Envoyer le rapport</h3>
-      <p class="sub">Le PDF a été enregistré sur le téléphone. Choisissez le mode d'envoi :</p>
+      <p class="sub">Le PDF a été généré pour transmission. Choisissez votre mode d'envoi :</p>
       ${t ? `<div class="sticky-note">Deux rapports : français + ${esc(I18N.natif(t.code))}${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
-      <button class="menu-item" data-a="partager"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Partager le rapport<small>Gmail / Outlook — PDF (et Word) déjà joints</small></span></button>
-      <button class="menu-item" data-a="mailto"><span class="ico">${(ICO.mail && ICO.mail(18)) || ''}</span><span>Ouvrir l'application e-mail<small>Destinataires et texte pré-remplis</small></span></button>
+
+      <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.5">
+        <div><strong style="color:var(--c-brand)">À :</strong> ${esc(dests.toStr || 'aucun destinataire direct')}</div>
+        <div style="margin-top:4px"><strong style="color:var(--c-brand)">Cc :</strong> ${esc(dests.ccStr || 'aucune copie')}</div>
+      </div>
+
+      <button class="menu-item" data-a="partager" style="background:#e0f2fe;border:1px solid #bae6fd"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span><strong>Partager le rapport (PDF joint)</strong><small>Gmail / Outlook — PDF joint automatiquement</small></span></button>
+      <button class="menu-item" data-a="mailto"><span class="ico">${(ICO.mail && ICO.mail(18)) || ''}</span><span>Ouvrir l'application e-mail<small>À, Cc, objet et corps pré-remplis</small></span></button>
       <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
       ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
       <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
       ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
-      <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du rapport</span></button>
-      <div class="sticky-note">Destinataires : ${esc(to || 'non renseignés')}</div>
+      <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du message</span></button>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('click', async (e) => {
         const b = e.target.closest('[data-a]:not([data-a="fermer"])');
         if (!b) return;
         const a = b.dataset.a;
         if (a === 'partager') {
-          if (navigator.share) { try { await navigator.share({ files: fichiersEnvoi(lots), title: Report.objetMail(R, S), text: Report.corpsMail(R, S, langueMail) }); } catch (err) {} }
-          else toast('Partage indisponible');
+          if (navigator.share) {
+            try {
+              await navigator.share({ files: fichiersEnvoi(lots), title: Report.objetMail(R, S), text: Report.corpsMail(R, S, langueMail) });
+              R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
+              planifier(); rendreTout();
+              toast('Rapport partagé avec succès');
+            } catch (err) {
+              if (err && err.name !== 'AbortError') toast('Partage indisponible');
+            }
+          } else {
+            toast('Partage natif indisponible : utilisez "Ouvrir l\'application e-mail"');
+          }
         } else if (a === 'mailto') {
-          window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(Report.objetMail(R, S)) +
-            '&body=' + encodeURIComponent(Report.corpsMail(R, S, langueMail));
+          // Téléchargement préalable du PDF pour qu'il soit dans Téléchargements
+          telecharger(res.blob, res.filename);
+          toast('PDF téléchargé : pensez à l\'attacher dans votre messagerie', 3400);
+          setTimeout(() => { window.location.href = mailtoUrl; }, 300);
         } else if (a === 'dl') telecharger(res.blob, res.filename);
         else if (a === 'dlt' && t) telecharger(t.pdf.blob, t.pdf.filename);
         else if (a === 'dlw' && resWord) telecharger(resWord.blob, resWord.filename);
@@ -1827,6 +1885,67 @@
     });
   }
 
+  /* ===================== Sélecteur d'icône d'application ===================== */
+  function feuilleIcones() {
+    const options = (typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || [];
+    Ouvrir.ouvrir(null, `<div class="panel">
+      <div class="grab"></div><h3>Icône de l'application</h3>
+      <p class="sub">Choisissez l'icône BFR affichée sur votre smartphone (écran d'accueil et navigateur) :</p>
+      <div class="icones-selecteur" style="margin-bottom:14px">
+        ${options.map(opt => {
+          const actif = (S.iconeApp || 'opt1') === opt.id;
+          return `
+            <div class="icone-card ${actif ? 'actif' : ''}" data-icone-id="${opt.id}">
+              <img src="${opt.dataUri || opt.src192}" alt="${esc(opt.titre)}">
+              <div class="icone-card-info">
+                <div class="icone-card-titre">
+                  <span>${esc(opt.titre)}</span>
+                  ${actif ? '<span class="icone-badge-actif">Actif</span>' : ''}
+                </div>
+                <div class="icone-card-desc">${esc(opt.desc)}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="sticky-note" style="margin-top:4px">
+        <strong>💡 Raccourci écran d'accueil Android :</strong><br>
+        Une fois l'icône choisie, si le raccourci sur votre écran d'accueil ne se met pas à jour tout de suite :
+        supprimez le raccourci actuel, puis touchez le menu <strong>⋮ de Chrome → "Ajouter à l'écran d'accueil"</strong> (ou "Installer l'application").
+      </div>
+      <button class="btn wide" style="margin-top:12px" data-a="fermer">Fermer</button>
+    </div>`, (panneau) => {
+      panneau.addEventListener('click', (e) => {
+        const iconeCard = e.target.closest('[data-icone-id]');
+        if (iconeCard) {
+          const id = iconeCard.dataset.iconeId;
+          S.iconeApp = id;
+          Store.set(K.settings, S);
+          appliquerIconeApp(id);
+
+          $$('.icone-card', panneau).forEach(c => {
+            const estActif = c.dataset.iconeId === id;
+            c.classList.toggle('actif', estActif);
+            const titreEl = $('.icone-card-titre', c);
+            if (titreEl) {
+              const badge = $('.icone-badge-actif', titreEl);
+              if (estActif && !badge) {
+                const b = document.createElement('span');
+                b.className = 'icone-badge-actif';
+                b.textContent = 'Actif';
+                titreEl.appendChild(b);
+              } else if (!estActif && badge) {
+                badge.remove();
+              }
+            }
+          });
+          const opt = options.find(o => o.id === id);
+          toast('Icône sélectionnée : ' + (opt ? opt.titre : id));
+        }
+      });
+    });
+  }
+
   /* ===================== Menu ========================================= */
   function feuilleMenu() {
     const liste = Store.get(K.rapports, []);
@@ -1834,6 +1953,7 @@
       <div class="grab"></div><h3>Menu</h3>
       <p class="sub">Rapport N° ${esc(R.numero || '—')} — ${esc(R.client.nom || 'client non renseigné')}</p>
       <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
+      <button class="menu-item" data-a="icones"><span class="ico">${(ICO.palette && ICO.palette(18)) || (ICO.gear && ICO.gear(18)) || ''}</span><span>Icône de l'application<small>Changer l'icône sur l'écran d'accueil Android</small></span></button>
       <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
       <button class="menu-item" data-a="nouveau"><span class="ico">${(ICO.plus && ICO.plus(18)) || ''}</span><span>Nouvelle intervention<small>Le rapport en cours reste dans l'historique</small></span></button>
       <button class="menu-item" data-a="historique"><span class="ico">${(ICO.folder && ICO.folder(18)) || ''}</span><span>Rapports enregistrés (${liste.length})</span></button>
@@ -1847,7 +1967,9 @@
         if (!b) return;
         const a = b.dataset.a;
         e.target.closest('.sheet').remove();
-        if (a === 'reglages') feuilleReglages();
+        if (a === 'identite') feuilleIdentite();
+        else if (a === 'icones') feuilleIcones();
+        else if (a === 'reglages') feuilleReglages();
         else if (a === 'nouveau') {
           if (!confirm('Créer une nouvelle intervention ?')) return;
           sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
@@ -2247,6 +2369,8 @@
 
   window.APP = {
     get rapport() { return R; }, get reglages() { return S; },
-    pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast
+    pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
+    destinatairesMail: destinatairesMail, destinataires: destinataires,
+    feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre
   };
 })();
