@@ -1674,3 +1674,76 @@ ul.liste li { margin-bottom: 6px; }
   letter-spacing: 0.3px;
 }
 
+/* =========================================================================
+   OVERLAY DE CHARGEMENT / ATTENTE DE TRADUCTION & GÉNÉRATION
+   ========================================================================= */
+.chargement-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: monte 0.2s ease-out;
+  touch-action: none;
+  user-select: none;
+}
+
+.chargement-boite {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 380px;
+  width: 100%;
+  padding: 26px 20px 22px 20px;
+  text-align: center;
+  border: 1.5px solid rgba(6, 186, 242, 0.3);
+}
+
+.chargement-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px auto;
+  border: 4px solid #e2e8f0;
+  border-top-color: var(--bfr-primary);
+  border-right-color: var(--bfr-secondary);
+  border-radius: 50%;
+  animation: spinner-rotation 0.85s linear infinite;
+}
+
+@keyframes spinner-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.chargement-titre {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--bfr-secondary);
+  margin-bottom: 8px;
+}
+
+.chargement-texte {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.chargement-notice {
+  font-size: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: inline-block;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+

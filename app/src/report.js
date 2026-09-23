@@ -1399,7 +1399,7 @@
   }
   function corpsMail(i, s, langue) {
     let tpl = (s && s.mail && s.mail.corps) || '';
-    if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1) {
+    if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1 || tpl.indexOf('Cordialement') !== -1 || tpl.indexOf('{{technicien}}') !== -1) {
       tpl = defaultCorpsMail();
     }
     const vars = variables(i, s);
@@ -1421,11 +1421,7 @@
       '',
       'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.',
       '',
-      'Restant à votre entière disposition pour tout renseignement complémentaire.',
-      '',
-      'Cordialement,',
-      '{{technicien}}',
-      '{{societe}}'
+      'Restant à votre entière disposition pour tout renseignement complémentaire.'
     ].join('\n');
   }
 
