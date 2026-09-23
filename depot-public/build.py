@@ -4,6 +4,7 @@ import os
 import struct
 import sys
 import zlib
+import shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'app', 'src')
@@ -65,10 +66,16 @@ def png_icon(size):
 
 def ecrire_icones(dossier):
     os.makedirs(dossier, exist_ok=True)
-    for nom, taille in {'icon-192.png': 192, 'icon-512.png': 512,
-                        'apple-touch-icon.png': 180, 'favicon.png': 64}.items():
-        with open(os.path.join(dossier, nom), 'wb') as f:
-            f.write(png_icon(taille))
+    icons_src = os.path.join(ROOT, 'app', 'icons')
+    if os.path.isdir(icons_src) and any(f.endswith('.png') for f in os.listdir(icons_src)):
+        for f in os.listdir(icons_src):
+            if f.endswith('.png'):
+                shutil.copy2(os.path.join(icons_src, f), os.path.join(dossier, f))
+    else:
+        for nom, taille in {'icon-192.png': 192, 'icon-512.png': 512,
+                            'apple-touch-icon.png': 180, 'favicon.png': 64}.items():
+            with open(os.path.join(dossier, nom), 'wb') as f:
+                f.write(png_icon(taille))
 
 
 # --------------------------------------------------------------------------
@@ -102,6 +109,7 @@ def construire_single_file(avec_pwa):
         'ICONS': lire(os.path.join(SRC, 'icons.js')),
         'WIZARD': lire(os.path.join(SRC, 'wizard.js')),
         'LOGO': lire(os.path.join(SRC, 'logo-bfr.js')),
+        'ICONES_DATA': lire(os.path.join(SRC, 'icones-data.js')),
         'CLIENTS': clients_data + lire(os.path.join(SRC, 'clients.js')),
         'APP': lire(os.path.join(SRC, 'app.js')),
     }
@@ -130,7 +138,7 @@ SW = """/* Service worker — application hors connexion.
    Le nom du cache contient l'empreinte du build : chaque publication remplace
    la précédente et vide les anciens caches. */
 const CACHE = 'bfr-fiche-sav-__VERSION__';
-const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png'];
+const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png', './apple-touch-icon.png', './icon-opt1-192.png', './icon-opt1-512.png', './icon-opt2-192.png', './icon-opt2-512.png', './icon-opt3-192.png', './icon-opt3-512.png'];
 const DELAI_RESEAU = 3500;
 
 const delai = (ms) => new Promise((ok) => setTimeout(ok, ms));

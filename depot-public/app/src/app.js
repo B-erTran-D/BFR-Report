@@ -89,7 +89,8 @@
     domaines: DOMAINES_DEFAUT,
     categories: CATEGORIES_DEFAUT,
     canevas: null,                 // null = canevas par défaut (Report.canevasDefaut())
-    numeroPrefixe: ''
+    numeroPrefixe: '',
+    iconeApp: 'opt1'
   };
 
   function fusion(base, modif) {
@@ -104,6 +105,51 @@
 
   let S = fusion(settingsDefaut, Store.get(K.settings, {}));
   if (!S.canevas) S.canevas = Report.canevasDefaut();
+
+  /* ---------- Gestion de l'icône de l'application (Écran d'accueil) ---------- */
+  function appliquerIconeApp(id) {
+    if (typeof document === 'undefined') return;
+    const options = (typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || [];
+    const opt = options.find(o => o.id === id) || options[0];
+    if (!opt) return;
+
+    try {
+      // Mise à jour de la favicon et de l'icône tactile Apple
+      const fav = document.querySelector('link[rel="icon"]');
+      if (fav) fav.href = opt.src192 || opt.dataUri;
+      const apple = document.querySelector('link[rel="apple-touch-icon"]');
+      if (apple) apple.href = opt.src192 || opt.dataUri;
+
+      // Mise à jour dynamique du manifest PWA pour installation Android
+      const manifestData = {
+        name: "BFR SAV — Compte rendu d'intervention",
+        short_name: "BFR SAV",
+        start_url: "./",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#332e72",
+        lang: "fr",
+        icons: [
+          { src: opt.src192 || "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: opt.src512 || "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: opt.src512 || "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
+        ]
+      };
+      if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
+        const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+        let link = document.querySelector('link[rel="manifest"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'manifest';
+          document.head.appendChild(link);
+        }
+        link.href = URL.createObjectURL(blob);
+      }
+    } catch (_) {}
+  }
+
+  // Application de l'icône choisie au démarrage
+  appliquerIconeApp(S.iconeApp || 'opt1');
 
   /* ===================== Intervention ================================= */
   function numeroSuggere() {
@@ -1597,6 +1643,27 @@
         <p class="small">Ces coordonnées restent dans le téléphone et servent à chaque intervention.</p>
       </div>
 
+      <div class="card"><h2>Icône de l'application (Écran d'accueil Android)</h2>
+        <p class="small">Sélectionnez l'icône installée sur votre smartphone. L'icône active est appliquée immédiatement au raccourci et à l'écran d'accueil.</p>
+        <div class="icones-selecteur">
+          ${((typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || []).map(opt => {
+            const actif = (S.iconeApp || 'opt1') === opt.id;
+            return `
+              <div class="icone-card ${actif ? 'actif' : ''}" data-icone-id="${opt.id}">
+                <img src="${opt.dataUri || opt.src192}" alt="${esc(opt.titre)}">
+                <div class="icone-card-info">
+                  <div class="icone-card-titre">
+                    <span>${esc(opt.titre)}</span>
+                    ${actif ? '<span class="icone-badge-actif">Actif</span>' : ''}
+                  </div>
+                  <div class="icone-card-desc">${esc(opt.desc)}</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
       <div class="card"><h2>Société</h2>
         ${f('societe.nom', 'Raison sociale')}
         <div class="grid2">${f('societe.sigle', 'Sigle (logo texte)')}${f('societe.sigleSuffixe', 'Complément')}</div>
@@ -1691,6 +1758,33 @@
         lecteur.readAsText(fichier, 'utf-8');
       });
       panneau.addEventListener('click', (e) => {
+        const iconeCard = e.target.closest('[data-icone-id]');
+        if (iconeCard) {
+          const id = iconeCard.dataset.iconeId;
+          S.iconeApp = id;
+          Store.set(K.settings, S);
+          appliquerIconeApp(id);
+
+          $$('.icone-card', panneau).forEach(c => {
+            const estActif = c.dataset.iconeId === id;
+            c.classList.toggle('actif', estActif);
+            const titreEl = $('.icone-card-titre', c);
+            if (titreEl) {
+              const badge = $('.icone-badge-actif', titreEl);
+              if (estActif && !badge) {
+                const b = document.createElement('span');
+                b.className = 'icone-badge-actif';
+                b.textContent = 'Actif';
+                titreEl.appendChild(b);
+              } else if (!estActif && badge) {
+                badge.remove();
+              }
+            }
+          });
+          const opt = ((typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || []).find(o => o.id === id);
+          toast('Icône appliquée : ' + (opt ? opt.titre : id));
+          return;
+        }
         if (e.target.closest('[data-a="identite"]')) { e.target.closest('.sheet').remove(); feuilleIdentite(); return; }
         if (e.target.closest('[data-a="clients-export"]')) {
           const contenu = JSON.stringify({ clients: Clients.liste() }, null, 1);

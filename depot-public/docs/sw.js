@@ -5,8 +5,8 @@
    met le cache à jour en arrière-plan.
    Le nom du cache contient l'empreinte du build : chaque publication remplace
    la précédente et vide les anciens caches. */
-const CACHE = 'bfr-fiche-sav-aa552d4ca4';
-const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png'];
+const CACHE = 'bfr-fiche-sav-a5c2d7e0ff';
+const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png', './apple-touch-icon.png', './icon-opt1-192.png', './icon-opt1-512.png', './icon-opt2-192.png', './icon-opt2-512.png', './icon-opt3-192.png', './icon-opt3-512.png'];
 const DELAI_RESEAU = 3500;
 
 const delai = (ms) => new Promise((ok) => setTimeout(ok, ms));
