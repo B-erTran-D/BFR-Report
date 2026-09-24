@@ -96,6 +96,38 @@
       en: 'Time on site', de: 'Zeit vor Ort', nl: 'Tijd ter plaatse',
       es: 'Duración en planta', it: 'Durata in loco', pt: 'Duração no local'
     },
+    'Trajet aller': {
+      en: 'Outward journey', de: 'Hinfahrt', nl: 'Heenreis',
+      es: 'Viaje de ida', it: 'Viaggio di andata', pt: 'Viagem de ida'
+    },
+    'Trajet retour': {
+      en: 'Return journey', de: 'Rückfahrt', nl: 'Terugreis',
+      es: 'Viaje de vuelta', it: 'Viaggio di ritorno', pt: 'Viagem de regresso'
+    },
+    'Trajet retour (estimé)': {
+      en: 'Return journey (est.)', de: 'Rückfahrt (geschätzt)', nl: 'Terugreis (geschat)',
+      es: 'Viaje de vuelta (est.)', it: 'Viaggio di ritorno (stimato)', pt: 'Viagem de regresso (est.)'
+    },
+    'Total déplacement': {
+      en: 'Total travel time', de: 'Gesamte Reisezeit', nl: 'Totale reistijd',
+      es: 'Tiempo total de viaje', it: 'Tempo totale di viaggio', pt: 'Tempo total de viagem'
+    },
+    'Total général (site + route)': {
+      en: 'Grand total (site + travel)', de: 'Gesamtdauer (Einsatz + Fahrt)', nl: 'Totaal generaal (ter plaatse + reistijd)',
+      es: 'Total general (planta + viaje)', it: 'Totale generale (luogo + viaggio)', pt: 'Total geral (local + viagem)'
+    },
+    'La durée du trajet retour est estimée sur la base du trajet aller constaté.': {
+      en: 'The return travel time is estimated based on the observed outward journey.',
+      de: 'Die Rückfahrtzeit wird auf Basis der festgestellten Hinfahrt geschätzt.',
+      nl: 'De terugreistijd is geschat op basis van de vastgestelde heenreis.',
+      es: 'El tiempo de viaje de vuelta se estima en función del viaje de ida constatado.',
+      it: 'Il tempo del viaggio di ritorno è stimato sulla base del viaggio di andata riscontrato.',
+      pt: 'O tempo de viagem de regresso é estimado com base na viagem de ida constatada.'
+    },
+    'estimé': {
+      en: 'estimated', de: 'geschätzt', nl: 'geschat',
+      es: 'estimado', it: 'stimato', pt: 'estimado'
+    },
     'Heures passées sur site': {
       en: 'Hours spent on site', de: 'Vor Ort verbrachte Stunden', nl: 'Uren ter plaatse',
       es: 'Horas en planta', it: 'Ore passate in loco', pt: 'Horas no local'

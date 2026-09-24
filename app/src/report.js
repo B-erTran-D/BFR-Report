@@ -148,6 +148,127 @@
   }
   function dureeDecimale(ms) { return (Math.round(ms / 36000) / 100).toFixed(2).replace('.', ','); }
 
+  function calculerTrajet(trajet, dureeSurSiteMs) {
+    if (!trajet || (!trajet.allerHeureDepart && !trajet.allerDureeMinutes && !trajet.actif)) {
+      return null;
+    }
+    const fmt = function (min) {
+      if (!min && min !== 0) return '—';
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      if (h === 0) return m + ' min';
+      return h + ' h ' + ('0' + m).slice(-2);
+    };
+    const dec = function (min) {
+      return (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', ',');
+    };
+    const diffMinutes = function (hd, ha, dd, da) {
+      if (!hd || !ha) return 0;
+      const p1 = hd.split(':').map(Number);
+      const p2 = ha.split(':').map(Number);
+      if (isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) return 0;
+      let m1 = p1[0] * 60 + p1[1];
+      let m2 = p2[0] * 60 + p2[1];
+      if (dd && da && dd !== da) {
+        const d1 = new Date(dd).getTime();
+        const d2 = new Date(da).getTime();
+        if (!isNaN(d1) && !isNaN(d2)) {
+          const joursDiff = Math.round((d2 - d1) / 86400000);
+          m2 += joursDiff * 1440;
+        }
+      } else if (m2 < m1) {
+        m2 += 1440; // passage de minuit
+      }
+      return Math.max(0, m2 - m1);
+    };
+
+    // 1. Aller
+    let allerMin = Number(trajet.allerDureeMinutes) || 0;
+    if (!allerMin && trajet.allerHeureDepart && trajet.allerHeureArrivee) {
+      allerMin = diffMinutes(trajet.allerHeureDepart, trajet.allerHeureArrivee, trajet.allerDateDepart, trajet.allerDateArrivee);
+    }
+
+    // 2. Retour
+    let retourMin = 0;
+    let retourEstime = true;
+    let retDep = trajet.retourHeureDepart || '';
+    let retArr = trajet.retourHeureArrivee || '';
+
+    if (trajet.retourCloture) {
+      retourEstime = false;
+      retDep = trajet.retourReelHeureDepart || retDep;
+      retArr = trajet.retourReelHeureArrivee || retArr;
+      retourMin = Number(trajet.retourReelDureeMinutes) || 0;
+      if (!retourMin && retDep && retArr) {
+        retourMin = diffMinutes(retDep, retArr, trajet.retourReelDateDepart, trajet.retourReelDateArrivee);
+      }
+    }
+
+    if (retourEstime) {
+      retourMin = Number(trajet.retourDureeMinutes) || 0;
+      if (!retourMin && retDep && retArr) {
+        retourMin = diffMinutes(retDep, retArr, trajet.retourDateDepart, trajet.retourDateArrivee);
+      }
+      if (!retourMin) {
+        retourMin = allerMin; // Estimation automatique calquée sur l'aller
+      }
+      // Si heure de départ retour existe et pas d'heure d'arrivée, calculer l'arrivée estimée
+      if (retDep && (!retArr || retArr === '')) {
+        const p = retDep.split(':').map(Number);
+        if (!isNaN(p[0]) && !isNaN(p[1])) {
+          const totM = (p[0] * 60 + p[1] + retourMin) % 1440;
+          const hArr = Math.floor(totM / 60);
+          const mArr = totM % 60;
+          retArr = ('0' + hArr).slice(-2) + ':' + ('0' + mArr).slice(-2);
+        }
+      }
+    }
+
+    const totalRouteMin = allerMin + retourMin;
+    const surSiteMin = Math.round((dureeSurSiteMs || 0) / 60000);
+    const totalGeneralMin = surSiteMin + totalRouteMin;
+
+    return {
+      actif: true,
+      aller: {
+        dateDepart: trajet.allerDateDepart || '',
+        heureDepart: trajet.allerHeureDepart || '',
+        dateArrivee: trajet.allerDateArrivee || '',
+        heureArrivee: trajet.allerHeureArrivee || '',
+        minutes: allerMin,
+        texte: fmt(allerMin),
+        decimale: dec(allerMin)
+      },
+      retour: {
+        dateDepart: retourEstime ? (trajet.retourDateDepart || '') : (trajet.retourReelDateDepart || ''),
+        heureDepart: retDep,
+        dateArrivee: retourEstime ? (trajet.retourDateArrivee || '') : (trajet.retourReelDateArrivee || ''),
+        heureArrivee: retArr,
+        minutes: retourMin,
+        texte: fmt(retourMin),
+        decimale: dec(retourMin),
+        estime: retourEstime
+      },
+      totalRoute: {
+        minutes: totalRouteMin,
+        texte: fmt(totalRouteMin),
+        decimale: dec(totalRouteMin)
+      },
+      surSite: {
+        minutes: surSiteMin,
+        texte: fmt(surSiteMin),
+        decimale: dec(surSiteMin)
+      },
+      totalGeneral: {
+        minutes: totalGeneralMin,
+        texte: fmt(totalGeneralMin),
+        decimale: dec(totalGeneralMin)
+      },
+      retourCloture: !!trajet.retourCloture,
+      note: trajet.note || ''
+    };
+  }
+
   function toJpeg(dataUrl, maxW, q) {
     return new Promise(function (resolve) {
       if (!dataUrl) return resolve(null);
@@ -803,6 +924,10 @@
       if (pcs.length > 0) {
         mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
       }
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      if (tr && tr.actif) {
+        mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
+      }
       const mentionTraduite = this.L(mention);
       const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 8).length * 10.6 + 9;
       const hBloc = 118;
@@ -917,6 +1042,23 @@
       }
 
       kvLignes.push(['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—']);
+
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      if (tr && tr.actif) {
+        if (tr.aller.heureDepart || tr.aller.heureArrivee) {
+          const horAller = [tr.aller.heureDepart || '—', tr.aller.heureArrivee || '—'].join(' - ');
+          kvLignes.push([this.L('Trajet aller'), horAller + ' (' + tr.aller.texte + ')']);
+        } else if (tr.aller.minutes) {
+          kvLignes.push([this.L('Trajet aller'), tr.aller.texte + ' (' + tr.aller.decimale + ' h)']);
+        }
+        if (tr.retour.heureDepart || tr.retour.heureArrivee || tr.retour.minutes) {
+          const horRetour = [tr.retour.heureDepart ? (tr.retour.estime ? '~' : '') + tr.retour.heureDepart : '—', tr.retour.heureArrivee ? (tr.retour.estime ? '~' : '') + tr.retour.heureArrivee : '—'].join(' - ');
+          const tagEstime = tr.retour.estime ? ' [' + this.L('estimé') + ']' : '';
+          kvLignes.push([this.L(tr.retour.estime ? 'Trajet retour (estimé)' : 'Trajet retour'), horRetour + ' (' + tr.retour.texte + tagEstime + ')']);
+        }
+        kvLignes.push([this.L('Total déplacement'), tr.totalRoute.texte + ' (' + tr.totalRoute.decimale + ' h)']);
+        kvLignes.push([this.L('Total général (site + route)'), tr.totalGeneral.texte + ' (' + tr.totalGeneral.decimale + ' h)', true]);
+      }
 
       if (techniciens.length <= 1) {
         kvLignes.push(['Technicien', nomTechnicien(i, s) || '—']);
@@ -1151,6 +1293,27 @@
         horLabelWord = i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée');
       }
 
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      let lignesTrajetWord = [];
+      if (tr && tr.actif) {
+        const horAller = (tr.aller.heureDepart && tr.aller.heureArrivee) ? (tr.aller.heureDepart + ' - ' + tr.aller.heureArrivee) : '—';
+        const horRetour = (tr.retour.heureDepart && tr.retour.heureArrivee) ? ((tr.retour.estime ? '~' : '') + tr.retour.heureDepart + ' - ' + (tr.retour.estime ? '~' : '') + tr.retour.heureArrivee) : '—';
+        lignesTrajetWord = [
+          [
+            { texte: this.L('Trajet aller'), gras: true },
+            { texte: horAller + ' (' + tr.aller.texte + ')' },
+            { texte: this.L(tr.retour.estime ? 'Trajet retour (estimé)' : 'Trajet retour'), gras: true },
+            { texte: horRetour + ' (' + tr.retour.texte + (tr.retour.estime ? ' [' + this.L('estimé') + ']' : '') + ')' }
+          ],
+          [
+            { texte: this.L('Total déplacement'), gras: true },
+            { texte: tr.totalRoute.texte + ' (' + tr.totalRoute.decimale + ' h)' },
+            { texte: this.L('Total général (site + route)'), gras: true, fond: 'E8EFFA' },
+            { texte: tr.totalGeneral.texte + ' (' + tr.totalGeneral.decimale + ' h)', gras: true, fond: 'E8EFFA' }
+          ]
+        ];
+      }
+
       d.bandeau('Intervention');
       d.tableau([
         [{ texte: this.L('Client'), gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
@@ -1175,7 +1338,7 @@
               { texte: formatDuree(this.etat.duree) || '—' }]]
           : [[{ texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }, { texte: '' }, { texte: '' }]]
-      ), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
+      ).concat(lignesTrajetWord), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
 
       // Si plusieurs machines, tableau récapitulatif détaillé des machines
       if (machinesWord.length > 1) {
@@ -1385,6 +1548,9 @@
           if (pcs.length > 0) {
             mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
           }
+          if (tr && tr.actif) {
+            mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
+          }
           d.para(this.L(mention), { taille: 9.5, apres: 160, encadre: true });
           const cli = i.signatureClient || {};
           const ligAccompagne = (colleguesP1Word.length > 0)
@@ -1509,7 +1675,7 @@
     genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
     etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, dureeTotale: dureeTotale, formatDuree: formatDuree,
-    dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
+    dureeDecimale: dureeDecimale, calculerTrajet: calculerTrajet, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
     listeMachines: listeMachines, listeTechniciens: listeTechniciens,
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien

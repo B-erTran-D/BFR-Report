@@ -2307,6 +2307,38 @@ ul.liste li { margin-bottom: 6px; }
       en: 'Time on site', de: 'Zeit vor Ort', nl: 'Tijd ter plaatse',
       es: 'Duración en planta', it: 'Durata in loco', pt: 'Duração no local'
     },
+    'Trajet aller': {
+      en: 'Outward journey', de: 'Hinfahrt', nl: 'Heenreis',
+      es: 'Viaje de ida', it: 'Viaggio di andata', pt: 'Viagem de ida'
+    },
+    'Trajet retour': {
+      en: 'Return journey', de: 'Rückfahrt', nl: 'Terugreis',
+      es: 'Viaje de vuelta', it: 'Viaggio di ritorno', pt: 'Viagem de regresso'
+    },
+    'Trajet retour (estimé)': {
+      en: 'Return journey (est.)', de: 'Rückfahrt (geschätzt)', nl: 'Terugreis (geschat)',
+      es: 'Viaje de vuelta (est.)', it: 'Viaggio di ritorno (stimato)', pt: 'Viagem de regresso (est.)'
+    },
+    'Total déplacement': {
+      en: 'Total travel time', de: 'Gesamte Reisezeit', nl: 'Totale reistijd',
+      es: 'Tiempo total de viaje', it: 'Tempo totale di viaggio', pt: 'Tempo total de viagem'
+    },
+    'Total général (site + route)': {
+      en: 'Grand total (site + travel)', de: 'Gesamtdauer (Einsatz + Fahrt)', nl: 'Totaal generaal (ter plaatse + reistijd)',
+      es: 'Total general (planta + viaje)', it: 'Totale generale (luogo + viaggio)', pt: 'Total geral (local + viagem)'
+    },
+    'La durée du trajet retour est estimée sur la base du trajet aller constaté.': {
+      en: 'The return travel time is estimated based on the observed outward journey.',
+      de: 'Die Rückfahrtzeit wird auf Basis der festgestellten Hinfahrt geschätzt.',
+      nl: 'De terugreistijd is geschat op basis van de vastgestelde heenreis.',
+      es: 'El tiempo de viaje de vuelta se estima en función del viaje de ida constatado.',
+      it: 'Il tempo del viaggio di ritorno è stimato sulla base del viaggio di andata riscontrato.',
+      pt: 'O tempo de viagem de regresso é estimado com base na viagem de ida constatada.'
+    },
+    'estimé': {
+      en: 'estimated', de: 'geschätzt', nl: 'geschat',
+      es: 'estimado', it: 'stimato', pt: 'estimado'
+    },
     'Heures passées sur site': {
       en: 'Hours spent on site', de: 'Vor Ort verbrachte Stunden', nl: 'Uren ter plaatse',
       es: 'Horas en planta', it: 'Ore passate in loco', pt: 'Horas no local'
@@ -5648,6 +5680,127 @@ ul.liste li { margin-bottom: 6px; }
   }
   function dureeDecimale(ms) { return (Math.round(ms / 36000) / 100).toFixed(2).replace('.', ','); }
 
+  function calculerTrajet(trajet, dureeSurSiteMs) {
+    if (!trajet || (!trajet.allerHeureDepart && !trajet.allerDureeMinutes && !trajet.actif)) {
+      return null;
+    }
+    const fmt = function (min) {
+      if (!min && min !== 0) return '—';
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      if (h === 0) return m + ' min';
+      return h + ' h ' + ('0' + m).slice(-2);
+    };
+    const dec = function (min) {
+      return (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', ',');
+    };
+    const diffMinutes = function (hd, ha, dd, da) {
+      if (!hd || !ha) return 0;
+      const p1 = hd.split(':').map(Number);
+      const p2 = ha.split(':').map(Number);
+      if (isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) return 0;
+      let m1 = p1[0] * 60 + p1[1];
+      let m2 = p2[0] * 60 + p2[1];
+      if (dd && da && dd !== da) {
+        const d1 = new Date(dd).getTime();
+        const d2 = new Date(da).getTime();
+        if (!isNaN(d1) && !isNaN(d2)) {
+          const joursDiff = Math.round((d2 - d1) / 86400000);
+          m2 += joursDiff * 1440;
+        }
+      } else if (m2 < m1) {
+        m2 += 1440; // passage de minuit
+      }
+      return Math.max(0, m2 - m1);
+    };
+
+    // 1. Aller
+    let allerMin = Number(trajet.allerDureeMinutes) || 0;
+    if (!allerMin && trajet.allerHeureDepart && trajet.allerHeureArrivee) {
+      allerMin = diffMinutes(trajet.allerHeureDepart, trajet.allerHeureArrivee, trajet.allerDateDepart, trajet.allerDateArrivee);
+    }
+
+    // 2. Retour
+    let retourMin = 0;
+    let retourEstime = true;
+    let retDep = trajet.retourHeureDepart || '';
+    let retArr = trajet.retourHeureArrivee || '';
+
+    if (trajet.retourCloture) {
+      retourEstime = false;
+      retDep = trajet.retourReelHeureDepart || retDep;
+      retArr = trajet.retourReelHeureArrivee || retArr;
+      retourMin = Number(trajet.retourReelDureeMinutes) || 0;
+      if (!retourMin && retDep && retArr) {
+        retourMin = diffMinutes(retDep, retArr, trajet.retourReelDateDepart, trajet.retourReelDateArrivee);
+      }
+    }
+
+    if (retourEstime) {
+      retourMin = Number(trajet.retourDureeMinutes) || 0;
+      if (!retourMin && retDep && retArr) {
+        retourMin = diffMinutes(retDep, retArr, trajet.retourDateDepart, trajet.retourDateArrivee);
+      }
+      if (!retourMin) {
+        retourMin = allerMin; // Estimation automatique calquée sur l'aller
+      }
+      // Si heure de départ retour existe et pas d'heure d'arrivée, calculer l'arrivée estimée
+      if (retDep && (!retArr || retArr === '')) {
+        const p = retDep.split(':').map(Number);
+        if (!isNaN(p[0]) && !isNaN(p[1])) {
+          const totM = (p[0] * 60 + p[1] + retourMin) % 1440;
+          const hArr = Math.floor(totM / 60);
+          const mArr = totM % 60;
+          retArr = ('0' + hArr).slice(-2) + ':' + ('0' + mArr).slice(-2);
+        }
+      }
+    }
+
+    const totalRouteMin = allerMin + retourMin;
+    const surSiteMin = Math.round((dureeSurSiteMs || 0) / 60000);
+    const totalGeneralMin = surSiteMin + totalRouteMin;
+
+    return {
+      actif: true,
+      aller: {
+        dateDepart: trajet.allerDateDepart || '',
+        heureDepart: trajet.allerHeureDepart || '',
+        dateArrivee: trajet.allerDateArrivee || '',
+        heureArrivee: trajet.allerHeureArrivee || '',
+        minutes: allerMin,
+        texte: fmt(allerMin),
+        decimale: dec(allerMin)
+      },
+      retour: {
+        dateDepart: retourEstime ? (trajet.retourDateDepart || '') : (trajet.retourReelDateDepart || ''),
+        heureDepart: retDep,
+        dateArrivee: retourEstime ? (trajet.retourDateArrivee || '') : (trajet.retourReelDateArrivee || ''),
+        heureArrivee: retArr,
+        minutes: retourMin,
+        texte: fmt(retourMin),
+        decimale: dec(retourMin),
+        estime: retourEstime
+      },
+      totalRoute: {
+        minutes: totalRouteMin,
+        texte: fmt(totalRouteMin),
+        decimale: dec(totalRouteMin)
+      },
+      surSite: {
+        minutes: surSiteMin,
+        texte: fmt(surSiteMin),
+        decimale: dec(surSiteMin)
+      },
+      totalGeneral: {
+        minutes: totalGeneralMin,
+        texte: fmt(totalGeneralMin),
+        decimale: dec(totalGeneralMin)
+      },
+      retourCloture: !!trajet.retourCloture,
+      note: trajet.note || ''
+    };
+  }
+
   function toJpeg(dataUrl, maxW, q) {
     return new Promise(function (resolve) {
       if (!dataUrl) return resolve(null);
@@ -6303,6 +6456,10 @@ ul.liste li { margin-bottom: 6px; }
       if (pcs.length > 0) {
         mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
       }
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      if (tr && tr.actif) {
+        mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
+      }
       const mentionTraduite = this.L(mention);
       const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 8).length * 10.6 + 9;
       const hBloc = 118;
@@ -6417,6 +6574,23 @@ ul.liste li { margin-bottom: 6px; }
       }
 
       kvLignes.push(['Durée sur site', formatDuree(this.etat.duree) ? formatDuree(this.etat.duree) + ' (' + dureeDecimale(this.etat.duree) + ' h)' : '—']);
+
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      if (tr && tr.actif) {
+        if (tr.aller.heureDepart || tr.aller.heureArrivee) {
+          const horAller = [tr.aller.heureDepart || '—', tr.aller.heureArrivee || '—'].join(' - ');
+          kvLignes.push([this.L('Trajet aller'), horAller + ' (' + tr.aller.texte + ')']);
+        } else if (tr.aller.minutes) {
+          kvLignes.push([this.L('Trajet aller'), tr.aller.texte + ' (' + tr.aller.decimale + ' h)']);
+        }
+        if (tr.retour.heureDepart || tr.retour.heureArrivee || tr.retour.minutes) {
+          const horRetour = [tr.retour.heureDepart ? (tr.retour.estime ? '~' : '') + tr.retour.heureDepart : '—', tr.retour.heureArrivee ? (tr.retour.estime ? '~' : '') + tr.retour.heureArrivee : '—'].join(' - ');
+          const tagEstime = tr.retour.estime ? ' [' + this.L('estimé') + ']' : '';
+          kvLignes.push([this.L(tr.retour.estime ? 'Trajet retour (estimé)' : 'Trajet retour'), horRetour + ' (' + tr.retour.texte + tagEstime + ')']);
+        }
+        kvLignes.push([this.L('Total déplacement'), tr.totalRoute.texte + ' (' + tr.totalRoute.decimale + ' h)']);
+        kvLignes.push([this.L('Total général (site + route)'), tr.totalGeneral.texte + ' (' + tr.totalGeneral.decimale + ' h)', true]);
+      }
 
       if (techniciens.length <= 1) {
         kvLignes.push(['Technicien', nomTechnicien(i, s) || '—']);
@@ -6651,6 +6825,27 @@ ul.liste li { margin-bottom: 6px; }
         horLabelWord = i.jours.length + ' ' + this.L(i.jours.length > 1 ? 'Journées d\'intervention' : 'Journée');
       }
 
+      const tr = calculerTrajet(i.trajet, this.etat.duree);
+      let lignesTrajetWord = [];
+      if (tr && tr.actif) {
+        const horAller = (tr.aller.heureDepart && tr.aller.heureArrivee) ? (tr.aller.heureDepart + ' - ' + tr.aller.heureArrivee) : '—';
+        const horRetour = (tr.retour.heureDepart && tr.retour.heureArrivee) ? ((tr.retour.estime ? '~' : '') + tr.retour.heureDepart + ' - ' + (tr.retour.estime ? '~' : '') + tr.retour.heureArrivee) : '—';
+        lignesTrajetWord = [
+          [
+            { texte: this.L('Trajet aller'), gras: true },
+            { texte: horAller + ' (' + tr.aller.texte + ')' },
+            { texte: this.L(tr.retour.estime ? 'Trajet retour (estimé)' : 'Trajet retour'), gras: true },
+            { texte: horRetour + ' (' + tr.retour.texte + (tr.retour.estime ? ' [' + this.L('estimé') + ']' : '') + ')' }
+          ],
+          [
+            { texte: this.L('Total déplacement'), gras: true },
+            { texte: tr.totalRoute.texte + ' (' + tr.totalRoute.decimale + ' h)' },
+            { texte: this.L('Total général (site + route)'), gras: true, fond: 'E8EFFA' },
+            { texte: tr.totalGeneral.texte + ' (' + tr.totalGeneral.decimale + ' h)', gras: true, fond: 'E8EFFA' }
+          ]
+        ];
+      }
+
       d.bandeau('Intervention');
       d.tableau([
         [{ texte: this.L('Client'), gras: true }, { texte: valeur(i.client && i.client.nom) || '—' },
@@ -6675,7 +6870,7 @@ ul.liste li { margin-bottom: 6px; }
               { texte: formatDuree(this.etat.duree) || '—' }]]
           : [[{ texte: this.L('Durée sur site'), gras: true },
               { texte: formatDuree(this.etat.duree) || '—' }, { texte: '' }, { texte: '' }]]
-      ), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
+      ).concat(lignesTrajetWord), { largeurs: [18, 32, 18, 32], enteteFond: 'F1F5F9' });
 
       // Si plusieurs machines, tableau récapitulatif détaillé des machines
       if (machinesWord.length > 1) {
@@ -6885,6 +7080,9 @@ ul.liste li { margin-bottom: 6px; }
           if (pcs.length > 0) {
             mention += " La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.";
           }
+          if (tr && tr.actif) {
+            mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
+          }
           d.para(this.L(mention), { taille: 9.5, apres: 160, encadre: true });
           const cli = i.signatureClient || {};
           const ligAccompagne = (colleguesP1Word.length > 0)
@@ -7009,7 +7207,7 @@ ul.liste li { margin-bottom: 6px; }
     genererDOCX: function (i, s, opts) { return new RapportWord(i, s, opts).generer(); },
     canevasDefaut: canevasDefaut,
     etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, dureeTotale: dureeTotale, formatDuree: formatDuree,
-    dureeDecimale: dureeDecimale, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
+    dureeDecimale: dureeDecimale, calculerTrajet: calculerTrajet, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
     listeMachines: listeMachines, listeTechniciens: listeTechniciens,
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
@@ -8420,6 +8618,13 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       multiJours: false,
       jours: [],
       evenements: [], photosLibres: [], pieces: [],
+      trajet: {
+        actif: false,
+        allerDateDepart: '', allerHeureDepart: '', allerDateArrivee: '', allerHeureArrivee: '', allerDureeMinutes: 0,
+        retourDateDepart: '', retourHeureDepart: '', retourDateArrivee: '', retourHeureArrivee: '', retourDureeMinutes: 0, retourEstime: true,
+        retourReelDateDepart: '', retourReelHeureDepart: '', retourReelDateArrivee: '', retourReelHeureArrivee: '', retourReelDureeMinutes: 0,
+        retourCloture: false, note: ''
+      },
       actions: '', aPrevoir: '', resumeTechnicien: '', noteInterne: '',
       travauxTermines: '', faitLe: todayISO(),
       signatureClient: { nom: '', fonction: '', dataUrl: '', date: '', heure: '' }
@@ -8429,6 +8634,15 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   let R = fusion(nouvelleIntervention(), Store.get(K.rapport, null) || {});
   if (!R.evenements) R.evenements = [];
   if (!Array.isArray(R.pieces)) R.pieces = [];
+  if (!R.trajet || typeof R.trajet !== 'object') {
+    R.trajet = {
+      actif: false,
+      allerDateDepart: '', allerHeureDepart: '', allerDateArrivee: '', allerHeureArrivee: '', allerDureeMinutes: 0,
+      retourDateDepart: '', retourHeureDepart: '', retourDateArrivee: '', retourHeureArrivee: '', retourDureeMinutes: 0, retourEstime: true,
+      retourReelDateDepart: '', retourReelHeureDepart: '', retourReelDateArrivee: '', retourReelHeureArrivee: '', retourReelDureeMinutes: 0,
+      retourCloture: false, note: ''
+    };
+  }
   /* Rapports enregistrés avant l'option de traduction : valeurs par défaut. */
   if (!R.langue || typeof R.langue !== 'object') R.langue = { active: false, code: '' };
   if (R.client && R.client.langue == null) R.client.langue = '';
@@ -8680,6 +8894,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     const zone = $('#zoneCloture');
     if (!zone) return;
     const signe = !!(R.signatureClient && R.signatureClient.dataUrl);
+    const tr = Report.calculerTrajet ? Report.calculerTrajet(R.trajet, e.duree) : null;
     zone.innerHTML = `
       <div class="card">
         <h2>Compte rendu</h2>
@@ -8704,6 +8919,14 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         <div class="btnrow" style="margin-top:10px">
           <button class="btn wide ghost" data-a="ajouter-piece">${(ICO.plus && ICO.plus(16)) || ''} Ajouter pièce de rechange</button>
         </div>
+      </div>
+
+      <div class="card" id="cardTrajet">
+        <h2>Temps de route &amp; Déplacement
+          ${(tr && tr.actif) ? `<span class="pill" style="background:#e0f2fe;color:#0369a1">${tr.totalRoute.texte}</span>` : ''}
+        </h2>
+        <p class="hint">Horaires aller et retour. Le retour est automatiquement estimé sur la base de l'aller avant la signature client.</p>
+        ${rendreContenuTrajet(tr)}
       </div>
 
       <div class="card">
@@ -8776,6 +8999,46 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           `).join('')}
         </tbody>
       </table>
+    </div>`;
+  }
+
+  function rendreContenuTrajet(tr) {
+    if (!tr || !tr.actif) {
+      return `<div style="border:1.5px dashed #cbd5e1;border-radius:8px;padding:12px;text-align:center;background:#f8fafc">
+        <p class="small" style="color:#64748b;margin:0 0 10px 0">Enregistrez les horaires de déplacement aller et retour pour les intégrer au rapport.</p>
+        <button type="button" class="btn sm" data-a="editer-trajet">${(ICO.mapPin && ICO.mapPin(14)) || ''} Renseigner le temps de route</button>
+      </div>`;
+    }
+    return `<div style="background:#f8fafc;border:1px solid var(--bord);border-radius:8px;padding:12px;margin:6px 0">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;font-size:12.5px">
+        <div style="background:#fff;padding:8px 10px;border-radius:6px;border:1px solid #e2e8f0">
+          <div style="color:#64748b;font-size:11px;font-weight:600">🚗 Trajet Aller</div>
+          <div style="font-weight:700;color:#1e293b;font-size:13.5px;margin-top:2px">${tr.aller.texte} <small style="font-weight:normal;color:#64748b">(${tr.aller.decimale} h)</small></div>
+          <div style="color:#64748b;font-size:11px">${(tr.aller.heureDepart && tr.aller.heureArrivee) ? tr.aller.heureDepart + ' → ' + tr.aller.heureArrivee : 'Durée directe'}</div>
+        </div>
+        <div style="background:#fff;padding:8px 10px;border-radius:6px;border:1px solid #e2e8f0">
+          <div style="color:#64748b;font-size:11px;font-weight:600">⏱️ Temps sur site</div>
+          <div style="font-weight:700;color:#1e293b;font-size:13.5px;margin-top:2px">${tr.surSite.texte} <small style="font-weight:normal;color:#64748b">(${tr.surSite.decimale} h)</small></div>
+          <div style="color:#64748b;font-size:11px">Chrono intervention</div>
+        </div>
+        <div style="background:#fff;padding:8px 10px;border-radius:6px;border:1px solid #e2e8f0">
+          <div style="color:#64748b;font-size:11px;font-weight:600;display:flex;justify-content:space-between">
+            <span>🔄 Trajet Retour</span>
+            <span class="pill" style="font-size:9.5px;padding:1px 5px;${tr.retour.estime ? 'background:#fef3c7;color:#92400e' : 'background:#dcfce7;color:#166534'}">${tr.retour.estime ? 'Estimé' : 'Réel'}</span>
+          </div>
+          <div style="font-weight:700;color:#1e293b;font-size:13.5px;margin-top:2px">${tr.retour.texte} <small style="font-weight:normal;color:#64748b">(${tr.retour.decimale} h)</small></div>
+          <div style="color:#64748b;font-size:11px">${(tr.retour.heureDepart && tr.retour.heureArrivee) ? (tr.retour.estime ? '~' : '') + tr.retour.heureDepart + ' → ' + (tr.retour.estime ? '~' : '') + tr.retour.heureArrivee : 'Durée estimée'}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:center;font-size:13px;flex-wrap:wrap;gap:6px">
+        <span style="color:#475569">Total déplacement : <strong>${tr.totalRoute.texte}</strong> (${tr.totalRoute.decimale} h)</span>
+        <span style="color:var(--bfr-secondary);font-weight:800;font-size:14px">TOTAL : ${tr.totalGeneral.texte} (${tr.totalGeneral.decimale} h)</span>
+      </div>
+      ${tr.note ? `<div style="margin-top:6px;font-size:12px;color:#64748b;font-style:italic">Note : ${esc(tr.note)}</div>` : ''}
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button type="button" class="btn sm grey" data-a="editer-trajet">${(ICO.pen && ICO.pen(13)) || ''} Modifier le trajet</button>
+      ${tr.retour.estime ? `<button type="button" class="btn sm or" data-a="cloturer-retour-reel">${(ICO.checkCircle && ICO.checkCircle(13)) || ''} Confirmer le retour réel</button>` : ''}
     </div>`;
   }
 
@@ -10806,6 +11069,8 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       else if (a === 'chrono-pause') basculerPause();
       else if (a === 'chrono-terminer') terminerChrono();
       else if (a === 'chrono-ajuster') feuilleAjusterChrono();
+      else if (a === 'editer-trajet') feuilleTrajet(false);
+      else if (a === 'cloturer-retour-reel') feuilleTrajet(true);
       else if (a === 'ajouter-ev') ajouterEvenement();
       else if (a === 'editer-client') feuilleClient();
       else if (a === 'ajouter-piece') feuillePiece();
@@ -11094,6 +11359,351 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     });
   }
 
+  /* ===================== Temps de route & Déplacement ================= */
+  function feuilleTrajet(modeCloture) {
+    if (!R.trajet || typeof R.trajet !== 'object') {
+      R.trajet = {
+        actif: false,
+        allerDateDepart: '', allerHeureDepart: '', allerDateArrivee: '', allerHeureArrivee: '', allerDureeMinutes: 0,
+        retourDateDepart: '', retourHeureDepart: '', retourDateArrivee: '', retourHeureArrivee: '', retourDureeMinutes: 0, retourEstime: true,
+        retourReelDateDepart: '', retourReelHeureDepart: '', retourReelDateArrivee: '', retourReelHeureArrivee: '', retourReelDureeMinutes: 0,
+        retourCloture: false, note: ''
+      };
+    }
+    const tr = R.trajet;
+    const c = R.chrono || {};
+    const dateJour = R.date || todayISO();
+    const heureFinChrono = (c.fin ? Report.heureFr(c.fin) : '') || '';
+
+    let allerDateDep = tr.allerDateDepart || dateJour;
+    let allerHeureDep = tr.allerHeureDepart || '';
+    let allerDateArr = tr.allerDateArrivee || dateJour;
+    let allerHeureArr = tr.allerHeureArrivee || (c.debut ? Report.heureFr(c.debut) : '');
+    let allerMin = Number(tr.allerDureeMinutes) || 0;
+
+    let retourDateDep = tr.retourDateDepart || dateJour;
+    let retourHeureDep = tr.retourHeureDepart || heureFinChrono || '';
+    let retourDateArr = tr.retourDateArrivee || dateJour;
+    let retourHeureArr = tr.retourHeureArrivee || '';
+    let retourMin = Number(tr.retourDureeMinutes) || allerMin || 0;
+
+    let retourCloture = modeCloture ? true : !!tr.retourCloture;
+    let retourReelDateDep = tr.retourReelDateDepart || dateJour;
+    let retourReelHeureDep = tr.retourReelHeureDepart || heureFinChrono || '';
+    let retourReelDateArr = tr.retourReelDateArrivee || dateJour;
+    let retourReelHeureArr = tr.retourReelHeureArrivee || '';
+    let retourReelMin = Number(tr.retourReelDureeMinutes) || 0;
+    let note = tr.note || '';
+
+    function calcDiff(hd, ha, dd, da) {
+      if (!hd || !ha) return 0;
+      const p1 = hd.split(':').map(Number);
+      const p2 = ha.split(':').map(Number);
+      if (isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) return 0;
+      let m1 = p1[0] * 60 + p1[1];
+      let m2 = p2[0] * 60 + p2[1];
+      if (dd && da && dd !== da) {
+        const d1 = new Date(dd).getTime();
+        const d2 = new Date(da).getTime();
+        if (!isNaN(d1) && !isNaN(d2)) {
+          m2 += Math.round((d2 - d1) / 86400000) * 1440;
+        }
+      } else if (m2 < m1) {
+        m2 += 1440;
+      }
+      return Math.max(0, m2 - m1);
+    }
+
+    function addMinutes(hd, mins) {
+      if (!hd) return '';
+      const p = hd.split(':').map(Number);
+      if (isNaN(p[0]) || isNaN(p[1])) return '';
+      const tot = (p[0] * 60 + p[1] + (Number(mins) || 0)) % 1440;
+      const h = Math.floor(tot / 60);
+      const m = tot % 60;
+      return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
+    }
+
+    function formatMin(m) {
+      if (!m && m !== 0) return '—';
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      if (h === 0) return min + ' min';
+      return h + ' h ' + ('0' + min).slice(-2);
+    }
+
+    if (!allerMin && allerHeureDep && allerHeureArr) {
+      allerMin = calcDiff(allerHeureDep, allerHeureArr, allerDateDep, allerDateArr);
+    }
+    if (!retourMin) {
+      retourMin = allerMin;
+    }
+    if (retourHeureDep && !retourHeureArr && retourMin) {
+      retourHeureArr = addMinutes(retourHeureDep, retourMin);
+    }
+
+    const panneau = Ouvrir.ouvrir(null, `<div class="panel">
+      <div class="grab"></div>
+      <h3>Temps de route &amp; Déplacement</h3>
+      <p class="sub">Horaires aller et retour pour le débriefing client et le suivi d'activité post-intervention.</p>
+
+      <!-- Section ALLER -->
+      <div style="background:#f8fafc;border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-weight:700;color:var(--bfr-secondary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <span>🚗 Trajet Aller (Départ &rarr; Client)</span>
+          <span id="badgeDureeAller" class="pill" style="background:#e0f2fe;color:#0369a1">${formatMin(allerMin)}</span>
+        </div>
+        
+        <div class="grid2">
+          <div class="field">
+            <label>Date départ aller</label>
+            <input type="date" id="trAllerDateDep" value="${esc(allerDateDep)}">
+          </div>
+          <div class="field">
+            <label>Heure départ aller</label>
+            <div style="display:flex;gap:6px">
+              <input type="time" id="trAllerHeureDep" value="${esc(allerHeureDep)}">
+              <button type="button" class="btn sm grey" data-a="maintenant-aller-dep" style="min-width:44px;padding:2px 8px;font-size:11px" title="Maintenant">Maint.</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Date arrivée sur site</label>
+            <input type="date" id="trAllerDateArr" value="${esc(allerDateArr)}">
+          </div>
+          <div class="field">
+            <label>Heure arrivée sur site</label>
+            <div style="display:flex;gap:6px">
+              <input type="time" id="trAllerHeureArr" value="${esc(allerHeureArr)}">
+              <button type="button" class="btn sm grey" data-a="maintenant-aller-arr" style="min-width:44px;padding:2px 8px;font-size:11px" title="Maintenant">Maint.</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:6px">
+          <label>Durée aller calculée (minutes)</label>
+          <input type="number" id="trAllerMin" min="0" step="5" value="${allerMin || ''}" placeholder="Ex. 135 pour 2 h 15">
+        </div>
+      </div>
+
+      <!-- Section RETOUR ESTIMÉ -->
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-weight:700;color:#92400e;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+          <span>🔄 Trajet Retour (Estimé pour le débrief)</span>
+          <span id="badgeDureeRetourEstime" class="pill" style="background:#fef3c7;color:#92400e">${formatMin(retourMin)}</span>
+        </div>
+        <p class="small" style="color:#78350f;margin-bottom:10px;line-height:1.4">
+          ℹ️ En débrief chez le client avant signature, la durée retour est automatiquement calquée sur l'aller. Vous pouvez l'ajuster si nécessaire.
+        </p>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Départ retour estimé</label>
+            <input type="time" id="trRetourHeureDep" value="${esc(retourHeureDep)}">
+          </div>
+          <div class="field">
+            <label>Durée estimée (minutes)</label>
+            <input type="number" id="trRetourMin" min="0" step="5" value="${retourMin || ''}" placeholder="Identique aller">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Arrivée retour estimée calculée</label>
+          <input type="time" id="trRetourHeureArr" value="${esc(retourHeureArr)}" readonly style="background:#f1f5f9;cursor:not-allowed">
+        </div>
+      </div>
+
+      <!-- Section CLÔTURE POST-INTERVENTION -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <label style="font-weight:700;color:#166534;display:flex;align-items:center;gap:6px;cursor:pointer;margin:0">
+            <input type="checkbox" id="trRetourCloture" ${retourCloture ? 'checked' : ''}>
+            🏠 Confirmer le retour réel (post-intervention)
+          </label>
+          <span id="badgeClotureStatus" class="pill" style="font-size:10px;${retourCloture ? 'background:#dcfce7;color:#166534' : 'background:#f1f5f9;color:#64748b'}">${retourCloture ? 'Confirmé' : 'En attente'}</span>
+        </div>
+        
+        <div id="blocRetourReel" style="${retourCloture ? '' : 'display:none;'}margin-top:10px">
+          <div class="grid2">
+            <div class="field">
+              <label>Départ réel retour</label>
+              <input type="time" id="trRetourReelHeureDep" value="${esc(retourReelHeureDep)}">
+            </div>
+            <div class="field">
+              <label>Arrivée réelle retour</label>
+              <div style="display:flex;gap:6px">
+                <input type="time" id="trRetourReelHeureArr" value="${esc(retourReelHeureArr)}">
+                <button type="button" class="btn sm grey" data-a="maintenant-reel-arr" style="min-width:44px;padding:2px 8px;font-size:11px" title="Maintenant">Maint.</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Observations trajet (trafic, déviation…)</label>
+            <input type="text" id="trNote" value="${esc(note)}" placeholder="Ex. Trafic fluide, ou 30 min de bouchon A6">
+          </div>
+        </div>
+      </div>
+
+      <!-- Récapitulatif dynamique -->
+      <div style="background:#0f172a;color:#fff;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:#94a3b8">🚗 Total route :</span>
+          <strong id="trApercuRoute">${formatMin((allerMin || 0) + (retourCloture && retourReelMin ? retourReelMin : (retourMin || 0)))}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:#94a3b8">⏱️ Heures sur site :</span>
+          <strong>${Report.formatDuree(duree()) || '0 min'}</strong>
+        </div>
+        <div style="border-top:1px solid #334155;padding-top:6px;margin-top:6px;display:flex;justify-content:space-between;font-size:14px;color:var(--bfr-cyan-vif)">
+          <span>🏁 TOTAL MOBILISÉ :</span>
+          <strong id="trApercuTotal">${formatMin(Math.round(duree() / 60000) + (allerMin || 0) + (retourCloture && retourReelMin ? retourReelMin : (retourMin || 0)))}</strong>
+        </div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn grey" data-a="fermer">Annuler</button>
+        <button class="btn" data-a="sauvegarder-trajet">Enregistrer le trajet</button>
+      </div>
+    </div>`, (pEl) => {
+      const inAllerDateDep = $('#trAllerDateDep', pEl);
+      const inAllerHeureDep = $('#trAllerHeureDep', pEl);
+      const inAllerDateArr = $('#trAllerDateArr', pEl);
+      const inAllerHeureArr = $('#trAllerHeureArr', pEl);
+      const inAllerMin = $('#trAllerMin', pEl);
+
+      const inRetHeureDep = $('#trRetourHeureDep', pEl);
+      const inRetMin = $('#trRetourMin', pEl);
+      const inRetHeureArr = $('#trRetourHeureArr', pEl);
+
+      const chkCloture = $('#trRetourCloture', pEl);
+      const blocReel = $('#blocRetourReel', pEl);
+      const badgeCloture = $('#badgeClotureStatus', pEl);
+      const inReelHeureDep = $('#trRetourReelHeureDep', pEl);
+      const inReelHeureArr = $('#trRetourReelHeureArr', pEl);
+      const inNote = $('#trNote', pEl);
+
+      const bAller = $('#badgeDureeAller', pEl);
+      const bRetour = $('#badgeDureeRetourEstime', pEl);
+      const apRoute = $('#trApercuRoute', pEl);
+      const apTotal = $('#trApercuTotal', pEl);
+
+      function mettreAJour() {
+        let aM = parseInt(inAllerMin.value, 10);
+        if (isNaN(aM)) {
+          aM = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
+          if (aM > 0) inAllerMin.value = aM;
+        }
+        bAller.textContent = formatMin(aM || 0);
+
+        let rM = parseInt(inRetMin.value, 10);
+        if (isNaN(rM) || rM <= 0) {
+          rM = aM || 0;
+          if (rM > 0) inRetMin.value = rM;
+        }
+        bRetour.textContent = formatMin(rM || 0);
+
+        if (inRetHeureDep.value && rM > 0) {
+          inRetHeureArr.value = addMinutes(inRetHeureDep.value, rM);
+        }
+
+        const isCloture = chkCloture.checked;
+        blocReel.style.display = isCloture ? '' : 'none';
+        badgeCloture.textContent = isCloture ? 'Confirmé' : 'En attente';
+        badgeCloture.style.background = isCloture ? '#dcfce7' : '#f1f5f9';
+        badgeCloture.style.color = isCloture ? '#166534' : '#64748b';
+
+        let reelM = 0;
+        if (isCloture) {
+          reelM = calcDiff(inReelHeureDep.value, inReelHeureArr.value, inAllerDateArr.value, inAllerDateArr.value);
+        }
+
+        const routeTot = (aM || 0) + (isCloture && reelM > 0 ? reelM : (rM || 0));
+        apRoute.textContent = formatMin(routeTot);
+        const siteM = Math.round(duree() / 60000);
+        apTotal.textContent = formatMin(siteM + routeTot);
+      }
+
+      function maintenantHeure() {
+        const d = new Date();
+        return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+      }
+
+      pEl.addEventListener('input', (e) => {
+        if (e.target === inAllerHeureDep || e.target === inAllerHeureArr) {
+          const m = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
+          inAllerMin.value = m || '';
+          if (!inRetMin.value || inRetMin.value === '0') inRetMin.value = m || '';
+        }
+        mettreAJour();
+      });
+
+      chkCloture.addEventListener('change', mettreAJour);
+
+      pEl.addEventListener('click', (e) => {
+        if (e.target.closest('[data-a="maintenant-aller-dep"]')) {
+          inAllerHeureDep.value = maintenantHeure();
+          const m = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
+          if (m > 0) inAllerMin.value = m;
+          mettreAJour();
+          return;
+        }
+        if (e.target.closest('[data-a="maintenant-aller-arr"]')) {
+          inAllerHeureArr.value = maintenantHeure();
+          const m = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
+          if (m > 0) inAllerMin.value = m;
+          mettreAJour();
+          return;
+        }
+        if (e.target.closest('[data-a="maintenant-reel-arr"]')) {
+          inReelHeureArr.value = maintenantHeure();
+          mettreAJour();
+          return;
+        }
+        if (e.target.closest('[data-a="sauvegarder-trajet"]')) {
+          let aM = parseInt(inAllerMin.value, 10);
+          if (isNaN(aM)) aM = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
+          let rM = parseInt(inRetMin.value, 10);
+          if (isNaN(rM)) rM = aM;
+
+          const isCloture = chkCloture.checked;
+          let reelM = isCloture ? calcDiff(inReelHeureDep.value, inReelHeureArr.value, inAllerDateArr.value, inAllerDateArr.value) : 0;
+
+          R.trajet = {
+            actif: true,
+            allerDateDepart: inAllerDateDep.value,
+            allerHeureDepart: inAllerHeureDep.value,
+            allerDateArrivee: inAllerDateArr.value,
+            allerHeureArrivee: inAllerHeureArr.value,
+            allerDureeMinutes: aM || 0,
+
+            retourDateDepart: inAllerDateArr.value,
+            retourHeureDepart: inRetHeureDep.value,
+            retourDateArrivee: inAllerDateArr.value,
+            retourHeureArrivee: inRetHeureArr.value,
+            retourDureeMinutes: rM || 0,
+            retourEstime: !isCloture,
+
+            retourReelDateDepart: isCloture ? inAllerDateArr.value : '',
+            retourReelHeureDepart: isCloture ? inReelHeureDep.value : '',
+            retourReelDateArrivee: isCloture ? inAllerDateArr.value : '',
+            retourReelHeureArrivee: isCloture ? inReelHeureArr.value : '',
+            retourReelDureeMinutes: reelM || 0,
+            retourCloture: isCloture,
+            note: inNote ? inNote.value.trim() : ''
+          };
+
+          planifier();
+          rendreTout();
+          pEl.closest('.sheet').remove();
+          toast(isCloture ? 'Trajet et retour réel enregistrés' : 'Temps de route enregistré (retour estimé)');
+        }
+      });
+    });
+    return panneau;
+  }
+
   /* ===================== Démarrage ==================================== */
   function demarrer() {
     brancher();
@@ -11137,9 +11747,10 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     destinatairesMail: destinatairesMail, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
-    apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto
+    apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,
+    feuilleTrajet: feuilleTrajet
   };
 })();
 </script>
-<script>window.SAV_VERSION="b5e2b50fff";</script></body>
+<script>window.SAV_VERSION="ca8355dbdf";</script></body>
 </html>
