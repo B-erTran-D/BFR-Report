@@ -37,7 +37,7 @@ Le rapport PDF et Word suivent maintenant la structure du modèle :
 | Pied de page (siège Coulommiers + site de Blyes) | ✅ sur toutes les pages, + « Page n / N » |
 
 Le corps (intervention, synthèse, évènements par catégorie, photos, signature) s'enchaîne après la page destinataire, avec les mêmes bandeaux cyan.
-Police du Word : **Open Sans 11 pt** comme le modèle ; en-tête et pied de page répétés sur chaque page.
+Police du Word : **Open Sans 13 pt** pour le corps, **Poppins** pour les titres et bandeaux (charte graphique BFR Systems : Poppins & Open Sans, comme le site bfrsystems.com) ; en-tête et pied de page répétés sur chaque page. Le PDF utilise l'Helvetica (équivalent hors-connexion, sans dépendance) avec les mêmes tailles relevées de 2 pt minimum.
 
 ## Ce que le modèle contient déjà (et pas seulement des variables)
 
