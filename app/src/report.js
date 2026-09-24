@@ -409,9 +409,9 @@
       const largLogo = logoCli ? Math.min(150, 90 * (logoCli.w / logoCli.h)) : 0;
       const largGauche = this.CW - (largLogo ? largLogo + 16 : 0);
       let y = haut;
-      if (valeur(cli.nom)) { p.text(Pdf.trunc(cli.nom, largGauche, 12, true), this.M, y + 10, { size: 12, font: 'F2', color: this.C.texte }); y += 17; }
-      if (valeur(cli.email)) { p.text(Pdf.trunc(cli.email, largGauche, 10), this.M, y + 9, { size: 10, color: this.C.texte }); y += 14; }
-      if (valeur(cli.tel)) { p.text(Pdf.trunc('Tél. ' + cli.tel, largGauche, 12), this.M, y + 11, { size: 12, color: this.C.texte }); y += 16; }
+      if (valeur(cli.nom)) { p.text(Pdf.trunc(cli.nom, largGauche, 14, true), this.M, y + 12, { size: 14, font: 'F2', color: this.C.texte }); y += 19; }
+      if (valeur(cli.email)) { p.text(Pdf.trunc(cli.email, largGauche, 12), this.M, y + 11, { size: 12, color: this.C.texte }); y += 16; }
+      if (valeur(cli.tel)) { p.text(Pdf.trunc('Tél. ' + cli.tel, largGauche, 14), this.M, y + 12, { size: 14, color: this.C.texte }); y += 18; }
       if (logoCli) {
         const h = largLogo * (logoCli.h / logoCli.w);
         p.image(logoCli.bytes, this.W - this.M - largLogo, haut, largLogo, Math.min(h, 62));
@@ -423,7 +423,7 @@
          en cyan BFR, comme le style « Titre » du Google Doc (36 pt). */
       const titre = "Compte rendu d'intervention";
       let taille = 30;
-      while (taille > 16 && Pdf.measure(titre, taille, true) > this.CW) taille -= 1;
+      while (taille > 18 && Pdf.measure(titre, taille, true) > this.CW) taille -= 1;
       p.text(titre, this.W / 2, p.y + taille, { size: taille, font: 'F2', color: CYAN, align: 'center' });
       p.y += taille + 8;
       p.text(frDate(i.date), this.W / 2, p.y + taille * 0.72, { size: taille * 0.72, font: 'F2', color: CYAN, align: 'center' });
@@ -432,24 +432,24 @@
       /* « Votre contact : » puis le bloc technicien
          ({Name_Technicien} {Poste_Tech} {Mail_Tech} {Num_Tech}). */
       const t = s.technicien || {};
-      p.text('Votre contact :', this.M, p.y + 10, { size: 10, color: this.C.texte });
-      p.y += 20;
+      p.text('Votre contact :', this.M, p.y + 11, { size: 12, color: this.C.texte });
+      p.y += 22;
       const yBloc = p.y;
-      p.text(nomComplet(t) || '—', this.M, yBloc + 11, { size: 11.5, font: 'F2', color: this.C.texte });
-      let yt = yBloc + 25;
+      p.text(nomComplet(t) || '—', this.M, yBloc + 12, { size: 13.5, font: 'F2', color: this.C.texte });
+      let yt = yBloc + 28;
       const self = this;
       [t.fonction, t.email, t.tel ? 'Tél. ' + t.tel : ''].filter(Boolean).forEach(function (l) {
-        p.text(Pdf.trunc(String(l), self.CW, 10), self.M, yt, { size: 10, color: self.C.texte });
-        yt += 14;
+        p.text(Pdf.trunc(String(l), self.CW, 12), self.M, yt, { size: 12, color: self.C.texte });
+        yt += 16;
       });
       const colleguesP1 = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
         ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
         : [];
       if (colleguesP1.length > 0) {
         yt += 6;
-        p.text(Pdf.trunc(this.L('Accompagné de') + ' : ' + colleguesP1.map(c => c.nom + (c.fonction ? ' (' + self.L(c.fonction) + ')' : '')).join(', '), self.CW, 9.5),
-          self.M, yt, { size: 9.5, font: 'F2', color: self.C.texte });
-        yt += 14;
+        p.text(Pdf.trunc(this.L('Accompagné de') + ' : ' + colleguesP1.map(c => c.nom + (c.fonction ? ' (' + self.L(c.fonction) + ')' : '')).join(', '), self.CW, 11.5),
+          self.M, yt, { size: 11.5, font: 'F2', color: self.C.texte });
+        yt += 16;
       }
       p.y = yt + 20;
     }
@@ -461,13 +461,13 @@
         const w = 5.4 * 28.35;
         const h = w * (this.logo.h / this.logo.w);
         p.image(this.logo.bytes, this.M, p.y, w, h);
-        p.text(Pdf.trunc('N° ' + valeur(this.i.numero) + ' — ' + valeur(this.i.client && this.i.client.nom), this.CW * 0.65, 9),
-          this.W - this.M, p.y + h - 3, { size: 9, color: C.gris, align: 'right' });
+        p.text(Pdf.trunc('N° ' + valeur(this.i.numero) + ' — ' + valeur(this.i.client && this.i.client.nom), this.CW * 0.65, 11),
+          this.W - this.M, p.y + h - 3, { size: 11, color: C.gris, align: 'right' });
         p.y += h + 8;
       } else {
-        p.text(Pdf.trunc(valeur(this.s.societe.nom), this.CW / 3, 9.5, true), this.M, 26, { size: 9.5, font: 'F2', color: C.cyan });
-        p.text(Pdf.trunc('N° ' + valeur(this.i.numero) + ' — ' + valeur(this.i.client && this.i.client.nom), this.CW * 0.62, 9),
-          this.W - this.M, 26, { size: 9, color: C.gris, align: 'right' });
+        p.text(Pdf.trunc(valeur(this.s.societe.nom), this.CW / 3, 11.5, true), this.M, 26, { size: 11.5, font: 'F2', color: C.cyan });
+        p.text(Pdf.trunc('N° ' + valeur(this.i.numero) + ' — ' + valeur(this.i.client && this.i.client.nom), this.CW * 0.62, 11),
+          this.W - this.M, 26, { size: 11, color: C.gris, align: 'right' });
         p.y = 34;
       }
       p.line(this.M, p.y, this.W - this.M, p.y, { color: C.bord });
@@ -478,18 +478,18 @@
     pageLettre() {
       const p = this.pdf, C = this.C, i = this.i, s = this.s, cli = i.client || {};
       const larg = this.CW * 0.62;
-      p.text(Pdf.trunc(valeur(cli.nom), larg, 11.5, true), this.M, p.y + 11, { size: 11.5, font: 'F2', color: C.texte });
-      p.y += 22;
-      Pdf.wrap(valeur(cli.adresse) || valeur(cli.lieu), larg, 10).forEach(function (l) {
-        p.text(l, this.M, p.y + 10, { size: 10, color: C.texte });
-        p.y += 14;
+      p.text(Pdf.trunc(valeur(cli.nom), larg, 13.5, true), this.M, p.y + 12, { size: 13.5, font: 'F2', color: C.texte });
+      p.y += 24;
+      Pdf.wrap(valeur(cli.adresse) || valeur(cli.lieu), larg, 12).forEach(function (l) {
+        p.text(l, this.M, p.y + 11, { size: 12, color: C.texte });
+        p.y += 16;
       }, this);
-      p.y += 18;
+      p.y += 20;
       p.text('À ' + valeur((s.societe && s.societe.lieuLettre) || 'Blyes') + ', le ' + frDate(i.date) + ',',
-        this.M, p.y + 10, { size: 10, color: C.texte });
-      p.y += 22;
-      p.text("À l'attention de " + valeur(cli.contact) + ',', this.M, p.y + 10, { size: 10, color: C.texte });
-      p.y += 26;
+        this.M, p.y + 11, { size: 12, color: C.texte });
+      p.y += 24;
+      p.text("À l'attention de " + valeur(cli.contact) + ',', this.M, p.y + 11, { size: 12, color: C.texte });
+      p.y += 28;
     }
 
     /* ---------- bandeaux, blocs et tableaux ---------- */
@@ -502,15 +502,15 @@
 
     /* Bandeau de section du modèle : fond cyan, texte blanc (petites capitales). */
     titre(txt, sousTitre, reserver) {
-      this.saut(40 + (reserver || 0));
+      this.saut(44 + (reserver || 0));
       const p = this.pdf, y = p.y, C = this.C;
-      let taille = 11.5;
-      const large = this.CW - 14 - (sousTitre ? Pdf.measure(sousTitre, 8, false) + 12 : 0);
-      while (taille > 7.5 && Pdf.measure(txt, taille, true) > large) taille -= 0.5;
-      p.rect(this.M, y, this.CW, 18.5, { fill: CYAN });
-      p.text(txt.toUpperCase(), this.M + 7, y + 12.5, { size: taille, font: 'F2', color: C.blanc });
-      if (sousTitre) p.text(sousTitre, this.W - this.M - 7, y + 12.5, { size: 8, color: C.blanc, align: 'right' });
-      p.y = y + 24;
+      let taille = 13.5;
+      const large = this.CW - 14 - (sousTitre ? Pdf.measure(sousTitre, 10, false) + 12 : 0);
+      while (taille > 9.5 && Pdf.measure(txt, taille, true) > large) taille -= 0.5;
+      p.rect(this.M, y, this.CW, 21, { fill: CYAN });
+      p.text(txt.toUpperCase(), this.M + 7, y + 14, { size: taille, font: 'F2', color: C.blanc });
+      if (sousTitre) p.text(sousTitre, this.W - this.M - 7, y + 14, { size: 10, color: C.blanc, align: 'right' });
+      p.y = y + 27;
     }
 
     kv(pairs) {
@@ -527,15 +527,15 @@
         const largeurs = ligne.length === 2 ? [colW, colW] : [ligne[0][2] ? this.CW : colW];
         let h = 0;
         ligne.forEach(function (it, idx) {
-          h = Math.max(h, 11 + Pdf.wrap(valeur(it[1]) || '—', largeurs[idx] - 14, 8.6).length * 11);
+          h = Math.max(h, 14 + Pdf.wrap(valeur(it[1]) || '—', largeurs[idx] - 14, 10.6).length * 13.5);
         });
         this.saut(h + 2);
         const y = p.y;
         let x = this.M;
         for (let idx = 0; idx < ligne.length; idx++) {
           p.rect(x, y, largeurs[idx], h, { fill: C.bandeau, stroke: C.bord, lineWidth: 0.5 });
-          p.text(ligne[idx][0], x + 7, y + 11, { size: 6.6, font: 'F2', color: C.gris });
-          p.paragraph(valeur(ligne[idx][1]) || '—', x + 7, y + 12, largeurs[idx] - 14, { size: 8.6, color: C.texte });
+          p.text(ligne[idx][0], x + 7, y + 12, { size: 8.6, font: 'F2', color: C.gris });
+          p.paragraph(valeur(ligne[idx][1]) || '—', x + 7, y + 14, largeurs[idx] - 14, { size: 10.6, color: C.texte });
           x += largeurs[idx] + gap;
         }
         p.y = y + h + 1;
@@ -546,19 +546,19 @@
     blocTexte(titre, contenu) {
       const p = this.pdf, C = this.C;
       const texte = valeur(contenu);
-      const lh = 11.4;
-      const lignes = Pdf.wrap(texte || '—', this.CW - 14, 8.8);
+      const lh = 14;
+      const lignes = Pdf.wrap(texte || '—', this.CW - 14, 10.8);
       let idx = 0;
       while (idx < lignes.length) {
         const place = Math.floor((p.H - this.M - 16 - p.y - (idx === 0 && titre ? 16 : 4)) / lh);
         if (place < 3) { p.newPage(); this.enteteSuite(); continue; }
         const n = Math.min(place, lignes.length - idx);
         if (idx === 0 && titre) {
-          p.text(titre, this.M + 6, p.y + 9, { size: 8.4, font: 'F2', color: C.gris });
-          p.y += 13;
+          p.text(titre, this.M + 6, p.y + 10, { size: 10.4, font: 'F2', color: C.gris });
+          p.y += 15;
         }
-        p.rect(this.M, p.y, this.CW, n * lh + 7, { stroke: C.bord, lineWidth: 0.6 });
-        for (let j = 0; j < n; j++) p.text(lignes[idx + j], this.M + 7, p.y + 9 + j * lh, { size: 8.8, color: C.texte });
+        p.rect(this.M, p.y, this.CW, n * lh + 9, { stroke: C.bord, lineWidth: 0.6 });
+        for (let j = 0; j < n; j++) p.text(lignes[idx + j], this.M + 7, p.y + 10 + j * lh, { size: 10.8, color: C.texte });
         p.y += n * lh + 9;
         idx += n;
       }
@@ -595,7 +595,7 @@
 
         const cadreX = this.M + (this.CW - wHarmoniseeSeule) / 2;
         const legendeTexte = avecNumero ? ('Photo ' + (++this.numeroPhoto) + (item.legende ? ' — ' + item.legende : '')) : (item.legende || '');
-        const placeRequise = hHarmoniseeSeule + (legendeTexte ? 16 : 0) + 10;
+        const placeRequise = hHarmoniseeSeule + (legendeTexte ? 18 : 0) + 12;
         if (!estEvenement) {
           this.saut(placeRequise);
         }
@@ -607,7 +607,7 @@
         p.image(bytes, imgX, imgY, imgW, imgH);
 
         if (legendeTexte) {
-          p.text(Pdf.trunc(legendeTexte, wHarmoniseeSeule, 7.6), cadreX + wHarmoniseeSeule / 2, cadreY + hHarmoniseeSeule + 10, { size: 7.6, color: C.gris, align: 'center' });
+          p.text(Pdf.trunc(legendeTexte, wHarmoniseeSeule, 9.6), cadreX + wHarmoniseeSeule / 2, cadreY + hHarmoniseeSeule + 12, { size: 9.6, color: C.gris, align: 'center' });
         }
         p.y = cadreY + placeRequise;
         return;
@@ -621,7 +621,7 @@
         if (this.lotEnCours.length === 2 || i === liste.length - 1) {
           const lot = this.lotEnCours;
           const legende = avecNumero || lot.some(it => valeur(it.legende));
-          const placeRequise = hHarmoniseeGrille + (legende ? 16 : 0) + 10;
+          const placeRequise = hHarmoniseeGrille + (legende ? 18 : 0) + 12;
           if (!estEvenement) {
             this.saut(placeRequise);
           }
@@ -651,7 +651,7 @@
 
             if (legende) {
               const texte = avecNumero ? ('Photo ' + (++self.numeroPhoto) + (it.legende ? ' — ' + it.legende : '')) : (it.legende || '');
-              p.text(Pdf.trunc(texte, colW, 7.2), x, y + hHarmoniseeGrille + 9, { size: 7.2, color: C.gris });
+              p.text(Pdf.trunc(texte, colW, 9.2), x, y + hHarmoniseeGrille + 11, { size: 9.2, color: C.gris });
             }
           });
           p.y = y + placeRequise;
@@ -670,26 +670,26 @@
       const couleur = hexRgb(cat.couleur);
       const fond = hexClair(cat.couleur, 0.9);
       const texte = valeur(ev.texte) || '(aucune annotation)';
-      const lh = 11.5;
-      const lignes = Pdf.wrap(texte, this.CW - 16, 8.8);
+      const lh = 14;
+      const lignes = Pdf.wrap(texte, this.CW - 16, 10.8);
       const photosEv = (ev.photos || []).filter(ph => ph.dataUrl);
 
       // 1. Bandeau de domaine / machine / heure / catégorie
-      p.rect(this.M, p.y, this.CW, 16, { fill: fond, stroke: couleur, lineWidth: 0.5 });
-      p.rect(this.M, p.y, 3.5, 16, { fill: couleur });
+      p.rect(this.M, p.y, this.CW, 19, { fill: fond, stroke: couleur, lineWidth: 0.5 });
+      p.rect(this.M, p.y, 3.5, 19, { fill: couleur });
       const libDom = this.L(dom.libelle);
       const libMach = ev.machineNom ? ' — [' + ev.machineNom + ']' : '';
-      p.text(libDom + libMach, this.M + 8, p.y + 11.2, { size: 8.6, font: 'F2', color: couleur });
-      p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 11.2, { size: 7.8, color: C.gris, align: 'center' });
-      p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 11.2, { size: 8.2, font: 'F2', color: couleur, align: 'right' });
-      p.y += 21;
+      p.text(libDom + libMach, this.M + 8, p.y + 13, { size: 10.6, font: 'F2', color: couleur });
+      p.text(heureFr(ev.heure), this.M + this.CW / 2, p.y + 13, { size: 9.8, color: C.gris, align: 'center' });
+      p.text(this.L(cat.libelle).toUpperCase(), this.M + this.CW - 8, p.y + 13, { size: 10.2, font: 'F2', color: couleur, align: 'right' });
+      p.y += 24;
 
       // 2. Encadré de texte / commentaire
       const nbLignes = Math.max(lignes.length, 1);
-      const hBoite = nbLignes * lh + 8;
+      const hBoite = nbLignes * lh + 10;
       p.rect(this.M, p.y, this.CW, hBoite, { stroke: C.bord, lineWidth: 0.5 });
       for (let j = 0; j < lignes.length; j++) {
-        p.text(lignes[j], this.M + 8, p.y + 9 + j * lh, { size: 8.8, color: C.texte });
+        p.text(lignes[j], this.M + 8, p.y + 10 + j * lh, { size: 10.8, color: C.texte });
       }
       p.y += hBoite + 14;
 
@@ -706,15 +706,15 @@
       if (cats.length) {
         const nb = cats.length;
         const caseW = (this.CW - (nb - 1) * 5) / nb;
-        this.saut(30);
+        this.saut(34);
         const y = p.y;
         cats.forEach(function (c, k) {
           const x = this.M + k * (caseW + 5);
-          p.rect(x, y, caseW, 30, { fill: hexClair(c.couleur, 0.88), stroke: hexRgb(c.couleur), lineWidth: 0.5 });
-          p.text(String(e.parCategorie[c.id]), x + caseW / 2, y + 15, { size: 15, font: 'F2', color: hexRgb(c.couleur), align: 'center' });
-          p.text(Pdf.trunc(this.L(c.libelle), caseW - 6, 6.6), x + caseW / 2, y + 25, { size: 6.6, color: C.gris, align: 'center' });
+          p.rect(x, y, caseW, 34, { fill: hexClair(c.couleur, 0.88), stroke: hexRgb(c.couleur), lineWidth: 0.5 });
+          p.text(String(e.parCategorie[c.id]), x + caseW / 2, y + 17, { size: 17, font: 'F2', color: hexRgb(c.couleur), align: 'center' });
+          p.text(Pdf.trunc(this.L(c.libelle), caseW - 6, 8.6), x + caseW / 2, y + 28, { size: 8.6, color: C.gris, align: 'center' });
         }, this);
-        p.y = y + 38;
+        p.y = y + 42;
       }
       // répartition par domaine + chrono
       const domaines = (this.s.domaines || []).filter(d => e.parDomaine[d.id]);
@@ -739,8 +739,8 @@
       const colDenomW = avecPhotos ? (this.CW - colPhotoW) * 0.52 : (this.CW * 0.54);
       const colRefW = avecPhotos ? (this.CW - colPhotoW) * 0.32 : (this.CW * 0.30);
       const colQteW = avecPhotos ? (this.CW - colPhotoW) * 0.16 : (this.CW * 0.16);
-      const hLigne = avecPhotos ? 44 : 18;
-      const hEntete = 18;
+      const hLigne = avecPhotos ? 48 : 22;
+      const hEntete = 21;
 
       this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
       let y = p.y;
@@ -749,17 +749,17 @@
         p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
         let curX = this.M;
         if (avecPhotos) {
-          p.text(this.L('Photo'), curX + colPhotoW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+          p.text(this.L('Photo'), curX + colPhotoW / 2, y + 14, { size: 10.5, font: 'F2', color: C.bleu, align: 'center' });
           p.line(curX + colPhotoW, y, curX + colPhotoW, y + hEntete, { color: C.bordFort, width: 0.6 });
           curX += colPhotoW;
         }
-        p.text(this.L('Dénomination'), curX + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Dénomination'), curX + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
         p.line(curX + colDenomW, y, curX + colDenomW, y + hEntete, { color: C.bordFort, width: 0.6 });
         curX += colDenomW;
-        p.text(this.L('Référence'), curX + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Référence'), curX + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
         p.line(curX + colRefW, y, curX + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
         curX += colRefW;
-        p.text(this.L('Quantité'), curX + colQteW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Quantité'), curX + colQteW / 2, y + 14, { size: 10.5, font: 'F2', color: C.bleu, align: 'center' });
         y += hEntete;
       };
 
@@ -795,13 +795,13 @@
                 const imgY = y + (hLigne - imgH) / 2;
                 p.image(jp.bytes, imgX, imgY, imgW, imgH);
               } else {
-                p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+                p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 10.5, color: C.gris, align: 'center' });
               }
             } catch (_) {
-              p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+              p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 10.5, color: C.gris, align: 'center' });
             }
           } else {
-            p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 8.5, color: C.gris, align: 'center' });
+            p.text('—', rowX + colPhotoW / 2, y + hLigne / 2 + 3, { size: 10.5, color: C.gris, align: 'center' });
           }
           p.line(rowX + colPhotoW, y, rowX + colPhotoW, y + hLigne, { color: C.bord, width: 0.4 });
           rowX += colPhotoW;
@@ -810,25 +810,25 @@
         const denom = valeur(item.denomination || item.designation) || '—';
         const ref = valeur(item.reference) || '—';
         const qte = String(valeur(item.quantite) || 1);
-        const textY = avecPhotos ? (y + hLigne / 2 + 3) : (y + 12);
+        const textY = avecPhotos ? (y + hLigne / 2 + 3) : (y + 14);
 
-        p.text(Pdf.trunc(denom, colDenomW - 12, 8.5, false), rowX + 6, textY, { size: 8.5, color: C.texte });
+        p.text(Pdf.trunc(denom, colDenomW - 12, 10.5, false), rowX + 6, textY, { size: 10.5, color: C.texte });
         p.line(rowX + colDenomW, y, rowX + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
         rowX += colDenomW;
 
-        p.text(Pdf.trunc(ref, colRefW - 12, 8.5, false), rowX + 6, textY, { size: 8.5, font: 'F2', color: C.texte });
+        p.text(Pdf.trunc(ref, colRefW - 12, 10.5, false), rowX + 6, textY, { size: 10.5, font: 'F2', color: C.texte });
         p.line(rowX + colRefW, y, rowX + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
         rowX += colRefW;
 
-        p.text(qte, rowX + colQteW / 2, textY, { size: 8.5, font: 'F2', color: C.texte, align: 'center' });
+        p.text(qte, rowX + colQteW / 2, textY, { size: 10.5, font: 'F2', color: C.texte, align: 'center' });
 
         y += hLigne;
       }
 
       p.y = y + 4;
       const mentionPcs = this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.');
-      p.paragraph(mentionPcs, this.M + 4, p.y, this.CW - 8, { size: 7.4, font: 'F1', color: C.gris });
-      p.y += 12;
+      p.paragraph(mentionPcs, this.M + 4, p.y, this.CW - 8, { size: 9.4, font: 'F1', color: C.gris });
+      p.y += 15;
     }
 
     async blocJours(jours) {
@@ -839,19 +839,19 @@
       const colPauseW = this.CW * 0.14;
       const colDureeW = this.CW * 0.18;
       const colDescW = this.CW * 0.28;
-      const hLigne = 18;
-      const hEntete = 18;
+      const hLigne = 22;
+      const hEntete = 21;
 
       this.saut(hEntete + hLigne * Math.min(jours.length + 1, 3) + 20);
       let y = p.y;
 
       const dessinerEntete = () => {
         p.rect(this.M, y, this.CW, hEntete, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
-        p.text(this.L('Date'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-        p.text(this.L('Horaires sur site'), this.M + colDateW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
-        p.text(this.L('Pause'), this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
-        p.text(this.L('Durée sur site'), this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
-        p.text(this.L('Activité / Travaux'), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Date'), this.M + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Horaires sur site'), this.M + colDateW + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
+        p.text(this.L('Pause'), this.M + colDateW + colHorairesW + colPauseW / 2, y + 14, { size: 10.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Durée sur site'), this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 14, { size: 10.5, font: 'F2', color: C.bleu, align: 'center' });
+        p.text(this.L('Activité / Travaux'), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
 
         let cx = this.M + colDateW;
         p.line(cx, y, cx, y + hEntete, { color: C.bordFort, width: 0.6 });
@@ -887,11 +887,11 @@
         const durTxt = dh > 0 ? (Math.floor(dh) + ' h ' + pad2(Math.round((dh % 1) * 60)) + ' (' + dh.toFixed(2).replace('.', ',') + ' h)') : '—';
         const desc = valeur(item.description || item.activite) || '—';
 
-        p.text(Pdf.trunc(dt, colDateW - 8, 8.2, false), this.M + 6, y + 12, { size: 8.2, color: C.texte });
-        p.text(Pdf.trunc(hor, colHorairesW - 8, 8.2, false), this.M + colDateW + 6, y + 12, { size: 8.2, color: C.texte });
-        p.text(pauseTxt, this.M + colDateW + colHorairesW + colPauseW / 2, y + 12, { size: 8.2, color: C.texte, align: 'center' });
-        p.text(durTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.2, font: 'F2', color: C.texte, align: 'center' });
-        p.text(Pdf.trunc(desc, colDescW - 8, 8.2, false), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 12, { size: 8.2, color: C.texte });
+        p.text(Pdf.trunc(dt, colDateW - 8, 10.2, false), this.M + 6, y + 14, { size: 10.2, color: C.texte });
+        p.text(Pdf.trunc(hor, colHorairesW - 8, 10.2, false), this.M + colDateW + 6, y + 14, { size: 10.2, color: C.texte });
+        p.text(pauseTxt, this.M + colDateW + colHorairesW + colPauseW / 2, y + 14, { size: 10.2, color: C.texte, align: 'center' });
+        p.text(durTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 14, { size: 10.2, font: 'F2', color: C.texte, align: 'center' });
+        p.text(Pdf.trunc(desc, colDescW - 8, 10.2, false), this.M + colDateW + colHorairesW + colPauseW + colDureeW + 6, y + 14, { size: 10.2, color: C.texte });
 
         let cx = this.M + colDateW;
         p.line(cx, y, cx, y + hLigne, { color: C.bord, width: 0.4 });
@@ -907,9 +907,9 @@
 
       // Ligne total cumulé
       p.rect(this.M, y, this.CW, hLigne, { fill: C.bleuClair, stroke: C.bordFort, lineWidth: 0.6 });
-      p.text(this.L('Total cumulé'), this.M + 6, y + 12, { size: 8.5, font: 'F2', color: C.bleu });
+      p.text(this.L('Total cumulé'), this.M + 6, y + 14, { size: 10.5, font: 'F2', color: C.bleu });
       const totTxt = totalH > 0 ? (Math.floor(totalH) + ' h ' + pad2(Math.round((totalH % 1) * 60)) + ' (' + totalH.toFixed(2).replace('.', ',') + ' h)') : '—';
-      p.text(totTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 12, { size: 8.5, font: 'F2', color: C.bleu, align: 'center' });
+      p.text(totTxt, this.M + colDateW + colHorairesW + colPauseW + colDureeW / 2, y + 14, { size: 10.5, font: 'F2', color: C.bleu, align: 'center' });
       y += hLigne + 8;
       p.y = y;
     }
@@ -929,27 +929,27 @@
         mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
       }
       const mentionTraduite = this.L(mention);
-      const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 8).length * 10.6 + 9;
-      const hBloc = 118;
+      const hT = Pdf.wrap(mentionTraduite, this.CW - 14, 10).length * 13 + 11;
+      const hBloc = 124;
       this.saut(hT + hBloc + 26);
       const y0 = p.y;
       p.rect(this.M, y0, this.CW, hT, { fill: [1, 0.976, 0.929], stroke: [0.99, 0.9, 0.6], lineWidth: 0.5 });
-      p.paragraph(mentionTraduite, this.M + 7, y0 + 2, this.CW - 14, { size: 8, color: [0.42, 0.29, 0.05] });
+      p.paragraph(mentionTraduite, this.M + 7, y0 + 2, this.CW - 14, { size: 10, color: [0.42, 0.29, 0.05] });
       const y = y0 + hT + 10;
       const colW = (this.CW - 10) / 2;
       [0, 1].forEach(function (k) {
         const x = this.M + k * (colW + 10);
         p.rect(x, y, colW, hBloc, { stroke: C.bordFort, lineWidth: 0.8 });
         p.rect(x + 0.5, y + 0.5, colW - 1, 15, { fill: C.bleuClair });
-        p.text(k === 0 ? 'Le client (bon pour accord)' : 'Le technicien', x + 6, y + 10.5, { size: 8.4, font: 'F2', color: C.bleu });
+        p.text(k === 0 ? 'Le client (bon pour accord)' : 'Le technicien', x + 6, y + 11.5, { size: 10.4, font: 'F2', color: C.bleu });
         p.line(x, y + 15.5, x + colW, y + 15.5, { color: C.bordFort, width: 0.8 });
         const c = k === 0 ? (i.signatureClient || {}) : { nom: nomTechnicien(i, s), fonction: s.technicien && s.technicien.fonction, contact: contactTech(s.technicien), date: i.date, heure: heureFr(i.chrono && i.chrono.fin) };
-        p.text(valeur(c.nom) || '—', x + 6, y + 29, { size: 9.4, font: 'F2', color: C.texte });
+        p.text(valeur(c.nom) || '—', x + 6, y + 29, { size: 11.4, font: 'F2', color: C.texte });
         /* Une seule ligne « fonction — téléphone · e-mail » pour ne pas empiéter sur
            la place réservée à la signature (la boîte fait 118 pt de haut). */
         const mention2 = [valeur(c.fonction), valeur(c.contact)].filter(Boolean).join(' — ');
-        if (mention2) p.text(mention2, x + 6, y + 40, { size: 7.6, color: C.gris });
-        p.text('Date : ' + frDate(c.date || i.date) + (c.heure ? ' à ' + c.heure : ''), x + 6, y + 51, { size: 7.6, color: C.gris });
+        if (mention2) p.text(mention2, x + 6, y + 40, { size: 9.6, color: C.gris });
+        p.text('Date : ' + frDate(c.date || i.date) + (c.heure ? ' à ' + c.heure : ''), x + 6, y + 51, { size: 9.6, color: C.gris });
         const sig = k === 0 ? sigClient : sigTech;
         if (sig) {
           const maxW = colW - 20, maxH = hBloc - 62;
@@ -957,7 +957,7 @@
           if (h > maxH) { h = maxH; w = h * (sig.w / sig.h); }
           p.image(Pdf.dataUrlToBytes(sig.dataUrl), x + (colW - w) / 2, y + 58, w, h);
         } else {
-          p.text('Signature non recueillie', x + colW / 2, y + 74, { size: 8, color: C.gris, align: 'center' });
+          p.text('Signature non recueillie', x + colW / 2, y + 74, { size: 10, color: C.gris, align: 'center' });
         }
       }, this);
 
@@ -966,7 +966,7 @@
         : [];
       if (collegues.length > 0) {
         const txtCol = this.L('Accompagné de') + ' : ' + collegues.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ');
-        p.text(Pdf.trunc(txtCol, this.CW - 14, 7.8, false), this.M + 4, y + hBloc + 7, { size: 7.8, color: C.gris });
+        p.text(Pdf.trunc(txtCol, this.CW - 14, 9.8, false), this.M + 4, y + hBloc + 9, { size: 9.8, color: C.gris });
         p.y = y + hBloc + 18;
       } else {
         p.y = y + hBloc + 10;
@@ -1165,10 +1165,10 @@
         d.line(d.margin, y - 26, d.W - d.margin, y - 26, { color: COULEURS_PDF.bord, width: 0.6 });
         const largeur = d.W - 2 * d.margin - 70;
         sieges.forEach(function (ligne, k) {
-          d.text(Pdf.trunc(ligne, largeur, k === 0 ? 7.4 : 6.6, k === 0), d.margin, y - 16 + k * 8.6,
-            { size: k === 0 ? 7.4 : 6.6, font: k === 0 ? 'F2' : 'F1', color: COULEURS_PDF.gris });
+          d.text(Pdf.trunc(ligne, largeur, k === 0 ? 9.4 : 8.6, k === 0), d.margin, y - 18 + k * 10,
+            { size: k === 0 ? 9.4 : 8.6, font: k === 0 ? 'F2' : 'F1', color: COULEURS_PDF.gris });
         });
-        d.text('Page ' + num + ' / ' + total, d.W - d.margin, y - 8, { size: 7, font: 'F2', color: COULEURS_PDF.gris, align: 'right' });
+        d.text('Page ' + num + ' / ' + total, d.W - d.margin, y - 8, { size: 9, font: 'F2', color: COULEURS_PDF.gris, align: 'right' });
       });
 
       if (this.opts.apercu) return { apercu: doc, filename: nomFichier(this.i, 'pdf', this.opts.suffixe ? this.langue : null) };
@@ -1231,9 +1231,9 @@
       const cli = i.client || {};
       const logoCli = cli.logo ? await toJpeg(cli.logo, 460, 0.92) : null;
       const runsBlocClient = [
-        { t: valeur(cli.nom), gras: true, taille: 12 },
-        { t: valeur(cli.email), taille: 10, saut: true },
-        { t: valeur(cli.tel) ? 'Tél. ' + cli.tel : '', taille: 12, saut: true }
+        { t: valeur(cli.nom), gras: true, taille: 14 },
+        { t: valeur(cli.email), taille: 12, saut: true },
+        { t: valeur(cli.tel) ? 'Tél. ' + cli.tel : '', taille: 14, saut: true }
       ].filter(function (r) { return r.t; });
       if (logoCli) {
         d.image(logoCli.dataUrl, 4.5, { hauteurMaxCm: 2.2 });
@@ -1247,29 +1247,29 @@
       d.para('', { taille: 6, apres: 200 });
 
       /* « Votre contact : » + bloc technicien */
-      d.para(this.L('Votre contact :'), { taille: 10, couleur: '58595B', apres: 40 });
-      d.para([{ t: Report.nomComplet(s.technicien) || '—', gras: true, taille: 11.5 }], { apres: 20 });
+      d.para(this.L('Votre contact :'), { taille: 12, couleur: '58595B', apres: 40 });
+      d.para([{ t: Report.nomComplet(s.technicien) || '—', gras: true, taille: 13.5 }], { apres: 20 });
       [(s.technicien || {}).fonction, (s.technicien || {}).email, (s.technicien || {}).tel ? 'Tél. ' + s.technicien.tel : '']
-        .filter(Boolean).forEach(function (l) { d.para(l, { taille: 10, couleur: '58595B', apres: 0 }); });
+        .filter(Boolean).forEach(function (l) { d.para(l, { taille: 12, couleur: '58595B', apres: 0 }); });
 
       const colleguesP1Word = (Array.isArray(i.techniciens) && i.techniciens.length > 1)
         ? i.techniciens.filter(x => x && !x.principal && valeur(x.nom))
         : [];
       if (colleguesP1Word.length > 0) {
         d.para([{ t: this.L('Accompagné de') + ' : ', gras: true }, { t: colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }],
-          { taille: 9.5, couleur: '58595B', avant: 20, apres: 20 });
+          { taille: 11.5, couleur: '58595B', avant: 20, apres: 20 });
       }
 
       /* Page 2 du modèle : destinataire, lieu et date, « À l'attention de » */
       d.sautDePage();
-      d.para([{ t: valeur(cli.nom), gras: true, taille: 11.5 }], { apres: 20 });
+      d.para([{ t: valeur(cli.nom), gras: true, taille: 13.5 }], { apres: 20 });
       String(valeur(cli.adresse) || valeur(cli.lieu)).split('\n').forEach(function (l) {
-        d.para(l, { taille: 10, couleur: '58595B', apres: 0 });
+        d.para(l, { taille: 12, couleur: '58595B', apres: 0 });
       });
       d.para('', { taille: 6, apres: 140 });
       d.para('À ' + (valeur(s.societe && s.societe.lieuLettre) || 'Blyes') + ', le ' + frDate(i.date) + ',',
-        { taille: 10, couleur: '58595B', apres: 60 });
-      d.para("À l'attention de " + valeur(cli.contact) + ',', { taille: 10, couleur: '58595B', apres: 200 });
+        { taille: 12, couleur: '58595B', apres: 60 });
+      d.para("À l'attention de " + valeur(cli.contact) + ',', { taille: 12, couleur: '58595B', apres: 200 });
 
       const machinesWord = listeMachines(i);
       const techniciensWord = listeTechniciens(i, s);
@@ -1405,14 +1405,14 @@
             { largeurs: [70, 30], enteteFond: 'E8EFFA' });
           const dom = (this.s.domaines || []).filter(x => this.etat.parDomaine[x.id])
             .map(x => this.L(x.libelle) + ' : ' + this.etat.parDomaine[x.id]);
-          if (dom.length) d.para(dom.join('   •   '), { taille: 10, couleur: '334155', apres: 60 });
+          if (dom.length) d.para(dom.join('   •   '), { taille: 12, couleur: '334155', apres: 60 });
           d.para('Heures passées sur site : ' + (formatDuree(this.etat.duree) || '—') +
             (this.etat.duree ? ' (' + dureeDecimale(this.etat.duree) + ' h)' : '') + '   •   Photos : ' + this.etat.nbPhotos,
-            { taille: 10, apres: 120 });
-          if (valeur(i.resumeTechnicien)) d.para('Synthèse du technicien', { gras: true, taille: 11, apres: 40 }),
-            d.para(i.resumeTechnicien, { taille: 10, apres: 120 });
-          if (valeur(i.objet)) d.para('Objet / demande du client', { gras: true, taille: 11, apres: 40 }),
-            d.para(i.objet, { taille: 10, apres: 120 });
+            { taille: 12, apres: 120 });
+          if (valeur(i.resumeTechnicien)) d.para('Synthèse du technicien', { gras: true, taille: 13, police: 'Poppins', apres: 40 }),
+            d.para(i.resumeTechnicien, { taille: 12, apres: 120 });
+          if (valeur(i.objet)) d.para('Objet / demande du client', { gras: true, taille: 13, police: 'Poppins', apres: 40 }),
+            d.para(i.objet, { taille: 12, apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'evenements') {
           const evs = evenementsDe(i, section);
@@ -1429,17 +1429,17 @@
             const cat = this.etat.categories[ev.categorie || 'INFO'] || { libelle: 'Informatif', couleur: '#475569' };
             const dom = this.etat.domaines[ev.domaine] || { libelle: '—' };
             const morc = [
-              { t: this.L(dom.libelle), gras: true, taille: 11, couleur: '332E72' }
+              { t: this.L(dom.libelle), gras: true, taille: 13, couleur: '332E72', police: 'Poppins' }
             ];
             if (ev.machineNom) {
-              morc.push({ t: '   [' + ev.machineNom + ']', gras: true, taille: 10, couleur: '06BAF2' });
+              morc.push({ t: '   [' + ev.machineNom + ']', gras: true, taille: 12, couleur: '06BAF2' });
             }
             morc.push(
-              { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 10, couleur: hexDocx(cat.couleur) },
-              { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 9, couleur: '94A3B8' }
+              { t: '   [' + this.L(cat.libelle).toUpperCase() + ']', gras: true, taille: 12, couleur: hexDocx(cat.couleur) },
+              { t: heureFr(ev.heure) ? '   ' + heureFr(ev.heure) : '', taille: 11, couleur: '94A3B8' }
             );
             d.para(morc, { avant: 140, apres: 50 });
-            d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 10, apres: 80, encadre: true });
+            d.para(valeur(ev.texte) || '(aucune annotation)', { taille: 12, apres: 80, encadre: true });
 
             const phs = (ev.photos || []).filter(x => x.dataUrl);
             if (phs.length === 1) {
@@ -1458,7 +1458,7 @@
           if (!contenu) continue;
           if (dernierTypeEtaitEvenement) d.sautDePage();
           d.bandeau(section.titre || 'Texte');
-          d.para(contenu, { taille: 10, apres: 120 });
+          d.para(contenu, { taille: 12, apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'pieces') {
           piecesRendues = true;
@@ -1493,7 +1493,7 @@
             ];
           });
           d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
-          d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
+          d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 10.5, couleur: '64748B', apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
           const libres = (i.photosLibres || []).filter(ph => ph.dataUrl);
@@ -1535,7 +1535,7 @@
                 ];
               });
               d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
-              d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 8.5, couleur: '64748B', apres: 120 });
+              d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 10.5, couleur: '64748B', apres: 120 });
               piecesRendues = true;
               dernierTypeEtaitEvenement = false;
             }
@@ -1551,7 +1551,7 @@
           if (tr && tr.actif) {
             mention += " La durée du trajet retour est estimée sur la base du trajet aller constaté.";
           }
-          d.para(this.L(mention), { taille: 9.5, apres: 160, encadre: true });
+          d.para(this.L(mention), { taille: 11.5, apres: 160, encadre: true });
           const cli = i.signatureClient || {};
           const ligAccompagne = (colleguesP1Word.length > 0)
             ? [[{ texte: '' }, { texte: this.L('Accompagné de') + ' : ' + colleguesP1Word.map(c => c.nom + (c.fonction ? ' (' + this.L(c.fonction) + ')' : '')).join(', ') }]]
