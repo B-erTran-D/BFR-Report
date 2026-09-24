@@ -2446,7 +2446,6 @@
       <button class="menu-item" data-a="historique"><span class="ico">${(ICO.folder && ICO.folder(18)) || ''}</span><span>Rapports enregistrés (${liste.length})</span></button>
       <button class="menu-item" data-a="export"><span class="ico">${(ICO.package && ICO.package(18)) || ''}</span><span>Exporter la sauvegarde (JSON)</span></button>
       <button class="menu-item" data-a="import"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Importer une sauvegarde</span></button>
-      <a class="menu-item" href="depot-public.zip" download="depot-public.zip" style="text-decoration:none;color:inherit"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le code source (ZIP)<small>Archive complète du dépôt public</small></span></a>
       <button class="menu-item" data-a="aide"><span class="ico">${(ICO.help && ICO.help(18)) || ''}</span><span>Mode d'emploi</span></button>
       <div class="sticky-note" style="margin-top:8px">${Store.ok ? 'Tout est conservé sur ce téléphone — rien n\'est envoyé sans votre accord.' : 'Stockage local indisponible : pensez à exporter votre travail.'}</div>
       <div style="text-align:center;font-size:11px;color:#64748b;margin:10px 0 4px 0;padding:6px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">Version active : <strong>${esc(ver)}</strong> (23/09/2026)</div>
