@@ -92,32 +92,38 @@ Déroulé de l'intervention, calqué sur la fiche papier :
 Les catégories pilotent directement la mise en forme du PDF : compteurs par gravité en
 synthèse, sections dédiées par catégorie, bandeau d'alerte en tête de liste dans l'application.
 
-### Envoi du rapport
+### Envoi du rapport : deux e-mails distincts
 
-Bouton orange **📤 Envoyer** :
+Bouton **Soumettre le rapport** : les PDF sont générés puis **partagés** (Gmail ou autre
+application, pièces jointes déjà prêtes), en **deux e-mails séparés** :
 
-- le PDF est généré puis **partagé** (Gmail ou autre application, pièce jointe déjà prête) ;
-- choisir les destinataires : le **client** (adresse saisie dans la fiche) et le
-  **responsable SAV** (adresse enregistrée dans les réglages) ;
-- le texte du mail est pré-rempli : synthèse des contrôles, écarts relevés, travaux à prévoir.
+- **1. Mail SAV (français)** : au **responsable SAV** (adresse des réglages), en copie le
+  technicien, **l'assistante SAV** et la copie systématique ; objet et texte en français
+  (modèles personnalisables en Réglages) ; PDF français + PDF traduit joint pour info ;
+- **2. Mail client (langue du client)** : au **client** (adresse saisie dans la fiche),
+  objet et texte **traduits** (modèles fixes) ; PDF traduit + PDF français en référence.
 
-Autres options : **👁️ Aperçu** (contrôle avant envoi), **⬇️ PDF**, **✉️ E-mail** (destinataires
-et texte pré-remplis), **📋 Copier le texte**.
+Chaque envoi est horodaté dans la fiche (« Envoyé le … ✓ »). Si l'e-mail du client n'est
+pas renseigné, le bouton client reste inactif.
+
+Autres options : **👁️ Aperçu** (contrôle avant envoi), **⬇️ PDF / Word** (chaque version),
+**✉️ E-mail** (repli : messagerie avec destinataires et texte pré-remplis, sans pièce jointe),
+**📋 Copier le texte** (version SAV et version client).
 
 ### Rapport dans la langue du client
 
 Dans *Client & machine*, la carte **Langue du client** :
 
 - **case décochée** (client français) → **un seul rapport, en français** : rien ne change ;
-- **case cochée** + choix de la langue → **deux rapports** sont créés et **joints au même
-  mail** (client et responsable SAV dans le même message) : le rapport français
-  (`Rapport_…pdf`) et sa version traduite (`Rapport_…_NL.pdf`, `_EN`, `_DE`, `_ES`, `_IT`, `_PT`).
+- **case cochée** + choix de la langue → **deux rapports** sont créés : le rapport français
+  (`Rapport_…pdf`) et sa version traduite (`Rapport_…_NL.pdf`, `_EN`, `_DE`, `_ES`, `_IT`, `_PT`),
+  **joints aux deux mails** (mail SAV comme mail client).
 
 Ce qui est traduit :
 
-- **tous les libellés** du rapport (titres, tableaux, sections, mentions, pied de page,
-  phrases du mail) par les **packs de langue embarqués** — donc **toujours disponibles,
-  même sans réseau** ;
+- **tous les libellés** du rapport (titres, tableaux, sections, mentions, pied de page)
+  et **l'objet + le corps du mail client** (modèles fixes pré-traduits) par les **packs
+  de langue embarqués** — donc **toujours disponibles, même sans réseau** ;
 - **les textes saisis par le technicien** (objet, travaux, observations des évènements,
   synthèse, légendes, travaux à prévoir) par le **traducteur du téléphone** (Chrome Android,
   gratuit). Les **données du terrain ne sont jamais traduites** : nom du client, adresses,

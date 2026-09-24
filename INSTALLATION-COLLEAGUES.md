@@ -72,8 +72,10 @@ liste importée si nécessaire.
   version traduite. La langue est retenue pour ce client (reproposée la fois suivante).
   Un appui sur **« Préparer la langue sur ce téléphone »**, au bureau ou en Wi-Fi, télécharge
   la langue une bonne fois : ensuite la traduction fonctionne **même sans réseau**.
-- **Soumettre le rapport** : le PDF (+ Word) est créé dans le téléphone, puis envoyé au client
-  et au responsable SAV par mail / partage Android (Gmail). L'envoi demande du réseau ;
+- **Soumettre le rapport** : le PDF (+ Word) est créé dans le téléphone, puis envoyé en
+  **deux e-mails distincts** par mail / partage Android (Gmail) : **1. Mail SAV** (français,
+  au responsable SAV) puis **2. Mail client** (objet et message dans sa langue). Chaque
+  envoi est horodaté (« Envoyé le … ✓ »). L'envoi demande du réseau ;
   **la création du rapport, elle, marche hors connexion**.
 - **Historique** : les rapports sont conservés dans le téléphone (relisibles, réexportables).
 

@@ -78,9 +78,9 @@
     },
     technicien: { prenom: '', nom: '', fonction: 'Technicien SAV', tel: '', email: '', signature: '' },
     mail: {
-      destinataireSAV: '', destinatairesCopie: '',
+      destinataireSAV: '', assistanteSAV: '', destinatairesCopie: '',
       objet: 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}',
-      corps: '', envoyerClient: true, envoyerSAV: true,
+      corps: '',
       messagePartage: 'Bonjour, veuillez trouver ci-joint le rapport d\'intervention N° {{numero}} du {{date}}. Cordialement.'
     },
     impression: {
@@ -1869,6 +1869,32 @@
     return { actif: true, ok: true, rapport: R, code: code, partiel: true, motif: res.motif };
   }
 
+  /* Destinataires des deux mails distincts (décision SAV 09/2026) :
+     — mail SAV : À = responsable SAV ; Cc = technicien + assistante SAV + copie systématique ;
+     — mail client : À = client ; Cc = copie systématique (le technicien n'y figure pas). */
+  function composerDests(qui) {
+    const to = [], cc = [];
+    const ajouter = (liste, adr) => {
+      adr = (adr || '').trim();
+      if (adr && to.indexOf(adr) === -1 && cc.indexOf(adr) === -1) liste.push(adr);
+    };
+    if (qui === 'sav') {
+      ajouter(to, S.mail.destinataireSAV);
+      ajouter(cc, S.technicien && S.technicien.email);
+      ajouter(cc, S.mail.assistanteSAV);
+    } else if (R.client && R.client.email) {
+      ajouter(to, R.client.email);
+    }
+    // Copie systématique : sur les deux mails.
+    if (S.mail.destinatairesCopie) {
+      S.mail.destinatairesCopie.split(/[;,]/).forEach(x => ajouter(cc, x));
+    }
+    return { to: to, cc: cc, toStr: to.join(', '), ccStr: cc.join(', ') };
+  }
+  function destinatairesSAV() { return composerDests('sav'); }
+  function destinatairesClient() { return composerDests('client'); }
+
+  /* Historique : composition combinée des deux mails (conservée pour compatibilité). */
   function destinatairesMail() {
     const to = [];
     const cc = [];
@@ -1888,6 +1914,10 @@
       const tech = S.technicien.email.trim();
       if (tech && cc.indexOf(tech) === -1 && to.indexOf(tech) === -1) cc.push(tech);
     }
+    if (S.mail.assistanteSAV) {
+      const ass = S.mail.assistanteSAV.trim();
+      if (ass && cc.indexOf(ass) === -1 && to.indexOf(ass) === -1) cc.push(ass);
+    }
     if (S.mail.destinatairesCopie) {
       S.mail.destinatairesCopie.split(/[;,]/).forEach(x => {
         const adr = x.trim();
@@ -1906,6 +1936,22 @@
   function destinataires() {
     const d = destinatairesMail();
     return d.to.concat(d.cc);
+  }
+
+  /* Construction RFC 6068 de l'URL mailto : virgule (,) comme séparateur officiel. */
+  function lienMailto(dests, objet, corps) {
+    let url = 'mailto:' + encodeURIComponent(dests.to.join(','));
+    const params = [];
+    if (dests.cc.length) params.push('cc=' + encodeURIComponent(dests.cc.join(',')));
+    params.push('subject=' + encodeURIComponent(objet));
+    params.push('body=' + encodeURIComponent(corps));
+    return url + '?' + params.join('&');
+  }
+
+  /* « Envoyé le 24/09/2026 à 14:32 ✓ » pour les pastilles de suivi d'envoi. */
+  function tamponEnvoi(iso) {
+    if (!iso) return '— non envoyé —';
+    return 'Envoyé le ' + Report.frDate(iso) + ' à ' + Report.heureFr(iso) + ' ✓';
   }
 
   /* ---------- Écran de chargement / attente traduction ---------- */
@@ -2044,50 +2090,83 @@
   }
 
   function feuilleEnvoi(lots) {
-    const dests = destinatairesMail();
     const res = lots.fr.pdf, resWord = lots.fr.word;
     const t = lots.trad;
-    const langueMail = t ? t.code : null;
+    const codeClient = t ? t.code : null;
+    const nomLangueClient = codeClient ? I18N.natif(codeClient) : 'français';
 
-    // Construction RFC 6068 de l'URL mailto : virgule (,) comme séparateur officiel
-    let mailtoUrl = 'mailto:' + encodeURIComponent(dests.to.join(','));
-    const mailtoParams = [];
-    if (dests.cc.length) mailtoParams.push('cc=' + encodeURIComponent(dests.cc.join(',')));
-    mailtoParams.push('subject=' + encodeURIComponent(Report.objetMail(R, S)));
-    mailtoParams.push('body=' + encodeURIComponent(Report.corpsMail(R, S, langueMail)));
-    mailtoUrl += '?' + mailtoParams.join('&');
+    /* Deux mails distincts (décision SAV 09/2026) :
+       1. Mail SAV — en français (modèles des Réglages) ; PDF français + PDF
+          traduit joint pour info.
+       2. Mail client — dans la langue du client (modèles fixes pré-traduits) ;
+          PDF traduit + PDF français en référence.
+       Les deux mails joignent donc les mêmes PDF ; seuls les destinataires
+       et la langue du message changent. */
+    const destsSAV = destinatairesSAV();
+    const destsClient = destinatairesClient();
+    const objetSAV = Report.objetMail(R, S, null);
+    let corpsSAV = Report.corpsMail(R, S, null);
+    const note = codeClient ? Report.noteTraductionJointe(codeClient) : null;
+    if (note) corpsSAV += '\n\n' + note;
+    const objetClient = Report.objetMail(R, S, codeClient);
+    const corpsClient = Report.corpsMail(R, S, codeClient);
+
+    const mailtoSAV = lienMailto(destsSAV, objetSAV, corpsSAV);
+    const mailtoClient = lienMailto(destsClient, objetClient, corpsClient);
+    const fichiers = fichiersEnvoi(lots);
+
+    const aClientMail = !!(R.client && R.client.email && R.client.email.trim());
+
+    const blocDests = (dests, etiqTo, etiqCc) => `
+      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.5">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+          <div><strong style="color:var(--bfr-secondary)">À (${etiqTo}) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.toStr || 'aucun')}</span></div>
+          ${dests.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.toStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier l'adresse">Copier</button>` : ''}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1">
+          <div><strong style="color:var(--bfr-secondary)">Cc (${etiqCc}) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.ccStr || 'aucune')}</span></div>
+          ${dests.ccStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.ccStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier les adresses en copie">Copier</button>` : ''}
+        </div>
+      </div>`;
 
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Envoyer le compte rendu</h3>
-      <p class="sub">Le rapport PDF est prêt pour transmission :</p>
-      ${t ? `<div class="sticky-note">Deux rapports prêts : français + ${esc(I18N.natif(t.code))}${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
+      <p class="sub">Deux e-mails distincts, mêmes pièces jointes (PDF français${t ? ' + PDF ' + esc(nomLangueClient) : ''}) :</p>
+      ${t ? `<div class="sticky-note">Version ${esc(nomLangueClient)} prête${lots.partiel ? ' (commentaires laissés en français : traduction automatique indisponible)' : ''}</div>` : ''}
 
-      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.5">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
-          <div><strong style="color:var(--bfr-secondary)">À (Client) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.toStr || 'aucun')}</span></div>
-          ${dests.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.toStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier l'adresse client">Copier</button>` : ''}
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1">
-          <div><strong style="color:var(--bfr-secondary)">Cc (SAV / Tech) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.ccStr || 'aucune')}</span></div>
-          ${dests.ccStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.ccStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier les adresses en copie">Copier</button>` : ''}
-        </div>
-      </div>
-
-      <button class="menu-item" data-a="partager" style="background:#e0f2fe;border:2px solid var(--bfr-primary)">
+      <h3 style="font-size:14px;margin:10px 0 6px">1. Mail SAV — français</h3>
+      ${blocDests(destsSAV, 'SAV', 'Tech / Assistante')}
+      <button class="menu-item" data-a="partager-sav" style="background:#e0f2fe;border:2px solid var(--bfr-primary)">
         <span class="ico">${(ICO.send && ICO.send(20)) || ''}</span>
-        <span><strong style="font-size:14.5px;color:var(--bfr-secondary)">Envoyer le rapport par e-mail (PDF joint)</strong>
-        <small>Outlook / Gmail — PDF attaché &amp; adresse client copiée dans le presse-papier</small></span>
+        <span><strong style="font-size:14.5px;color:var(--bfr-secondary)">Envoyer au SAV par e-mail (PDF joints)</strong>
+        <small>Outlook / Gmail — PDF attachés &amp; adresse SAV copiée dans le presse-papier</small></span>
       </button>
-
-      <div style="text-align:center;margin:6px 0 10px 0">
-        <a href="${esc(mailtoUrl)}" data-a="mailto" class="small" style="color:var(--bfr-primary);text-decoration:underline;font-size:11.5px">Repli direct : ouvrir l'application e-mail avec À et Cc pré-remplis (sans pièce jointe)</a>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0 10px 0">
+        <a href="${esc(mailtoSAV)}" data-a="mailto-sav" class="small" style="color:var(--bfr-primary);text-decoration:underline;font-size:11.5px">Repli : ouvrir la messagerie avec À et Cc pré-remplis (sans pièce jointe)</a>
+        <span class="small" id="stampSAV" style="color:#64748b;white-space:nowrap">${esc(tamponEnvoi(R.envoyeSAV))}</span>
       </div>
+
+      <h3 style="font-size:14px;margin:10px 0 6px">2. Mail client — ${esc(nomLangueClient)}</h3>
+      ${blocDests(destsClient, 'Client', 'Copie')}
+      ${aClientMail ? `
+      <button class="menu-item" data-a="partager-client" style="background:#e0f2fe;border:2px solid var(--bfr-primary)">
+        <span class="ico">${(ICO.send && ICO.send(20)) || ''}</span>
+        <span><strong style="font-size:14.5px;color:var(--bfr-secondary)">Envoyer au client (${esc(nomLangueClient)})</strong>
+        <small>Objet et message en ${esc(nomLangueClient)} — PDF attachés &amp; adresse client copiée</small></span>
+      </button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0 10px 0">
+        <a href="${esc(mailtoClient)}" data-a="mailto-client" class="small" style="color:var(--bfr-primary);text-decoration:underline;font-size:11.5px">Repli : ouvrir la messagerie avec À et Cc pré-remplis (sans pièce jointe)</a>
+        <span class="small" id="stampClient" style="color:#64748b;white-space:nowrap">${esc(tamponEnvoi(R.envoyeClient))}</span>
+      </div>` : `
+      <div class="sticky-note">Renseignez l'e-mail du client dans la fiche pour activer cet envoi.</div>
+      <div style="margin:6px 0 10px 0"><span class="small" style="color:#64748b">${esc(tamponEnvoi(R.envoyeClient))}</span></div>`}
 
       <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF${t ? ' (français)' : ''}</span></button>
       ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${esc(I18N.natif(t.code))})</span></button>` : ''}
       <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word${t ? ' (français)' : ''}</span></button>
       ${t && t.word ? `<button class="menu-item" data-a="dlwt"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (${esc(I18N.natif(t.code))})</span></button>` : ''}
-      <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du message</span></button>
+      <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du message (SAV, français)</span></button>
+      ${t ? `<button class="menu-item" data-a="copier-client"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du message (${esc(I18N.natif(t.code))})</span></button>` : ''}
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('click', async (e) => {
         const btnCopierDest = e.target.closest('[data-copier-dest]');
@@ -2101,54 +2180,65 @@
         const b = e.target.closest('[data-a]:not([data-a="fermer"])');
         if (!b) return;
         const a = b.dataset.a;
-        if (a === 'partager' || a === 'envoyer-mail') {
-          // Copier automatiquement l'adresse client dans le presse-papier pour faciliter le coller dans A:
-          if (dests.toStr) {
-            copier(dests.toStr);
-          }
-          const fichiers = fichiersEnvoi(lots);
-          const corpsTexte = Report.corpsMail(R, S, langueMail);
-          const objet = Report.objetMail(R, S);
+
+        /* Envoi de l'un des deux mails : partage natif avec les PDF joints. */
+        const envoyer = async (qui) => {
+          const dests = qui === 'sav' ? destsSAV : destsClient;
+          const objet = qui === 'sav' ? objetSAV : objetClient;
+          const corpsTexte = qui === 'sav' ? corpsSAV : corpsClient;
+          const mailto = qui === 'sav' ? mailtoSAV : mailtoClient;
+          const champ = qui === 'sav' ? 'envoyeSAV' : 'envoyeClient';
+          const stampId = qui === 'sav' ? 'stampSAV' : 'stampClient';
+          // Copier automatiquement l'adresse du destinataire pour faciliter le coller dans À :
+          if (dests.toStr) copier(dests.toStr);
           let peutPartagerFichiers = false;
           if (navigator.canShare && fichiers.length) {
-            try { peutPartagerFichiers = navigator.canShare({ files: fichiers }); } catch (e) { peutPartagerFichiers = false; }
+            try { peutPartagerFichiers = navigator.canShare({ files: fichiers }); } catch (err2) { peutPartagerFichiers = false; }
           }
           if (peutPartagerFichiers) {
             try {
-              toast('PDF attaché — Adresse client copiée', 3000);
-              await navigator.share({
-                files: fichiers,
-                title: objet,
-                text: corpsTexte
-              });
-              R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
+              toast('PDF attachés — Adresse copiée', 3000);
+              await navigator.share({ files: fichiers, title: objet, text: corpsTexte });
+              R[champ] = new Date().toISOString();
+              R.statut = 'transmis'; if (codeClient) R.langueEnvoyee = codeClient;
               planifier(); rendreTout();
-              toast('Rapport transmis avec succès');
+              const stamp = panneau.querySelector('#' + stampId);
+              if (stamp) stamp.textContent = tamponEnvoi(R[champ]);
+              toast(qui === 'sav' ? 'Mail SAV transmis avec succès' : 'Mail client transmis avec succès');
             } catch (err) {
               if (err && err.name !== 'AbortError') {
                 console.warn('Erreur lors du partage avec fichiers :', err);
                 toast('Ouverture de votre messagerie…');
-                window.location.href = mailtoUrl;
+                window.location.href = mailto;
               }
             }
           } else {
-            // PC ou navigateur sans Web Share de fichier : on télécharge le PDF et on ouvre mailto
+            // PC ou navigateur sans Web Share de fichier : on télécharge les PDF et on ouvre mailto
             telecharger(res.blob, res.filename);
-            toast('PDF téléchargé — ouverture de votre messagerie…', 3200);
-            setTimeout(() => { window.location.href = mailtoUrl; }, 300);
+            if (t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
+            toast('PDF téléchargés — ouverture de votre messagerie…', 3200);
+            setTimeout(() => { window.location.href = mailto; }, 300);
           }
-        } else if (a === 'mailto') {
+        };
+
+        if (a === 'partager-sav') { envoyer('sav'); return; }
+        if (a === 'partager-client') { envoyer('client'); return; }
+        if (a === 'mailto-sav' || a === 'mailto-client') {
           telecharger(res.blob, res.filename);
+          if (a === 'mailto-client' && t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
           toast('PDF téléchargé : pensez à l\'attacher dans votre messagerie', 3400);
-          setTimeout(() => { window.location.href = mailtoUrl; }, 300);
-        } else if (a === 'dl') telecharger(res.blob, res.filename);
+          setTimeout(() => { window.location.href = (a === 'mailto-sav' ? mailtoSAV : mailtoClient); }, 300);
+        }
+        else if (a === 'dl') telecharger(res.blob, res.filename);
         else if (a === 'dlt' && t) telecharger(t.pdf.blob, t.pdf.filename);
         else if (a === 'dlw' && resWord) telecharger(resWord.blob, resWord.filename);
         else if (a === 'dlwt' && t && t.word) telecharger(t.word.blob, t.word.filename);
-        else if (a === 'copier') copier(Report.corpsMail(R, S, langueMail));
+        else if (a === 'copier') copier(corpsSAV);
+        else if (a === 'copier-client') copier(corpsClient);
       });
     });
   }
+
   function copier(txt) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt).then(() => toast('Copié'), () => toast('Copie impossible'));
@@ -2324,12 +2414,12 @@
       </div>
 
       <div class="card"><h2>Envoi du rapport</h2>
-        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email')}
-        ${f('mail.destinatairesCopie', 'Copie systématique (CC)', 'email')}
-        <div class="agreement"><input type="checkbox" id="chkClient" ${S.mail.envoyerClient ? 'checked' : ''}><label for="chkClient">Envoyer aussi au client</label></div>
-        <div class="agreement"><input type="checkbox" id="chkSAV" ${S.mail.envoyerSAV ? 'checked' : ''}><label for="chkSAV">Envoyer au responsable SAV</label></div>
-        ${f('mail.objet', 'Objet du mail')}
-        <label style="font-size:12.5px;font-weight:600">Corps du mail</label>
+        <p class="small">Deux e-mails distincts sont envoyés depuis la fiche : le <strong>mail SAV</strong> (français, ci-dessous) et le <strong>mail client</strong> (modèles fixes traduits dans sa langue).</p>
+        ${f('mail.destinataireSAV', 'E-mail du responsable SAV (destinataire du mail SAV)', 'email')}
+        ${f('mail.assistanteSAV', 'E-mail de l’assistante SAV (en copie du mail SAV)', 'email')}
+        ${f('mail.destinatairesCopie', 'Copie systématique (CC, sur les 2 mails)', 'email')}
+        ${f('mail.objet', 'Objet du mail SAV (français)')}
+        <label style="font-size:12.5px;font-weight:600">Corps du mail SAV (français)</label>
         <textarea id="setCorps" rows="8" style="width:100%">${esc(S.mail.corps || Report.defaultCorpsMail())}</textarea>
         <p class="small">Variables : {{numero}} {{client}} {{lieu}} {{contact}} {{date}} {{machine}} {{serie}} {{technicien}} {{societe}} {{duree}}</p>
       </div>
@@ -2420,13 +2510,11 @@
         ['societe.lieuLettre', 'societe.siege1', 'societe.siege2',
          'societe.nom', 'societe.sigle', 'societe.sigleSuffixe', 'societe.adresse', 'societe.cpVille', 'societe.tel',
          'societe.email', 'societe.siteWeb', 'societe.siret', 'societe.tva',
-         'mail.destinataireSAV', 'mail.destinatairesCopie', 'mail.objet'
+         'mail.destinataireSAV', 'mail.assistanteSAV', 'mail.destinatairesCopie', 'mail.objet'
         ].forEach(k => { const el = $('[data-sk="' + k + '"]', panneau); if (el) setPath(S, k, el.value.trim()); });
         const saisieCorps = ($('#setCorps', panneau).value || '').trim();
         S.mail.corps = (saisieCorps === Report.defaultCorpsMail().trim()) ? '' : saisieCorps;
         S.impression.mentionClient = $('#setMention', panneau).value;
-        S.mail.envoyerClient = $('#chkClient', panneau).checked;
-        S.mail.envoyerSAV = $('#chkSAV', panneau).checked;
         try {
           const canevas = JSON.parse($('#setCanevas', panneau).value);
           const domaines = JSON.parse($('#setDomaines', panneau).value);
@@ -2669,7 +2757,7 @@
         <li><strong>Démarrer</strong> — appuyez sur « Démarrer l'intervention » en haut : l'heure de début est enregistrée. Pause possible (repas, attente pièce).</li>
         <li><strong>Ajouter un évènement</strong> à chaque constat : <em>domaine</em> (mécanique / électrique / automatisme) → <em>annotation</em> écrite ou dictée → <em>photo</em> annotée au doigt → <em>catégorie</em> (sécurité, urgent, priorité haute/basse, informatif).</li>
         <li><strong>Point client</strong> — en fin d'intervention, expliquez le déroulé puis faites signer le client sur l'écran.</li>
-        <li><strong>Soumettre le rapport</strong> — le PDF (et la version Word) partent par e-mail au client et au responsable SAV. Vos nom et coordonnées figurent dans le bloc de signature.</li>
+        <li><strong>Soumettre le rapport</strong> — deux e-mails distincts : le mail SAV (français, au responsable SAV) et le mail client (objet et message dans sa langue). Les deux joignent le PDF français et le PDF traduit. Vos nom et coordonnées figurent dans le bloc de signature.</li>
       </ol>
       <div class="sep"></div>
       <p class="small"><strong>Client étranger :</strong> dans <em>Client &amp; machine</em>, cochez « Traduire le rapport dans la langue du client » et choisissez la langue (anglais, allemand, néerlandais, espagnol, italien, portugais). Le mail part alors avec <strong>deux rapports</strong> : le français et la version traduite. La langue est retenue pour ce client. Un appui sur « Préparer la langue sur ce téléphone » (au bureau, en Wi-Fi) rend la traduction disponible même hors connexion.</p>
@@ -3404,6 +3492,7 @@
     get rapport() { return R; }, get reglages() { return S; },
     pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
     destinatairesMail: destinatairesMail, destinataires: destinataires,
+    destinatairesSAV: destinatairesSAV, destinatairesClient: destinatairesClient,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
     apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,

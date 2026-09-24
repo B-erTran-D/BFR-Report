@@ -1631,22 +1631,43 @@
   function appliquer(tpl, vars) {
     return String(tpl || '').replace(/\{\{(\w+)\}\}/g, function (m, k) { return vars[k] !== undefined ? vars[k] : m; });
   }
-  function objetMail(i, s) {
+  /* Deux mails distincts (décision SAV 09/2026) :
+     — mail SAV : objet/corps des Réglages, en français (langue nulle ou 'fr') ;
+     — mail client : modèles fixes pré-traduits de langues.js (option A), dans
+       la langue du client, y compris l'objet et le corps. Les {{variables}}
+       sont remplies avec les données brutes, jamais traduites. */
+  function modeleMailClient(langue) {
+    if (!langue || langue === 'fr' || !global.I18N || !global.I18N.modeleMail) return null;
+    return global.I18N.modeleMail(langue);
+  }
+  function objetMail(i, s, langue) {
+    const modele = modeleMailClient(langue);
+    if (modele) return appliquer(modele.objet, variables(i, s));
     return appliquer((s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}', variables(i, s));
   }
   function corpsMail(i, s, langue) {
+    const modele = modeleMailClient(langue);
+    const vars = variables(i, s);
+    if (modele) {
+      return appliquer(modele.corps, vars)
+        .replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
+    }
     let tpl = (s && s.mail && s.mail.corps) || '';
     if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1 || tpl.indexOf('Cordialement') !== -1 || tpl.indexOf('{{technicien}}') !== -1) {
       tpl = defaultCorpsMail();
     }
-    const vars = variables(i, s);
     let corps = appliquer(tpl, vars);
     // Nettoyer les parenthèses vides si le lieu n'est pas renseigné (ex: "CLIENT () — MACHINE" -> "CLIENT — MACHINE")
     corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
-    /* Rapport envoyé en deux langues : on le dit au client, dans sa langue,
-       à la fin du message (le corps du mail reste en français pour le SAV). */
-    const phrase = (langue && langue !== 'fr' && global.I18N) ? global.I18N.phraseTraduction(langue) : null;
-    return phrase ? corps + '\n\n' + phrase : corps;
+    return corps;
+  }
+  /* Note ajoutée au mail SAV (français) quand le rapport traduit y est joint
+     pour information : « La version anglaise du rapport est également jointe
+     pour information. » (null si pas de version traduite). */
+  const ADJECTIF_LANGUE = { en: 'anglaise', de: 'allemande', nl: 'néerlandaise', es: 'espagnole', it: 'italienne', pt: 'portugaise' };
+  function noteTraductionJointe(code) {
+    const adj = ADJECTIF_LANGUE[code];
+    return adj ? 'La version ' + adj + ' du rapport est également jointe pour information.' : null;
   }
   function defaultCorpsMail() {
     return [
@@ -1677,7 +1698,7 @@
     etat: etat, evenementsDe: evenementsDe, dureeMs: dureeMs, dureeTotale: dureeTotale, formatDuree: formatDuree,
     dureeDecimale: dureeDecimale, calculerTrajet: calculerTrajet, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
     listeMachines: listeMachines, listeTechniciens: listeTechniciens,
-    objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
+    objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, noteTraductionJointe: noteTraductionJointe, variables: variables,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
 })(window);

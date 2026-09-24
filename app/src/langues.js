@@ -573,6 +573,99 @@
     pt: 'Em anexo o relatório de intervenção em francês e a respetiva versão em português.'
   };
 
+  /* --- Modèles de mail client pré-traduits (décision SAV 09/2026) ---
+     Le mail adressé au client utilise ces modèles fixes : mêmes {{variables}}
+     que le modèle français (remplies avec les données brutes, non traduites :
+     un nom de client ou de ville ne doit jamais être traduit).
+     La personnalisation des Réglages (objet/corps) ne s'applique qu'au mail
+     SAV, en français. */
+  const MODELES_MAIL = {
+    en: {
+      objet: 'Service report No. {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Hello,',
+        '',
+        'Please find attached service report No. {{numero}} dated {{date}}, concerning {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Time spent on site: {{duree}}.',
+        '',
+        'The full report, with details of the work carried out, technical readings, parts and signatures, is attached to this message in English, together with the French reference version.',
+        '',
+        'We remain at your entire disposal for any further information.'
+      ].join('\n')
+    },
+    de: {
+      objet: 'Servicebericht Nr. {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Guten Tag,',
+        '',
+        'anbei erhalten Sie den Servicebericht Nr. {{numero}} vom {{date}} für {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Arbeitszeit vor Ort: {{duree}}.',
+        '',
+        'Der vollständige Bericht mit Details zu den durchgeführten Arbeiten, technischen Messwerten, Ersatzteilen und Unterschriften liegt dieser Nachricht auf Deutsch sowie als französische Referenzversion bei.',
+        '',
+        'Für Rückfragen stehen wir Ihnen gerne zur Verfügung.'
+      ].join('\n')
+    },
+    nl: {
+      objet: 'Servicerapport nr. {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Goedendag,',
+        '',
+        'In bijlage vindt u servicerapport nr. {{numero}} van {{date}} voor {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Tijd op locatie: {{duree}}.',
+        '',
+        'Het volledige rapport, met details van de uitgevoerde werkzaamheden, technische metingen, onderdelen en handtekeningen, is bij dit bericht gevoegd in het Nederlands, samen met de Franse referentieversie.',
+        '',
+        'Voor vragen staan wij volledig tot uw beschikking.'
+      ].join('\n')
+    },
+    es: {
+      objet: 'Informe de intervención n.º {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Buenos días,',
+        '',
+        'Adjunto encontrará el informe de intervención n.º {{numero}} del {{date}}, relativo a {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Tiempo en sitio: {{duree}}.',
+        '',
+        'El informe completo, con el detalle de los trabajos realizados, las lecturas técnicas, las piezas y las firmas, se adjunta a este mensaje en español, junto con la versión francesa de referencia.',
+        '',
+        'Quedamos a su entera disposición para cualquier información adicional.'
+      ].join('\n')
+    },
+    it: {
+      objet: 'Rapporto di intervento n. {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Buongiorno,',
+        '',
+        'In allegato il rapporto di intervento n. {{numero}} del {{date}}, relativo a {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Tempo in loco: {{duree}}.',
+        '',
+        'Il rapporto completo, con il dettaglio dei lavori eseguiti, dei rilievi tecnici, dei ricambi e delle firme, è allegato al presente messaggio in italiano, insieme alla versione francese di riferimento.',
+        '',
+        'Restiamo a completa disposizione per ogni ulteriore informazione.'
+      ].join('\n')
+    },
+    pt: {
+      objet: 'Relatório de intervenção n.º {{numero}} — {{client}} — {{date}}',
+      corps: [
+        'Bom dia,',
+        '',
+        'Em anexo o relatório de intervenção n.º {{numero}} de {{date}}, relativo a {{client}} ({{lieu}}) — {{machine}}.',
+        '',
+        'Tempo no local: {{duree}}.',
+        '',
+        'O relatório completo, com o detalhe dos trabalhos realizados, das leituras técnicas, das peças e das assinaturas, segue anexo a esta mensagem em português, juntamente com a versão francesa de referência.',
+        '',
+        'Estamos inteiramente à disposição para qualquer informação adicional.'
+      ].join('\n')
+    }
+  };
+
   /* ===================== Moteur de traduction ========================== */
   function normaliser(txt) {
     return String(txt == null ? '' : txt)
@@ -669,6 +762,11 @@
     /* Phrase bilingue pour le mail (null si la langue n'en a pas). */
     phraseTraduction: function (code) {
       return PHRASES[code] || null;
+    },
+
+    /* Modèle de mail client pré-traduit ({ objet, corps }) ou null. */
+    modeleMail: function (code) {
+      return MODELES_MAIL[code] || null;
     }
   };
 
