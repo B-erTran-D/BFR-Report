@@ -147,6 +147,12 @@
     } catch (_) {}
   }
 
+  // Assainissement : strictement les 3 icônes officielles BFR
+  if (!['opt1', 'opt2', 'opt3'].includes(S.iconeApp)) {
+    S.iconeApp = 'opt1';
+    Store.set(K.settings, S);
+  }
+
   /* ---------- Gestion de l'icône de l'application (Écran d'accueil) ---------- */
   function appliquerIconeApp(id) {
     if (typeof document === 'undefined') return;
@@ -3375,6 +3381,20 @@
           setTimeout(() => window.location.reload(), 800);
         }
       });
+
+      // Détection proactive et anti-cache d'une nouvelle version sur GitHub Pages
+      if (typeof fetch !== 'undefined') {
+        fetch('sw.js?t=' + Date.now(), { cache: 'no-store' })
+          .then((rep) => rep && rep.ok ? rep.text() : '')
+          .then((code) => {
+            const match = code.match(/CACHE\s*=\s*'bfr-fiche-sav-([a-f0-9]+)'/);
+            if (match && match[1] && window.SAV_VERSION && match[1] !== window.SAV_VERSION) {
+              toast('Nouvelle version BFR détectée : mise à niveau...', 2200);
+              setTimeout(() => actualiserApp(), 1200);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
