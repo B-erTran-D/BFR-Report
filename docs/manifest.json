@@ -1,29 +1,30 @@
 {
-  "name": "Fiche d'intervention S.A.V. — BFR Systems",
-  "short_name": "Fiche SAV",
-  "description": "Saisie, signature du client et envoi des fiches d'intervention S.A.V. Fonctionne hors connexion.",
+  "id": "bfr-sav-v3-bleu-petrole",
+  "name": "BFR SAV — Compte rendu d'intervention",
+  "short_name": "BFR SAV",
+  "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f4f6f9",
+  "background_color": "#ffffff",
   "theme_color": "#332e72",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-opt1-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-opt1-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-opt1-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

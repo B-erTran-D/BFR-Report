@@ -4,7 +4,7 @@
   "short_name": "BFR SAV",
   "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
   "lang": "fr",
-  "start_url": "./",
+  "start_url": "./?icone=opt1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

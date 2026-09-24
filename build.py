@@ -87,8 +87,6 @@ def lire(p):
 
 
 # Liste clients : embarquée par défaut (usage hors connexion immédiat).
-# `python3 build.py --sans-liste` produit une application SANS la liste : les
-# techniciens la chargent alors depuis le classeur via ☰ → Réglages → Liste clients.
 SANS_LISTE = '--sans-liste' in sys.argv
 
 
@@ -138,13 +136,20 @@ SW = """/* Service worker — application hors connexion.
    Le nom du cache contient l'empreinte du build : chaque publication remplace
    la précédente et vide les anciens caches. */
 const CACHE = 'bfr-fiche-sav-__VERSION__';
-const FICHIERS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './favicon.png', './apple-touch-icon.png', './icon-opt1-192.png', './icon-opt1-512.png', './icon-opt2-192.png', './icon-opt2-512.png', './icon-opt3-192.png', './icon-opt3-512.png'];
+const FICHIERS = [
+  './', './index.html',
+  './manifest.json', './manifest-opt1.json', './manifest-opt2.json', './manifest-opt3.json',
+  './icon-192.png', './icon-512.png', './favicon.png', './apple-touch-icon.png',
+  './icon-opt1-192.png', './icon-opt1-512.png',
+  './icon-opt2-192.png', './icon-opt2-512.png',
+  './icon-opt3-192.png', './icon-opt3-512.png'
+];
 const DELAI_RESEAU = 3500;
 
 const delai = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 function servir(requete, estPage) {
-  const optionsFetch = estPage ? { cache: 'no-cache' } : {};
+  const optionsFetch = (estPage || requete.url.includes('manifest')) ? { cache: 'no-cache' } : {};
   const reseau = fetch(requete, optionsFetch).then((rep) => {
     if (rep && rep.ok) {
       const copie = rep.clone();
@@ -183,6 +188,15 @@ self.addEventListener('message', (e) => {
       caches.keys().then((noms) => Promise.all(noms.map((n) => caches.delete(n))))
         .then(() => self.clients.claim())
     );
+  } else if (e.data && e.data.action === 'changerIcone') {
+    e.waitUntil(
+      caches.open(CACHE).then(async (c) => {
+        const cles = await c.keys();
+        await Promise.all(
+          cles.filter(req => req.url.includes('manifest') || req.url.includes('icon')).map(req => c.delete(req))
+        );
+      })
+    );
   }
 });
 
@@ -193,22 +207,79 @@ self.addEventListener('fetch', (e) => {
 });
 """
 
-MANIFEST = {
-    "name": "Fiche d'intervention S.A.V. — BFR Systems",
-    "short_name": "Fiche SAV",
-    "description": "Saisie, signature du client et envoi des fiches d'intervention S.A.V. Fonctionne hors connexion.",
-    "lang": "fr",
-    "start_url": "./",
-    "scope": "./",
-    "display": "standalone",
-    "orientation": "portrait",
-    "background_color": "#f4f6f9",
-    "theme_color": "#332e72",
-    "icons": [
-        {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-        {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-        {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
-    ]
+MANIFESTS = {
+    'manifest.json': {
+        "id": "bfr-sav-v3-bleu-petrole",
+        "name": "BFR SAV — Compte rendu d'intervention",
+        "short_name": "BFR SAV",
+        "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
+        "lang": "fr",
+        "start_url": "./",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#ffffff",
+        "theme_color": "#332e72",
+        "icons": [
+            {"src": "icon-opt1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        ]
+    },
+    'manifest-opt1.json': {
+        "id": "bfr-sav-v3-bleu-petrole",
+        "name": "BFR SAV — Compte rendu d'intervention",
+        "short_name": "BFR SAV",
+        "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
+        "lang": "fr",
+        "start_url": "./?icone=opt1",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#ffffff",
+        "theme_color": "#332e72",
+        "icons": [
+            {"src": "icon-opt1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        ]
+    },
+    'manifest-opt2.json': {
+        "id": "bfr-sav-v2-blanc-glace",
+        "name": "BFR SAV — Compte rendu d'intervention",
+        "short_name": "BFR SAV",
+        "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
+        "lang": "fr",
+        "start_url": "./?icone=opt2",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#ffffff",
+        "theme_color": "#332e72",
+        "icons": [
+            {"src": "icon-opt2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        ]
+    },
+    'manifest-opt3.json': {
+        "id": "bfr-sav-v1-cyan-clair",
+        "name": "BFR SAV — Compte rendu d'intervention",
+        "short_name": "BFR SAV",
+        "description": "Saisie, signature du client et envoi des comptes rendus d'intervention SAV BFR Systems. Fonctionne hors connexion.",
+        "lang": "fr",
+        "start_url": "./?icone=opt3",
+        "scope": "./",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#ffffff",
+        "theme_color": "#332e72",
+        "icons": [
+            {"src": "icon-opt3-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt3-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "icon-opt3-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        ]
+    }
 }
 
 
@@ -235,7 +306,6 @@ def main():
     html_pwa = injecter_version(construire_single_file(avec_pwa=True), version)
     with open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html_pwa)
-    # Également à la racine (au cas où GitHub Pages est configuré sur la racine / au lieu de /docs)
     with open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html_pwa)
 
@@ -248,10 +318,11 @@ def main():
     with open(os.path.join(ROOT, 'sw.js'), 'w', encoding='utf-8') as f:
         f.write(sw_code)
 
-    with open(os.path.join(SITE, 'manifest.json'), 'w', encoding='utf-8') as f:
-        json.dump(MANIFEST, f, ensure_ascii=False, indent=2)
-    with open(os.path.join(ROOT, 'manifest.json'), 'w', encoding='utf-8') as f:
-        json.dump(MANIFEST, f, ensure_ascii=False, indent=2)
+    for fname, mdata in MANIFESTS.items():
+        with open(os.path.join(SITE, fname), 'w', encoding='utf-8') as f:
+            json.dump(mdata, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(ROOT, fname), 'w', encoding='utf-8') as f:
+            json.dump(mdata, f, ensure_ascii=False, indent=2)
 
     # fichier .nojekyll : GitHub Pages ne doit pas filtrer les fichiers
     open(os.path.join(SITE, '.nojekyll'), 'w').close()

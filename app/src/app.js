@@ -120,44 +120,75 @@
   }
   if (!S.canevas) S.canevas = Report.canevasDefaut();
 
+  /* Capture de l'événement d'installation PWA Android */
+  let deferredInstallPrompt = null;
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btns = document.querySelectorAll('[data-a="installer-pwa"]');
+      btns.forEach(b => { b.style.display = 'block'; });
+    });
+  }
+
+  // Détection du paramètre URL ?icone= pour synchroniser l'icône lors du lancement depuis un raccourci
+  if (typeof window !== 'undefined' && window.location && window.location.search) {
+    try {
+      const uParams = new URLSearchParams(window.location.search);
+      const urlIcone = uParams.get('icone');
+      if (urlIcone) {
+        const options = window.BFR_ICONES_OPTIONS || [];
+        const optMatch = options.find(o => o.id === urlIcone || o.version === urlIcone || o.alias === urlIcone);
+        if (optMatch) {
+          S.iconeApp = optMatch.id;
+          Store.set(K.settings, S);
+        }
+      }
+    } catch (_) {}
+  }
+
   /* ---------- Gestion de l'icône de l'application (Écran d'accueil) ---------- */
   function appliquerIconeApp(id) {
     if (typeof document === 'undefined') return;
     const options = (typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || [];
-    const opt = options.find(o => o.id === id) || options[0];
+    const opt = options.find(o => o.id === id || o.version === id || o.alias === id) || options[0];
     if (!opt) return;
 
     try {
-      // Mise à jour de la favicon et de l'icône tactile Apple
-      const fav = document.querySelector('link[rel="icon"]');
-      if (fav) fav.href = opt.src192 || opt.dataUri;
-      const apple = document.querySelector('link[rel="apple-touch-icon"]');
-      if (apple) apple.href = opt.src192 || opt.dataUri;
-
-      // Mise à jour dynamique du manifest PWA pour installation Android
-      const manifestData = {
-        name: "BFR SAV — Compte rendu d'intervention",
-        short_name: "BFR SAV",
-        start_url: "./",
-        display: "standalone",
-        background_color: "#ffffff",
-        theme_color: "#332e72",
-        lang: "fr",
-        icons: [
-          { src: opt.src192 || "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: opt.src512 || "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: opt.src512 || "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
-        ]
-      };
-      if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
-        const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-        let link = document.querySelector('link[rel="manifest"]');
-        if (!link) {
-          link = document.createElement('link');
-          link.rel = 'manifest';
-          document.head.appendChild(link);
+      // 1. Mise à jour de la favicon et de l'icône tactile Apple
+      const iconeUrl = opt.src192 || opt.dataUri;
+      ['link[rel="icon"]', 'link[rel="shortcut icon"]'].forEach(sel => {
+        let el = document.querySelector(sel);
+        if (!el) {
+          el = document.createElement('link');
+          el.rel = 'icon';
+          document.head.appendChild(el);
         }
-        link.href = URL.createObjectURL(blob);
+        el.href = iconeUrl;
+      });
+      const apple = document.querySelector('link[rel="apple-touch-icon"]');
+      if (apple) apple.href = iconeUrl;
+
+      // 2. Remplacement dynamique et forcé du manifest PWA (URL physique versionnée, sans blob: non supporté sur Android)
+      const manifestFichier = opt.manifest || ('manifest-' + opt.id + '.json');
+      const manifestUrl = manifestFichier + '?v=' + Date.now();
+      const ancienLien = document.querySelector('link[rel="manifest"]');
+      const nouveauLien = document.createElement('link');
+      nouveauLien.rel = 'manifest';
+      nouveauLien.href = manifestUrl;
+      if (ancienLien && ancienLien.parentNode) {
+        ancienLien.parentNode.replaceChild(nouveauLien, ancienLien);
+      } else {
+        document.head.appendChild(nouveauLien);
+      }
+
+      // 3. Notification au Service Worker pour actualiser le cache
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          action: 'changerIcone',
+          iconeId: opt.id,
+          manifest: manifestFichier
+        });
       }
     } catch (_) {}
   }
@@ -2409,6 +2440,7 @@
   /* ===================== Sélecteur d'icône d'application ===================== */
   function feuilleIcones() {
     const options = (typeof window !== 'undefined' && window.BFR_ICONES_OPTIONS) || [];
+    const canPrompt = !!deferredInstallPrompt;
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Icône de l'application</h3>
       <p class="sub">Choisissez l'icône BFR affichée sur votre smartphone (écran d'accueil et navigateur) :</p>
@@ -2429,11 +2461,23 @@
           `;
         }).join('')}
       </div>
-      <div class="sticky-note" style="margin-top:4px">
-        <strong>💡 Raccourci écran d'accueil Android :</strong><br>
-        Une fois l'icône choisie, si le raccourci sur votre écran d'accueil ne se met pas à jour tout de suite :
-        supprimez le raccourci actuel, puis touchez le menu <strong>⋮ de Chrome → "Ajouter à l'écran d'accueil"</strong> (ou "Installer l'application").
+
+      <div class="sticky-note" style="margin-top:8px; border-left:4px solid #06baf2; background:rgba(6,186,242,0.08); padding:10px 12px; border-radius:6px;">
+        <strong style="color:#00a5bb; font-size:13px;">✨ Prise en charge immédiate (Zéro désinstallation requise) :</strong>
+        <p style="margin:5px 0 0 0; font-size:12px; line-height:1.45; color:#1e293b;">
+          Chaque icône dispose de son propre profil d'installation dédié. Vous n'avez <strong>jamais besoin de désinstaller l'application</strong> pour changer d'icône :
+        </p>
+        <ul style="margin:6px 0 0 16px; padding:0; font-size:12px; line-height:1.45; color:#1e293b;">
+          <li>Sélectionnez votre icône ci-dessus.</li>
+          <li>Touchez <strong>« Installer avec cette icône »</strong> ci-dessous (ou ouvrez le menu <strong>⋮ de Chrome → "Ajouter à l'écran d'accueil"</strong>).</li>
+          <li>Le nouveau raccourci est créé directement avec l'icône choisie.</li>
+        </ul>
       </div>
+
+      <button class="btn btn-primary wide" data-a="installer-pwa" style="margin-top:12px; display:${canPrompt ? 'block' : 'none'}; background:#06baf2; color:#fff; font-weight:600;">
+        📲 Installer avec cette icône sur l'écran d'accueil
+      </button>
+
       <button class="btn wide" style="margin-top:12px" data-a="fermer">Fermer</button>
     </div>`, (panneau) => {
       panneau.addEventListener('click', (e) => {
@@ -2462,6 +2506,23 @@
           });
           const opt = options.find(o => o.id === id);
           toast('Icône sélectionnée : ' + (opt ? opt.titre : id));
+          return;
+        }
+
+        if (e.target.closest('[data-a="installer-pwa"]')) {
+          if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            deferredInstallPrompt.userChoice.then((choice) => {
+              if (choice && choice.outcome === 'accepted') {
+                toast('Icône ajoutée à votre écran d\'accueil !');
+              }
+              deferredInstallPrompt = null;
+              const btn = panneau.querySelector('[data-a="installer-pwa"]');
+              if (btn) btn.style.display = 'none';
+            });
+          } else {
+            toast('Dans Chrome : touchez ⋮ puis « Ajouter à l\'écran d\'accueil »');
+          }
         }
       });
     });
