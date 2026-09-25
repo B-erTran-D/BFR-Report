@@ -7983,7 +7983,8 @@ ul.liste li { margin-bottom: 6px; }
           <button class="btn ${this.ecoute ? 'or' : 'ghost'}" data-a="dictee">${icoMic} ${this.ecoute ? 'Arrêter la dictée' : 'Dicter'}</button>
           <button class="btn ghost" data-a="relire" ${ev.texte ? '' : 'disabled'}>${icoRelire} Relire</button>
         </div>
-        ${dispo ? '' : '<p class="assistant-note">Dictée indisponible sur ce navigateur : utilisez la dictée vocale de votre clavier Android.</p>'}`;
+        <p class="assistant-note" style="margin-top:8px;font-size:12px;color:#64748b">💡 <em>Astuce : Vous pouvez aussi toucher le micro 🎙️ de votre clavier tactile pour dicter directement.</em></p>
+        ${dispo ? '' : '<p class="assistant-note">Dictée intégrée indisponible sur ce navigateur : utilisez le micro de votre clavier Android.</p>'}`;
     }
 
     etapePhoto() {
@@ -8116,22 +8117,79 @@ ul.liste li { margin-bottom: 6px; }
       rec.continuous = true;
       rec.interimResults = true;
       const self = this;
-      const champ = this.corps.querySelector('#evTexte');
-      let base = (self.ev.texte || '') ? self.ev.texte.replace(/\s+$/, '') + ' ' : '';
+      // Texte initial présent avant le début de cette session de dictée (immuable pendant la session)
+      const baseInitiale = (self.ev.texte || '').trim();
+
       rec.onresult = function (e) {
-        let final = '', provisoire = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) final += t; else provisoire += t;
+        if (!e || !e.results) return;
+        let finalSession = '';
+        let interimSession = '';
+        for (let i = 0; i < e.results.length; i++) {
+          const res = e.results[i];
+          const morceau = (res[0] && res[0].transcript) || '';
+          if (res.isFinal) {
+            finalSession += (finalSession ? ' ' : '') + morceau.trim();
+          } else {
+            interimSession += (interimSession ? ' ' : '') + morceau.trim();
+          }
         }
-        if (final) base += final;
-        self.ev.texte = base + provisoire;
-        if (champ) { champ.value = self.ev.texte; champ.scrollTop = champ.scrollHeight; }
+
+        // Nettoyage de la session en cours (séparation nette des mots)
+        let sessionTexte = finalSession;
+        if (interimSession) {
+          sessionTexte = (sessionTexte ? sessionTexte + ' ' : '') + interimSession;
+        }
+        sessionTexte = sessionTexte.trim();
+
+        // Ponctuation vocale en français si dictée
+        sessionTexte = sessionTexte
+          .replace(/\bvirgule\b/gi, ',')
+          .replace(/\bpoint à la ligne\b/gi, '.\n')
+          .replace(/\bà la ligne\b/gi, '\n')
+          .replace(/\bretour à la ligne\b/gi, '\n')
+          .replace(/\bpoint d'interrogation\b/gi, '?')
+          .replace(/\bpoint d'exclamation\b/gi, '!')
+          .replace(/\bdeux points\b/gi, ':')
+          .replace(/\bpoint\b/gi, '.')
+          .replace(/\s+([.,;:!?])/g, '$1');
+
+        let texteTotal = baseInitiale;
+        if (sessionTexte) {
+          if (texteTotal) {
+            const sep = /\n$/.test(texteTotal) ? '' : ' ';
+            texteTotal += sep + sessionTexte;
+          } else {
+            texteTotal = sessionTexte;
+          }
+        }
+
+        self.ev.texte = texteTotal;
+        const champ = (self.corps && self.corps.querySelector('#evTexte')) || document.querySelector('#evTexte');
+        if (champ) {
+          champ.value = texteTotal;
+          champ.scrollTop = champ.scrollHeight;
+        }
         self.maj();
       };
-      rec.onerror = function () { self.arreterDictee(); self.rendre(); };
-      rec.onend = function () { if (self.ecoute) { self.ecoute = false; self.rendre(); } };
-      try { rec.start(); } catch (e) { self.toast('Micro indisponible'); return; }
+
+      rec.onerror = function (err) {
+        if (err && err.error === 'no-speech') return;
+        self.arreterDictee();
+        self.rendre();
+      };
+      rec.onend = function () {
+        if (self.ecoute) {
+          self.ecoute = false;
+          self.rendre();
+        }
+      };
+
+      try {
+        rec.start();
+      } catch (e) {
+        self.toast('Micro indisponible');
+        return;
+      }
       this.reconnaissance = rec;
       this.ecoute = true;
       this.toast('Dictée en cours… parlez');
@@ -12371,5 +12429,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="958cecd5fe";window.SAV_DATE="25/09/2026";</script></body>
+<script>window.SAV_VERSION="7c7f486f57";window.SAV_DATE="25/09/2026";</script></body>
 </html>
