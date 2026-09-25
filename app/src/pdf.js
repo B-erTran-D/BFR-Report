@@ -438,7 +438,10 @@
   const POLICE_CSS = (font, size, echelle) => {
     const gras = font === 'F2' || font === 'F4';
     const italique = font === 'F3' || font === 'F4';
-    return (italique ? 'italic ' : '') + (gras ? '700 ' : '') + (size * echelle) + 'px Helvetica, Arial, sans-serif';
+    const family = gras
+      ? '"Poppins", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      : '"Open Sans", "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    return (italique ? 'italic ' : '') + (gras ? '700 ' : '400 ') + (size * echelle) + 'px ' + family;
   };
 
   /** Dessine un document d'aperçu sur des canvas (un par page).

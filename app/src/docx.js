@@ -153,6 +153,8 @@
       morceaux.forEach(function (m) {
         if (typeof m === 'string') m = { t: m };
         const rpr = [];
+        const font = m.font || opt.font;
+        if (font) rpr.push(`<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:cs="${font}"/>`);
         if (m.gras || opt.gras) rpr.push('<w:b/>');
         if (m.italique || opt.italique) rpr.push('<w:i/>');
         if (m.mono) rpr.push('<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>');
@@ -169,11 +171,12 @@
     }
 
     titre(texte, niveau) {
-      const tailles = { 1: 20, 2: 14, 3: 11.5 };
+      const tailles = { 1: 22, 2: 15, 3: 12.5 };
       const couleurs = { 1: '0B3D91', 2: '0B3D91', 3: '334155' };
       niveau = niveau || 1;
       return this.para(texte, {
-        gras: true, taille: tailles[niveau] || 12, couleur: couleurs[niveau] || '334155',
+        font: 'Poppins',
+        gras: true, taille: tailles[niveau] || 12.5, couleur: couleurs[niveau] || '334155',
         avant: niveau === 1 ? 0 : 240, apres: 120
       });
     }
@@ -190,16 +193,16 @@
         '<w:bottom w:val="single" w:sz="4" w:color="' + fond + '"/>' +
         '<w:right w:val="single" w:sz="4" w:color="' + fond + '"/></w:pBdr>' +
         `<w:shd w:val="clear" w:fill="${fond}"/><w:jc w:val="left"/></w:pPr>` +
-        `<w:r><w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr>` +
+        `<w:r><w:rPr><w:rFonts w:ascii="Poppins" w:hAnsi="Poppins" w:cs="Poppins"/><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr>` +
         `<w:t xml:space="preserve">${x(texte)}</w:t></w:r>` +
-        (droit ? `<w:r><w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="17"/></w:rPr>` +
+        (droit ? `<w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="FFFFFF"/><w:sz w:val="18"/></w:rPr>` +
           `<w:t xml:space="preserve">  ${x(droit)}</w:t></w:r>` : '') + '</w:p>');
       return this;
     }
 
     /** Titre du document, comme dans le modèle : cyan BFR, gras, centré. */
     grandTitre(texte, taille) {
-      return this.para(texte, { gras: true, taille: taille || 30, couleur: '06BAF2', align: 'center', apres: 60 });
+      return this.para(texte, { font: 'Poppins', gras: true, taille: taille || 30, couleur: '06BAF2', align: 'center', apres: 60 });
     }
 
     tableau(lignes, opt) {
@@ -314,7 +317,7 @@
 
       this.corps.push(`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="40" w:after="${opt.legende ? 0 : 120}"/></w:pPr>` +
         '<w:r>' + this.dessin(im, Math.round(cm * CM), Math.round(cmH * CM), im.nom, im.idDessin, im.rid) + '</w:r></w:p>');
-      if (opt.legende) this.para(opt.legende, { taille: 8.5, couleur: '64748B', align: 'center', apres: 160, italique: true });
+      if (opt.legende) this.para(opt.legende, { font: 'Open Sans', taille: 9.5, couleur: '64748B', align: 'center', apres: 160, italique: true });
       return this;
     }
 
@@ -340,7 +343,7 @@
         '<w:qFormat/></w:style>' +
         '<w:style w:type="paragraph" w:styleId="Bandeau"><w:name w:val="Bandeau"/>' +
         '<w:basedOn w:val="Normal"/><w:pPr><w:keepNext/></w:pPr>' +
-        '<w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr></w:style>' +
+        '<w:rPr><w:rFonts w:ascii="Poppins" w:hAnsi="Poppins" w:cs="Poppins"/><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr></w:style>' +
         '</w:styles>';
     }
 
@@ -364,13 +367,13 @@
       const lignes = (this.pied || []).filter(Boolean);
       if (!lignes.length && this.numeroPage === false) return null;
       const paragraphes = lignes.map((l, i) => '<w:p><w:pPr><w:spacing w:before="0" w:after="' + (i === lignes.length - 1 ? 0 : 20) + '"/><w:jc w:val="center"/></w:pPr>' +
-        `<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">${x(l)}</w:t></w:r></w:p>`).join('');
+        `<w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="808080"/><w:sz w:val="17"/></w:rPr><w:t xml:space="preserve">${x(l)}</w:t></w:r></w:p>`).join('');
       const pageNum = this.numeroPage
-        ? '<w:p><w:pPr><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr>' +
+        ? '<w:p><w:pPr><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="808080"/><w:sz w:val="17"/></w:rPr>' +
           '<w:t xml:space="preserve">Page </w:t></w:r>' +
-          '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
-          '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> / </w:t></w:r>' +
-          '<w:fldSimple w:instr=" NUMPAGES "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+          '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="808080"/><w:sz w:val="17"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+          '<w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="808080"/><w:sz w:val="17"/></w:rPr><w:t xml:space="preserve"> / </w:t></w:r>' +
+          '<w:fldSimple w:instr=" NUMPAGES "><w:r><w:rPr><w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans"/><w:color w:val="808080"/><w:sz w:val="17"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
           '</w:p>'
         : '';
       return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
