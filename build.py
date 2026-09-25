@@ -5,6 +5,7 @@ import struct
 import sys
 import zlib
 import shutil
+import datetime
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'app', 'src')
@@ -283,10 +284,12 @@ MANIFESTS = {
 }
 
 
-def injecter_version(html, version):
-    """Inscrit le n° de version dans la page (☰ → Mode d'emploi) : sur le
+def injecter_version(html, version, date_build=None):
+    """Inscrit le n° de version et la date du build dans la page (☰ → Mode d'emploi) : sur le
     téléphone, on voit d'un coup d'œil quelle version tourne réellement."""
-    balise = '<script>window.SAV_VERSION="%s";</script></body>' % version
+    if not date_build:
+        date_build = datetime.date.today().strftime('%d/%m/%Y')
+    balise = '<script>window.SAV_VERSION="%s";window.SAV_DATE="%s";</script></body>' % (version, date_build)
     if html.count('</body>') != 1:
         raise SystemExit('Balise </body> attendue une seule fois dans app/index.html')
     return html.replace('</body>', balise)
@@ -296,14 +299,15 @@ def main():
     # Version = empreinte du code : elle change à chaque modification réelle,
     # ce qui vide le cache du téléphone et lui livre la nouvelle version.
     version = hashlib.sha256(construire_single_file(avec_pwa=True).encode('utf-8')).hexdigest()[:10]
+    date_build = datetime.date.today().strftime('%d/%m/%Y')
 
     # 1) fichier unique (livrable terrain : un seul fichier à ouvrir dans Chrome)
     with open(OUT_SINGLE, 'w', encoding='utf-8') as f:
-        f.write(injecter_version(construire_single_file(avec_pwa=False), version))
+        f.write(injecter_version(construire_single_file(avec_pwa=False), version, date_build))
 
     # 2) site déployable (GitHub Pages : docs/)
     os.makedirs(SITE, exist_ok=True)
-    html_pwa = injecter_version(construire_single_file(avec_pwa=True), version)
+    html_pwa = injecter_version(construire_single_file(avec_pwa=True), version, date_build)
     with open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html_pwa)
     with open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf-8') as f:

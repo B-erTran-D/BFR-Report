@@ -202,7 +202,7 @@
     text(str, x, y, opt) {
       opt = opt || {};
       str = traduire(str, this.langue);
-      const size = opt.size || 11;
+      const size = opt.size || 9;
       const font = opt.font || 'F1';
       const color = opt.color || [0.1, 0.1, 0.12];
       let px = x;
@@ -218,7 +218,7 @@
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
       str = traduire(str, this.langue);          // traduit avant le calcul des lignes
-      const size = opt.size || 11;
+      const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lines = wrap(str, width, size, opt.bold);
       lines.forEach((l, i) => {
@@ -228,7 +228,7 @@
     }
 
     paragraphHeight(str, width, size, bold) {
-      size = size || 11;
+      size = size || 9;
       str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }
@@ -383,7 +383,7 @@
     text(str, x, y, opt) {
       opt = opt || {};
       str = traduire(str, this.langue);
-      const size = opt.size || 11;
+      const size = opt.size || 9;
       const texte = String(str == null ? '' : str);
       const largeur = measure(texte, size, opt.bold);       // largeur de référence (Helvetica)
       let px = x;
@@ -396,14 +396,14 @@
     paragraph(str, x, y, width, opt) {
       opt = opt || {};
       str = traduire(str, this.langue);
-      const size = opt.size || 11;
+      const size = opt.size || 9;
       const lh = opt.lineHeight || size * 1.35;
       const lignes = wrap(str, width, size, opt.bold);
       lignes.forEach((l, i) => this.text(l, x, y + i * lh + size, { size: size, font: opt.font, color: opt.color, bold: opt.bold }));
       return y + lignes.length * lh;
     }
     paragraphHeight(str, width, size, bold) {
-      size = size || 11;
+      size = size || 9;
       str = traduire(str, this.langue);
       return Math.max(1, wrap(str, width, size, bold).length) * (size * 1.35);
     }

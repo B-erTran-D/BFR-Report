@@ -127,9 +127,8 @@
          de langue (langues.js). En français, rien n'est modifié. */
       this.langue = opts.langue || 'fr';
       this.demande = '(' + (opts.auteur || 'Application SAV') + ')';
-      /* Charte graphique BFR Systems : Poppins pour les titres, Open Sans pour
-         le corps de texte (polices officielles du site bfrsystems.com).
-         Corps de texte relevé à 13 pt pour une meilleure lisibilité. */
+      /* Mise en page du modèle « Compte rendu d'intervention » BFR :
+         A4, marges 1,9 cm (côtés) et 2,5 cm (haut/bas), Open Sans 11 pt. */
       this.entete = opts.entete || null;        // dataURL du logo, répété en haut de chaque page
       this.enteteLargeurCm = opts.enteteLargeurCm || 10.2;
       this.pied = opts.pied || [];              // lignes de texte du pied de page
@@ -157,8 +156,6 @@
         if (m.gras || opt.gras) rpr.push('<w:b/>');
         if (m.italique || opt.italique) rpr.push('<w:i/>');
         if (m.mono) rpr.push('<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>');
-        const police = m.police || opt.police;
-        if (police) rpr.push(`<w:rFonts w:ascii="${police}" w:hAnsi="${police}" w:cs="${police}" w:eastAsia="${police}"/>`);
         const taille = m.taille || opt.taille;
         if (taille) rpr.push(`<w:sz w:val="${Math.round(taille * 2)}"/>`);
         const couleur = m.couleur || opt.couleur;
@@ -172,19 +169,17 @@
     }
 
     titre(texte, niveau) {
-      const tailles = { 1: 22, 2: 16, 3: 13.5 };
+      const tailles = { 1: 20, 2: 14, 3: 11.5 };
       const couleurs = { 1: '0B3D91', 2: '0B3D91', 3: '334155' };
       niveau = niveau || 1;
       return this.para(texte, {
-        gras: true, taille: tailles[niveau] || 14, couleur: couleurs[niveau] || '334155',
-        police: 'Poppins',
+        gras: true, taille: tailles[niveau] || 12, couleur: couleurs[niveau] || '334155',
         avant: niveau === 1 ? 0 : 240, apres: 120
       });
     }
 
     /** Bandeau de section du modèle : fond cyan BFR, texte blanc en petites
-        capitales (style « Titre 1 » du Google Doc de référence).
-        Police Poppins 15 pt, en accord avec la charte BFR Systems. */
+        capitales (style « Titre 1 » du Google Doc de référence). */
     bandeau(texte, couleurFond, droit) {
       texte = traduire(texte, this.langue);
       droit = droit ? traduire(droit, this.langue) : droit;
@@ -195,19 +190,16 @@
         '<w:bottom w:val="single" w:sz="4" w:color="' + fond + '"/>' +
         '<w:right w:val="single" w:sz="4" w:color="' + fond + '"/></w:pBdr>' +
         `<w:shd w:val="clear" w:fill="${fond}"/><w:jc w:val="left"/></w:pPr>` +
-        `<w:r><w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="30"/>` +
-        '<w:rFonts w:ascii="Poppins" w:hAnsi="Poppins" w:cs="Poppins" w:eastAsia="Poppins"/></w:rPr>' +
+        `<w:r><w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr>` +
         `<w:t xml:space="preserve">${x(texte)}</w:t></w:r>` +
-        (droit ? `<w:r><w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="21"/>` +
-          '<w:rFonts w:ascii="Poppins" w:hAnsi="Poppins" w:cs="Poppins" w:eastAsia="Poppins"/></w:rPr>' +
+        (droit ? `<w:r><w:rPr><w:color w:val="FFFFFF"/><w:sz w:val="17"/></w:rPr>` +
           `<w:t xml:space="preserve">  ${x(droit)}</w:t></w:r>` : '') + '</w:p>');
       return this;
     }
 
-    /** Titre du document, comme dans le modèle : cyan BFR, gras, centré.
-        Police Poppins (charte BFR Systems). */
+    /** Titre du document, comme dans le modèle : cyan BFR, gras, centré. */
     grandTitre(texte, taille) {
-      return this.para(texte, { gras: true, taille: taille || 30, couleur: '06BAF2', align: 'center', apres: 60, police: 'Poppins' });
+      return this.para(texte, { gras: true, taille: taille || 30, couleur: '06BAF2', align: 'center', apres: 60 });
     }
 
     tableau(lignes, opt) {
@@ -262,7 +254,6 @@
                 if (m.italique) r2.push('<w:i/>');
                 if (m.taille) r2.push(`<w:sz w:val="${Math.round(m.taille * 2)}"/>`);
                 if (m.couleur) r2.push(`<w:color w:val="${m.couleur}"/>`);
-                if (m.police) r2.push(`<w:rFonts w:ascii="${m.police}" w:hAnsi="${m.police}" w:cs="${m.police}" w:eastAsia="${m.police}"/>`);
                 return `<w:r>${r2.length ? '<w:rPr>' + r2.join('') + '</w:rPr>' : ''}` +
                   (m.saut ? '<w:br/>' : '') + `<w:t xml:space="preserve">${x(traduire(m.t || '', langue))}</w:t></w:r>`;
               }).join('');
@@ -323,7 +314,7 @@
 
       this.corps.push(`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="40" w:after="${opt.legende ? 0 : 120}"/></w:pPr>` +
         '<w:r>' + this.dessin(im, Math.round(cm * CM), Math.round(cmH * CM), im.nom, im.idDessin, im.rid) + '</w:r></w:p>');
-      if (opt.legende) this.para(opt.legende, { taille: 10.5, couleur: '64748B', align: 'center', apres: 160, italique: true });
+      if (opt.legende) this.para(opt.legende, { taille: 8.5, couleur: '64748B', align: 'center', apres: 160, italique: true });
       return this;
     }
 
@@ -335,14 +326,13 @@
       return this;
     }
 
-    /* --- styles du document (charte BFR : Open Sans 13 pt par défaut,
-           Poppins pour les titres et bandeaux) --- */
+    /* --- styles du document (police du modèle) --- */
     stylesXml() {
       return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
         '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
         '<w:docDefaults><w:rPrDefault><w:rPr>' +
         '<w:rFonts w:ascii="Open Sans" w:hAnsi="Open Sans" w:cs="Open Sans" w:eastAsia="Open Sans"/>' +
-        '<w:sz w:val="26"/><w:szCs w:val="26"/>' +
+        '<w:sz w:val="22"/><w:szCs w:val="22"/>' +
         '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>' +
         '<w:spacing w:after="100" w:line="259" w:lineRule="auto"/>' +
         '</w:pPr></w:pPrDefault></w:docDefaults>' +
@@ -350,8 +340,7 @@
         '<w:qFormat/></w:style>' +
         '<w:style w:type="paragraph" w:styleId="Bandeau"><w:name w:val="Bandeau"/>' +
         '<w:basedOn w:val="Normal"/><w:pPr><w:keepNext/></w:pPr>' +
-        '<w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="30"/>' +
-        '<w:rFonts w:ascii="Poppins" w:hAnsi="Poppins" w:cs="Poppins" w:eastAsia="Poppins"/></w:rPr></w:style>' +
+        '<w:rPr><w:b/><w:smallCaps/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr></w:style>' +
         '</w:styles>';
     }
 
@@ -375,13 +364,13 @@
       const lignes = (this.pied || []).filter(Boolean);
       if (!lignes.length && this.numeroPage === false) return null;
       const paragraphes = lignes.map((l, i) => '<w:p><w:pPr><w:spacing w:before="0" w:after="' + (i === lignes.length - 1 ? 0 : 20) + '"/><w:jc w:val="center"/></w:pPr>' +
-        `<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">${x(l)}</w:t></w:r></w:p>`).join('');
+        `<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">${x(l)}</w:t></w:r></w:p>`).join('');
       const pageNum = this.numeroPage
-        ? '<w:p><w:pPr><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="20"/></w:rPr>' +
+        ? '<w:p><w:pPr><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr>' +
           '<w:t xml:space="preserve">Page </w:t></w:r>' +
-          '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="20"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
-          '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve"> / </w:t></w:r>' +
-          '<w:fldSimple w:instr=" NUMPAGES "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="20"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+          '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+          '<w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> / </w:t></w:r>' +
+          '<w:fldSimple w:instr=" NUMPAGES "><w:r><w:rPr><w:color w:val="808080"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
           '</w:p>'
         : '';
       return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +

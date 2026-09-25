@@ -2565,6 +2565,7 @@
   function feuilleMenu() {
     const liste = Store.get(K.rapports, []);
     const ver = (typeof window !== 'undefined' && window.SAV_VERSION) || 'locale';
+    const dateVer = (typeof window !== 'undefined' && window.SAV_DATE) || '24/09/2026';
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Menu</h3>
       <p class="sub">Rapport N° ${esc(R.numero || '—')} — ${esc(R.client.nom || 'client non renseigné')}</p>
@@ -2580,7 +2581,7 @@
       <button class="menu-item" data-a="import"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Importer une sauvegarde</span></button>
       <button class="menu-item" data-a="aide"><span class="ico">${(ICO.help && ICO.help(18)) || ''}</span><span>Mode d'emploi</span></button>
       <div class="sticky-note" style="margin-top:8px">${Store.ok ? 'Tout est conservé sur ce téléphone — rien n\'est envoyé sans votre accord.' : 'Stockage local indisponible : pensez à exporter votre travail.'}</div>
-      <div style="text-align:center;font-size:11px;color:#64748b;margin:10px 0 4px 0;padding:6px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">Version active : <strong>${esc(ver)}</strong> (23/09/2026)</div>
+      <div style="text-align:center;font-size:11px;color:#64748b;margin:10px 0 4px 0;padding:6px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">Version active : <strong>${esc(ver)}</strong> (${esc(dateVer)})</div>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`, (panneau) => {
       panneau.addEventListener('click', (e) => {
         const b = e.target.closest('[data-a]:not([data-a="fermer"])');
@@ -2675,7 +2676,7 @@
       <p class="small"><strong>Client étranger :</strong> dans <em>Client &amp; machine</em>, cochez « Traduire le rapport dans la langue du client » et choisissez la langue (anglais, allemand, néerlandais, espagnol, italien, portugais). Le mail part alors avec <strong>deux rapports</strong> : le français et la version traduite. La langue est retenue pour ce client. Un appui sur « Préparer la langue sur ce téléphone » (au bureau, en Wi-Fi) rend la traduction disponible même hors connexion.</p>
       <p class="small">Un évènement reste modifiable à tout moment : appuyez dessus pour reprendre l'assistant.</p>
       <p class="small"><strong>Installation :</strong> dans Chrome, menu ⋮ → « Ajouter à l'écran d'accueil ». L'application fonctionne ensuite hors connexion.</p>
-      <p class="small"><strong>Version de l'application :</strong> <span id="versionAppli">${self.SAV_VERSION || 'non versionnée'}</span> — si l'application ne se met pas à jour, ce numéro (au support) dit quelle version tourne sur ce téléphone.</p>
+      <p class="small"><strong>Version de l'application :</strong> <span id="versionAppli">${self.SAV_VERSION || 'non versionnée'} (${self.SAV_DATE || '24/09/2026'})</span> — si l'application ne se met pas à jour, ce numéro (au support) dit quelle version tourne sur ce téléphone.</p>
       <button class="btn grey wide" data-a="fermer">Fermer</button></div>`);
   }
 
@@ -3207,8 +3208,11 @@
         </div>
       </div>
 
-      <div class="btnrow">
-        <button class="btn grey" data-a="fermer">Annuler</button>
+      <div class="btnrow" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <button class="btn grey" data-a="fermer">Annuler</button>
+          ${tr.actif ? `<button type="button" class="btn sm danger" data-a="supprimer-trajet" style="margin-left:8px">Effacer le trajet</button>` : ''}
+        </div>
         <button class="btn" data-a="sauvegarder-trajet">Enregistrer le trajet</button>
       </div>
     </div>`, (pEl) => {
@@ -3306,6 +3310,23 @@
           mettreAJour();
           return;
         }
+        if (e.target.closest('[data-a="supprimer-trajet"]')) {
+          if (!confirm('Voulez-vous retirer le temps de route de ce rapport ?')) return;
+          R.trajet = {
+            actif: false,
+            allerDateDepart: '', allerHeureDepart: '', allerDateArrivee: '', allerHeureArrivee: '', allerDureeMinutes: 0,
+            retourDateDepart: '', retourHeureDepart: '', retourDateArrivee: '', retourHeureArrivee: '', retourDureeMinutes: 0, retourEstime: true,
+            retourReelDateDepart: '', retourReelHeureDepart: '', retourReelDateArrivee: '', retourReelHeureArrivee: '', retourReelDureeMinutes: 0,
+            retourCloture: false, note: ''
+          };
+          sauver(true);
+          Cache.pdf = Cache.docx = null;
+          Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
+          rendreTout();
+          pEl.closest('.sheet').remove();
+          toast('Temps de route retiré');
+          return;
+        }
         if (e.target.closest('[data-a="sauvegarder-trajet"]')) {
           let aM = parseInt(inAllerMin.value, 10);
           if (isNaN(aM)) aM = calcDiff(inAllerHeureDep.value, inAllerHeureArr.value, inAllerDateDep.value, inAllerDateArr.value);
@@ -3339,7 +3360,9 @@
             note: inNote ? inNote.value.trim() : ''
           };
 
-          planifier();
+          sauver(true);
+          Cache.pdf = Cache.docx = null;
+          Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
           rendreTout();
           pEl.closest('.sheet').remove();
           toast(isCloture ? 'Trajet et retour réel enregistrés' : 'Temps de route enregistré (retour estimé)');
