@@ -344,11 +344,126 @@
       });
     }
 
+    /* ---------- assainissement anti-bégaiement & anti-doublons ---------- */
+    static normaliserDictee(t) {
+      return (t || '').replace(/\s+/g, ' ').trim();
+    }
+
+    static cleDictee(t) {
+      return Assistant.normaliserDictee(t).replace(/[^a-z0-9à-ÿ]/gi, '').toLowerCase();
+    }
+
+    /* Détecte si la fin de 'last' chevauche le début de 'next' (1 à N mots) et les fusionne */
+    static fusionnerChevauchement(last, next) {
+      const w1 = (last || '').trim().split(/\s+/).filter(Boolean);
+      const w2 = (next || '').trim().split(/\s+/).filter(Boolean);
+      const maxK = Math.min(w1.length, w2.length);
+      for (let k = maxK; k >= 1; k--) {
+        const tail = w1.slice(-k).map(w => w.toLowerCase().replace(/[^a-z0-9à-ÿ]/g, '')).join(' ');
+        const head = w2.slice(0, k).map(w => w.toLowerCase().replace(/[^a-z0-9à-ÿ]/g, '')).join(' ');
+        if (tail && head && tail === head) {
+          return w1.concat(w2.slice(k)).join(' ');
+        }
+      }
+      return null;
+    }
+
+    /* Fusionne les hypothèses successives émises par Android (évite la duplication de préfixes) */
+    static mergeFinalHypotheses(committed, nextRaw) {
+      const next = Assistant.normaliserDictee(nextRaw);
+      if (!next) return committed;
+      if (!committed || committed.length === 0) return [next];
+
+      const last = committed[committed.length - 1];
+      if (!last) return [...committed.slice(0, -1), next];
+
+      const lastKey = Assistant.cleDictee(last);
+      const nextKey = Assistant.cleDictee(next);
+
+      // Doublon exact ou préfixe croissant émis par Android
+      if (nextKey === lastKey) return committed;
+      if (nextKey.startsWith(lastKey)) return [...committed.slice(0, -1), next];
+      if (lastKey.startsWith(nextKey)) return committed;
+
+      // Chevauchement de mots aux limites
+      const chev = Assistant.fusionnerChevauchement(last, next);
+      if (chev) {
+        return [...committed.slice(0, -1), chev];
+      }
+
+      return [...committed, next];
+    }
+
+    /* Élimine les répétitions consécutives de mots ou de groupes de mots (bégaiement Android) */
+    static eliminerRepetitionsConsecutives(texte) {
+      if (!texte) return '';
+      const mots = texte.trim().split(/\s+/).filter(Boolean);
+      if (mots.length <= 1) return texte;
+
+      let resultat = [...mots];
+      let change = true;
+      while (change) {
+        change = false;
+        for (let k = Math.min(8, Math.floor(resultat.length / 2)); k >= 1; k--) {
+          for (let i = 0; i <= resultat.length - 2 * k; i++) {
+            const seq1 = resultat.slice(i, i + k).map(w => w.toLowerCase().replace(/[^a-z0-9à-ÿ]/g, '')).join(' ');
+            const seq2 = resultat.slice(i + k, i + 2 * k).map(w => w.toLowerCase().replace(/[^a-z0-9à-ÿ]/g, '')).join(' ');
+            if (seq1 && seq2 && seq1 === seq2) {
+              resultat.splice(i + k, k);
+              change = true;
+              break;
+            }
+          }
+          if (change) break;
+        }
+      }
+      return resultat.join(' ');
+    }
+
+    /* Ponctuation vocale en français sans casser les termes techniques ('point de consigne') */
+    static appliquerPonctuationVocale(texte) {
+      if (!texte) return '';
+      return texte
+        .replace(/\bpoint à la ligne\b/gi, '.\n')
+        .replace(/\bà la ligne\b/gi, '\n')
+        .replace(/\bretour à la ligne\b/gi, '\n')
+        .replace(/\bpoint d'interrogation\b/gi, '?')
+        .replace(/\bpoint d'exclamation\b/gi, '!')
+        .replace(/\bdeux points\b/gi, ':')
+        .replace(/\bvirgule\b/gi, ',')
+        .replace(/\bpoint\b(?!\s+(?:de|d'|dur|mort|chaud|singulier|clef|fixe|zéro|central))/gi, '.')
+        .replace(/\s+([.,;:!?])/g, '$1')
+        .replace(/([.!?]\s+)([a-zà-ÿ])/g, function (m, p1, p2) {
+          return p1 + p2.toUpperCase();
+        });
+    }
+
+    /* Fusionne la session de dictée avec le texte qui existait déjà dans le champ */
+    static fusionnerAvecBase(base, session) {
+      const b = (base || '').trim();
+      const s = (session || '').trim();
+      if (!b) return s;
+      if (!s) return b;
+
+      const keyB = Assistant.cleDictee(b);
+      const keyS = Assistant.cleDictee(s);
+
+      if (keyS.startsWith(keyB)) return s;
+      if (keyB.startsWith(keyS)) return b;
+
+      const chev = Assistant.fusionnerChevauchement(b, s);
+      if (chev) return chev;
+
+      const sep = (/[.!?]$/.test(b) || /\n$/.test(b)) ? ' ' : ' ';
+      return b + sep + s;
+    }
+
     /* ---------- dictée / relecture ---------- */
     basculerDictee() {
       if (this.ecoute) { this.arreterDictee(); this.rendre(); return; }
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) { this.toast('Dictée non disponible : utilisez le micro du clavier'); return; }
+      const { normaliserDictee, mergeFinalHypotheses, fusionnerChevauchement, eliminerRepetitionsConsecutives, appliquerPonctuationVocale, fusionnerAvecBase } = Assistant;
       const rec = new SR();
       rec.lang = 'fr-FR';
       rec.continuous = true;
@@ -356,49 +471,60 @@
       const self = this;
       // Texte initial présent avant le début de cette session de dictée (immuable pendant la session)
       const baseInitiale = (self.ev.texte || '').trim();
+      const finalsByIndex = [];
 
       rec.onresult = function (e) {
         if (!e || !e.results) return;
-        let finalSession = '';
-        let interimSession = '';
+
+        let interimTexte = '';
+        const start = Math.max(0, e.resultIndex || 0);
+
         for (let i = 0; i < e.results.length; i++) {
           const res = e.results[i];
           const morceau = (res[0] && res[0].transcript) || '';
+          const txtNormalise = normaliserDictee(morceau);
+          if (!txtNormalise) continue;
+
           if (res.isFinal) {
-            finalSession += (finalSession ? ' ' : '') + morceau.trim();
-          } else {
-            interimSession += (interimSession ? ' ' : '') + morceau.trim();
+            finalsByIndex[i] = txtNormalise;
+          } else if (i >= start) {
+            interimTexte = txtNormalise;
           }
         }
 
-        // Nettoyage de la session en cours (séparation nette des mots)
-        let sessionTexte = finalSession;
-        if (interimSession) {
-          sessionTexte = (sessionTexte ? sessionTexte + ' ' : '') + interimSession;
+        let committed = [];
+        for (let i = 0; i < finalsByIndex.length; i++) {
+          const piece = finalsByIndex[i];
+          if (!piece) continue;
+          committed = mergeFinalHypotheses(committed, piece);
         }
-        sessionTexte = sessionTexte.trim();
+        let texteCommitted = committed.join(' ').replace(/\s+/g, ' ').trim();
 
-        // Ponctuation vocale en français si dictée
-        sessionTexte = sessionTexte
-          .replace(/\bvirgule\b/gi, ',')
-          .replace(/\bpoint à la ligne\b/gi, '.\n')
-          .replace(/\bà la ligne\b/gi, '\n')
-          .replace(/\bretour à la ligne\b/gi, '\n')
-          .replace(/\bpoint d'interrogation\b/gi, '?')
-          .replace(/\bpoint d'exclamation\b/gi, '!')
-          .replace(/\bdeux points\b/gi, ':')
-          .replace(/\bpoint\b/gi, '.')
-          .replace(/\s+([.,;:!?])/g, '$1');
-
-        let texteTotal = baseInitiale;
-        if (sessionTexte) {
-          if (texteTotal) {
-            const sep = /\n$/.test(texteTotal) ? '' : ' ';
-            texteTotal += sep + sessionTexte;
+        let sessionTexte = texteCommitted;
+        if (interimTexte) {
+          const interimNorm = normaliserDictee(interimTexte);
+          if (texteCommitted) {
+            const chevInterim = fusionnerChevauchement(texteCommitted, interimNorm);
+            if (chevInterim) {
+              sessionTexte = chevInterim;
+            } else if (interimNorm.toLowerCase().startsWith(texteCommitted.toLowerCase())) {
+              sessionTexte = interimNorm;
+            } else if (!texteCommitted.toLowerCase().endsWith(interimNorm.toLowerCase())) {
+              sessionTexte = texteCommitted + ' ' + interimNorm;
+            }
           } else {
-            texteTotal = sessionTexte;
+            sessionTexte = interimNorm;
           }
         }
+
+        // Élimination des répétitions consécutives de mots ou groupes de mots (bégaiement Android)
+        sessionTexte = eliminerRepetitionsConsecutives(sessionTexte);
+
+        // Ponctuation vocale en français
+        sessionTexte = appliquerPonctuationVocale(sessionTexte);
+
+        // Fusion sans doublon avec le texte qui existait déjà dans le champ
+        const texteTotal = fusionnerAvecBase(baseInitiale, sessionTexte);
 
         self.ev.texte = texteTotal;
         const champ = (self.corps && self.corps.querySelector('#evTexte')) || document.querySelector('#evTexte');
@@ -431,8 +557,6 @@
       this.ecoute = true;
       this.toast('Dictée en cours… parlez');
       this.rendre();
-      const champApres = this.corps.querySelector('#evTexte');
-      if (champApres) champApres.focus();
     }
 
     arreterDictee() {
