@@ -87,7 +87,12 @@
           const self = this;
           Annotation.ouvrir(photo, {
             fin: function (valide) {
-              if (valide) { self.maj(); }
+              if (valide) {
+                if (typeof window !== 'undefined' && window.RapportDB) {
+                  window.RapportDB.sauverPhoto(photo.id, photo.dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+                }
+                self.maj();
+              }
               self.rendre();
             }
           });
@@ -289,10 +294,23 @@
             const photo = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), dataUrl: dataUrl, annotations: [] };
             self.ev.photos = self.ev.photos || [];
             self.ev.photos.push(photo);
+            if (typeof window !== 'undefined' && window.RapportDB) {
+              window.RapportDB.sauverPhoto(photo.id, dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+            }
             self.maj();
             // on enchaîne directement sur l'annotation de la photo qui vient d'être prise
             await new Promise(function (resolve) {
-              Annotation.ouvrir(photo, { fin: function (valide) { if (valide) self.maj(); resolve(); } });
+              Annotation.ouvrir(photo, {
+                fin: function (valide) {
+                  if (valide) {
+                    if (typeof window !== 'undefined' && window.RapportDB) {
+                      window.RapportDB.sauverPhoto(photo.id, photo.dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+                    }
+                    self.maj();
+                  }
+                  resolve();
+                }
+              });
             });
           } catch (e) { self.toast('Photo ignorée (format non pris en charge)'); }
         }

@@ -7850,7 +7850,12 @@ ul.liste li { margin-bottom: 6px; }
           const self = this;
           Annotation.ouvrir(photo, {
             fin: function (valide) {
-              if (valide) { self.maj(); }
+              if (valide) {
+                if (typeof window !== 'undefined' && window.RapportDB) {
+                  window.RapportDB.sauverPhoto(photo.id, photo.dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+                }
+                self.maj();
+              }
               self.rendre();
             }
           });
@@ -8052,10 +8057,23 @@ ul.liste li { margin-bottom: 6px; }
             const photo = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), dataUrl: dataUrl, annotations: [] };
             self.ev.photos = self.ev.photos || [];
             self.ev.photos.push(photo);
+            if (typeof window !== 'undefined' && window.RapportDB) {
+              window.RapportDB.sauverPhoto(photo.id, dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+            }
             self.maj();
             // on enchaîne directement sur l'annotation de la photo qui vient d'être prise
             await new Promise(function (resolve) {
-              Annotation.ouvrir(photo, { fin: function (valide) { if (valide) self.maj(); resolve(); } });
+              Annotation.ouvrir(photo, {
+                fin: function (valide) {
+                  if (valide) {
+                    if (typeof window !== 'undefined' && window.RapportDB) {
+                      window.RapportDB.sauverPhoto(photo.id, photo.dataUrl, 'evenement', (typeof R !== 'undefined' && R && R.id) || '');
+                    }
+                    self.maj();
+                  }
+                  resolve();
+                }
+              });
             });
           } catch (e) { self.toast('Photo ignorée (format non pris en charge)'); }
         }
@@ -8484,6 +8502,268 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   /* ===================== Réglages ===================================== */
   const K = { settings: 'sav3.settings', rapport: 'sav3.rapport', rapports: 'sav3.rapports' };
 
+  /* ===================== Base de données locale (IndexedDB) ===================== */
+  /* IndexedDB permet de stocker l'intégralité des rapports et de toutes leurs photos
+     sans la limite de 5 Mo du localStorage (pratiquement illimité sur Android).
+     En cas d'absence d'IndexedDB (ex. tests unitaires Node.js ou navigation privée),
+     un repli automatique en mémoire et localStorage est assuré. */
+  const RapportDB = (function () {
+    const DB_NAME = 'bfr_sav_v3';
+    const DB_VERSION = 1;
+    const STORE_RAPPORTS = 'rapports';
+    const STORE_PHOTOS = 'photos';
+
+    const memRapports = new Map();
+    const memPhotos = new Map();
+
+    function estDispo() {
+      return typeof window !== 'undefined' && !!window.indexedDB;
+    }
+
+    let dbPromise = null;
+    function ouvrirDB() {
+      if (!estDispo()) return Promise.resolve(null);
+      if (dbPromise) return dbPromise;
+      dbPromise = new Promise(function (resolve) {
+        try {
+          const req = window.indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = function (e) {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_RAPPORTS)) {
+              db.createObjectStore(STORE_RAPPORTS, { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains(STORE_PHOTOS)) {
+              db.createObjectStore(STORE_PHOTOS, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = function (e) {
+            resolve(e.target.result);
+          };
+          req.onerror = function () {
+            resolve(null);
+          };
+        } catch (err) {
+          resolve(null);
+        }
+      });
+      return dbPromise;
+    }
+
+    async function sauverPhoto(id, dataUrl, contexte, rapportId) {
+      if (!id || !dataUrl) return false;
+      memPhotos.set(id, { id: id, dataUrl: dataUrl, contexte: contexte || '', rapportId: rapportId || '', maj: Date.now() });
+      const db = await ouvrirDB();
+      if (!db) return true;
+      return new Promise(function (resolve) {
+        try {
+          const tx = db.transaction([STORE_PHOTOS], 'readwrite');
+          tx.objectStore(STORE_PHOTOS).put({
+            id: id,
+            dataUrl: dataUrl,
+            contexte: contexte || '',
+            rapportId: rapportId || '',
+            maj: Date.now()
+          });
+          tx.oncomplete = function () { resolve(true); };
+          tx.onerror = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    }
+
+    async function getPhoto(id) {
+      if (!id) return null;
+      if (memPhotos.has(id)) {
+        const item = memPhotos.get(id);
+        return typeof item === 'string' ? item : (item && item.dataUrl ? item.dataUrl : null);
+      }
+      const db = await ouvrirDB();
+      if (!db) return null;
+      return new Promise(function (resolve) {
+        try {
+          const tx = db.transaction([STORE_PHOTOS], 'readonly');
+          const req = tx.objectStore(STORE_PHOTOS).get(id);
+          req.onsuccess = function () {
+            const res = req.result;
+            if (res && res.dataUrl) {
+              memPhotos.set(id, res);
+              resolve(res.dataUrl);
+            } else {
+              resolve(null);
+            }
+          };
+          req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    }
+
+    async function sauverPhotosDeRapport(rapport) {
+      if (!rapport) return;
+      (rapport.evenements || []).forEach(function (ev) {
+        (ev.photos || []).forEach(function (ph, idx) {
+          if (ph && !ph.id) ph.id = 'p_' + (rapport.id || 'r') + '_' + (ev.id || 'e') + '_' + idx;
+          if (ph && ph.id && ph.dataUrl) {
+            sauverPhoto(ph.id, ph.dataUrl, 'evenement', rapport.id);
+          }
+        });
+      });
+      (rapport.photosLibres || []).forEach(function (ph, idx) {
+        if (ph && !ph.id) ph.id = 'phl_' + (rapport.id || 'r') + '_' + idx;
+        if (ph && ph.id && ph.dataUrl) {
+          sauverPhoto(ph.id, ph.dataUrl, 'photosLibres', rapport.id);
+        }
+      });
+      (rapport.pieces || []).forEach(function (pc) {
+        if (pc && pc.id && pc.photo) {
+          sauverPhoto('pc_' + pc.id, pc.photo, 'piece', rapport.id);
+        }
+      });
+      if (rapport.signatureClient && rapport.signatureClient.dataUrl) {
+        sauverPhoto('sig_client_' + rapport.id, rapport.signatureClient.dataUrl, 'signatureClient', rapport.id);
+      }
+      if (rapport.signatureTech && rapport.signatureTech.dataUrl) {
+        sauverPhoto('sig_tech_' + rapport.id, rapport.signatureTech.dataUrl, 'signatureTech', rapport.id);
+      }
+    }
+
+    async function sauverRapport(rapport) {
+      if (!rapport || !rapport.id) return false;
+      const copie = JSON.parse(JSON.stringify(rapport));
+      memRapports.set(rapport.id, copie);
+      await sauverPhotosDeRapport(rapport);
+      const db = await ouvrirDB();
+      if (!db) return true;
+      return new Promise(function (resolve) {
+        try {
+          const tx = db.transaction([STORE_RAPPORTS], 'readwrite');
+          tx.objectStore(STORE_RAPPORTS).put(copie);
+          tx.oncomplete = function () { resolve(true); };
+          tx.onerror = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    }
+
+    async function getRapport(id) {
+      if (!id) return null;
+      let r = null;
+      const db = await ouvrirDB();
+      if (db) {
+        r = await new Promise(function (resolve) {
+          try {
+            const tx = db.transaction([STORE_RAPPORTS], 'readonly');
+            const req = tx.objectStore(STORE_RAPPORTS).get(id);
+            req.onsuccess = function () { resolve(req.result || null); };
+            req.onerror = function () { resolve(null); };
+          } catch (e) { resolve(null); }
+        });
+      }
+      if (!r && memRapports.has(id)) {
+        r = JSON.parse(JSON.stringify(memRapports.get(id)));
+      }
+      if (r) {
+        await restaurerPhotos(r);
+      }
+      return r;
+    }
+
+    async function tousLesRapports() {
+      let liste = [];
+      const db = await ouvrirDB();
+      if (db) {
+        liste = await new Promise(function (resolve) {
+          try {
+            const tx = db.transaction([STORE_RAPPORTS], 'readonly');
+            const req = tx.objectStore(STORE_RAPPORTS).getAll();
+            req.onsuccess = function () { resolve(req.result || []); };
+            req.onerror = function () { resolve([]); };
+          } catch (e) { resolve([]); }
+        });
+      }
+      if (!liste || !liste.length) {
+        liste = Array.from(memRapports.values()).map(r => JSON.parse(JSON.stringify(r)));
+      }
+      for (const r of liste) {
+        await restaurerPhotos(r);
+      }
+      return liste;
+    }
+
+    async function supprimerRapport(id) {
+      if (!id) return false;
+      memRapports.delete(id);
+      const db = await ouvrirDB();
+      if (!db) return true;
+      return new Promise(function (resolve) {
+        try {
+          const tx = db.transaction([STORE_RAPPORTS], 'readwrite');
+          tx.objectStore(STORE_RAPPORTS).delete(id);
+          tx.oncomplete = function () { resolve(true); };
+          tx.onerror = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    }
+
+    async function restaurerPhotos(rapport) {
+      if (!rapport) return rapport;
+      // 1. Photos des évènements
+      for (const ev of (rapport.evenements || [])) {
+        for (let idx = 0; idx < (ev.photos || []).length; idx++) {
+          const ph = ev.photos[idx];
+          if (ph) {
+            if (!ph.id) ph.id = 'p_' + (rapport.id || 'r') + '_' + (ev.id || 'e') + '_' + idx;
+            if (!ph.dataUrl || ph.dataUrl === '') {
+              const u = await getPhoto(ph.id);
+              if (u) ph.dataUrl = u;
+            }
+          }
+        }
+      }
+      // 2. Photos libres
+      for (let idx = 0; idx < (rapport.photosLibres || []).length; idx++) {
+        const ph = rapport.photosLibres[idx];
+        if (ph) {
+          const pid = ph.id || ('phlib_' + (rapport.id || 'r') + '_' + idx);
+          ph.id = pid;
+          if (!ph.dataUrl || ph.dataUrl === '') {
+            const u = await getPhoto(pid);
+            if (u) ph.dataUrl = u;
+          }
+        }
+      }
+      // 3. Photos des pièces
+      for (const pc of (rapport.pieces || [])) {
+        if (pc && pc.id && (!pc.photo || pc.photo === '')) {
+          const u = await getPhoto('pc_' + pc.id);
+          if (u) pc.photo = u;
+        }
+      }
+      // 4. Signatures
+      if (rapport.signatureClient && (!rapport.signatureClient.dataUrl || rapport.signatureClient.dataUrl === '')) {
+        const u = await getPhoto('sig_client_' + rapport.id);
+        if (u) rapport.signatureClient.dataUrl = u;
+      }
+      if (rapport.signatureTech && (!rapport.signatureTech.dataUrl || rapport.signatureTech.dataUrl === '')) {
+        const u = await getPhoto('sig_tech_' + rapport.id);
+        if (u) rapport.signatureTech.dataUrl = u;
+      }
+      return rapport;
+    }
+
+    return {
+      disponible: estDispo,
+      sauverRapport,
+      getRapport,
+      tousLesRapports,
+      supprimerRapport,
+      sauverPhoto,
+      getPhoto,
+      sauverPhotosDeRapport,
+      restaurerPhotos
+    };
+  })();
+
+  if (typeof window !== 'undefined') window.RapportDB = RapportDB;
+  if (typeof global !== 'undefined') global.RapportDB = RapportDB;
+
   const DOMAINES_DEFAUT = [
     { id: 'MECANIQUE', libelle: 'Mécanique', icone: '🔧' },
     { id: 'ELECTRIQUE', libelle: 'Électrique', icone: '⚡' },
@@ -8733,20 +9013,102 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     }
   }
 
+  // Initialisation asynchrone du stockage IndexedDB et auto-guérison des photos
+  if (typeof RapportDB !== 'undefined') {
+    (async function initialiserStockage() {
+      try {
+        if (R && R.id) {
+          const avant = (R.evenements || []).reduce((acc, e) => acc + (e.photos || []).filter(p => p && p.dataUrl).length, 0);
+          await RapportDB.restaurerPhotos(R);
+          const apres = (R.evenements || []).reduce((acc, e) => acc + (e.photos || []).filter(p => p && p.dataUrl).length, 0);
+          if (apres > avant) {
+            Store.set(K.rapport, R);
+            if (typeof rendreTout === 'function') rendreTout();
+          }
+          await RapportDB.sauverRapport(R);
+        }
+        const liste = Store.get(K.rapports, []);
+        for (const rep of liste) {
+          if (rep && rep.id) {
+            const dbRep = await RapportDB.getRapport(rep.id);
+            if (!dbRep) {
+              await RapportDB.sauverRapport(rep);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Initialisation stockage:', e);
+      }
+    })();
+  }
+
   let dirty = false, saveTimer;
   function sauver(silencieux) {
     synchroniserEntites();
     R.maj = new Date().toISOString();
-    const ok = Store.set(K.rapport, R);
+
+    // 1. Persistance intégrale dans IndexedDB (aucun quota de 5 Mo, 100 % des photos conservées)
+    if (typeof RapportDB !== 'undefined') {
+      RapportDB.sauverRapport(R);
+    }
+
+    // 2. Persistance du rapport actif dans localStorage
+    let ok = Store.set(K.rapport, R);
+    if (!ok) {
+      // Si R dépasse le quota localStorage (5 Mo), on enregistre une version légère dans localStorage
+      // tandis qu'IndexedDB conserve 100 % des photos
+      const rLeger = JSON.parse(JSON.stringify(R));
+      rLeger.evenements = (rLeger.evenements || []).map(e => Object.assign({}, e, {
+        photos: (e.photos || []).map(p => ({ id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: '' }))
+      }));
+      rLeger.photosLibres = (rLeger.photosLibres || []).map(p => ({
+        id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: ''
+      }));
+      ok = Store.set(K.rapport, rLeger);
+    }
+
+    // 3. Mise à jour de la liste d'historique
     const liste = Store.get(K.rapports, []);
     const i = liste.findIndex(x => x.id === R.id);
-    const leger = JSON.parse(JSON.stringify(R));
-    leger.photosLibres = (leger.photosLibres || []).map(p => ({ legende: p.legende, dataUrl: '' }));
-    leger.evenements = (leger.evenements || []).map(e => Object.assign({}, e, { photos: (e.photos || []).map(p => ({ dataUrl: '' })) }));
-    if (i >= 0) liste[i] = leger; else liste.unshift(leger);
+    if (i >= 0) liste[i] = R; else liste.unshift(R);
     if (liste.length > 40) liste.length = 40;
-    const ok2 = Store.set(K.rapports, liste);
-    if (!ok || !ok2) { if (!silencieux) toast('Mémoire pleine : exportez la sauvegarde (Menu)', 5000); return false; }
+
+    let ok2 = Store.set(K.rapports, liste);
+    if (!ok2) {
+      // Si le localStorage sature (quota 5 Mo dépassé), on allège la copie de secours du localStorage
+      // tout en conservant les identifiants et métadonnées de photos.
+      // RapportDB conserve 100 % des photos en haute résolution dans IndexedDB.
+      const listeCondensee = liste.map(r => {
+        if (r.id === R.id) return r;
+        const c = JSON.parse(JSON.stringify(r));
+        c.evenements = (c.evenements || []).map(e => Object.assign({}, e, {
+          photos: (e.photos || []).map(p => ({ id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: '' }))
+        }));
+        c.photosLibres = (c.photosLibres || []).map(p => ({
+          id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: ''
+        }));
+        return c;
+      });
+      ok2 = Store.set(K.rapports, listeCondensee);
+      if (!ok2) {
+        const listeUltra = listeCondensee.map(r => {
+          const c = JSON.parse(JSON.stringify(r));
+          c.evenements = (c.evenements || []).map(e => Object.assign({}, e, {
+            photos: (e.photos || []).map(p => ({ id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: '' }))
+          }));
+          c.photosLibres = (c.photosLibres || []).map(p => ({
+            id: p.id, legende: p.legende || '', annotations: p.annotations || [], dataUrl: ''
+          }));
+          return c;
+        });
+        ok2 = Store.set(K.rapports, listeUltra);
+      }
+    }
+
+    if (!ok && (!RapportDB || !RapportDB.disponible())) {
+      if (!silencieux) toast('Mémoire pleine : exportez la sauvegarde (Menu)', 5000);
+      return false;
+    }
     dirty = false;
     if (!silencieux) toast('Enregistré');
     return true;
@@ -8904,7 +9266,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         <span class="ev-heure">${esc(Report.heureFr(ev.heure))}</span>
       </div>
       <div class="ev-corps">
-        ${(ev.photos || []).length ? `<div class="ev-vignettes">${ev.photos.slice(0, 3).map(p => `<img src="${p.dataUrl}" alt="">`).join('')}</div>` : ''}
+        ${(ev.photos || []).filter(p => p && p.dataUrl).length ? `<div class="ev-vignettes">${ev.photos.filter(p => p && p.dataUrl).slice(0, 3).map(p => `<img src="${p.dataUrl}" alt="">`).join('')}</div>` : ''}
         <p class="ev-texte">${texte ? esc(texte.length > 180 ? texte.slice(0, 180) + '…' : texte) : '<em>Annotation à compléter…</em>'}</p>
       </div>
       <div class="ev-pied">
@@ -9208,6 +9570,9 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         } else {
           if (!Array.isArray(R.pieces)) R.pieces = [];
           R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte, photo: photoEnCours || null });
+        }
+        if (photoEnCours && typeof RapportDB !== 'undefined') {
+          RapportDB.sauverPhoto('pc_' + p.id, photoEnCours, 'piece', (typeof R !== 'undefined' && R && R.id) || '');
         }
         planifier();
         rendreTout();
@@ -10996,7 +11361,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   function feuilleMenu() {
     const liste = Store.get(K.rapports, []);
     const ver = (typeof window !== 'undefined' && window.SAV_VERSION) || 'locale';
-    const dateVer = (typeof window !== 'undefined' && window.SAV_DATE) || '24/09/2026';
+    const dateVer = (typeof window !== 'undefined' && window.SAV_DATE) || '25/09/2026';
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Menu</h3>
       <p class="sub">Rapport N° ${esc(R.numero || '—')} — ${esc(R.client.nom || 'client non renseigné')}</p>
@@ -11027,28 +11392,126 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         else if (a === 'actualiser') actualiserApp();
         else if (a === 'nouveau') {
           if (!confirm('Créer une nouvelle intervention ?')) return;
-          sauver(true); R = nouvelleIntervention(); Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
-          Store.set(K.rapport, R); rendreTout(); toast('Nouvelle intervention — N° ' + R.numero);
+          sauver(true);
+          R = nouvelleIntervention();
+          Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
+          Store.set(K.rapport, R);
+          if (typeof RapportDB !== 'undefined') RapportDB.sauverRapport(R);
+          rendreTout();
+          toast('Nouvelle intervention — N° ' + R.numero);
         } else if (a === 'historique') feuilleHistorique();
         else if (a === 'aide') feuilleAide();
         else if (a === 'export') {
-          telecharger(new Blob([JSON.stringify({ version: 3, exporte: new Date().toISOString(), reglages: S, rapport: R, rapports: Store.get(K.rapports, []) }, null, 1)], { type: 'application/json' }),
-            'sauvegarde_rapports_' + todayISO() + '.json');
-          toast('Sauvegarde exportée');
+          sauver(true);
+          (async () => {
+            let listeExport = [];
+            if (typeof RapportDB !== 'undefined' && RapportDB.disponible()) {
+              try { listeExport = await RapportDB.tousLesRapports(); } catch (e) { listeExport = []; }
+            }
+            if (!listeExport || !listeExport.length) {
+              listeExport = Store.get(K.rapports, []);
+            }
+            if (R && R.id) {
+              const idx = listeExport.findIndex(x => x.id === R.id);
+              if (idx >= 0) listeExport[idx] = R; else listeExport.unshift(R);
+            }
+            if (typeof RapportDB !== 'undefined') {
+              for (const rep of listeExport) {
+                await RapportDB.restaurerPhotos(rep);
+              }
+              await RapportDB.restaurerPhotos(R);
+            }
+            const totalPhotos = listeExport.reduce((acc, rep) => {
+              const evPh = (rep.evenements || []).reduce((a, e) => a + ((e.photos || []).filter(p => p && p.dataUrl).length), 0);
+              const libPh = (rep.photosLibres || []).filter(p => p && p.dataUrl).length;
+              const pcPh = (rep.pieces || []).filter(p => p && p.photo).length;
+              return acc + evPh + libPh + pcPh;
+            }, 0);
+            telecharger(
+              new Blob([JSON.stringify({ version: 3, exporte: new Date().toISOString(), reglages: S, rapport: R, rapports: listeExport }, null, 1)], { type: 'application/json' }),
+              'sauvegarde_rapports_' + todayISO() + '.json'
+            );
+            toast(`Sauvegarde exportée (${listeExport.length} rapport(s), ${totalPhotos} photo(s) incluses)`);
+          })();
         } else if (a === 'import') {
           const inp = document.createElement('input');
           inp.type = 'file'; inp.accept = '.json,application/json';
           inp.onchange = () => {
             const f = inp.files[0]; if (!f) return;
             const r = new FileReader();
-            r.onload = () => {
+            r.onload = async () => {
               try {
                 const d = JSON.parse(r.result);
-                if (d.reglages) { S = fusion(settingsDefaut, d.reglages); Store.set(K.settings, S); }
-                if (Array.isArray(d.rapports)) Store.set(K.rapports, d.rapports);
-                if (d.rapport) R = fusion(nouvelleIntervention(), d.rapport);
-                rendreTout(); toast('Sauvegarde importée');
-              } catch (err) { toast('Fichier invalide'); }
+                let nbImportes = 0;
+                let nbPhotosTotal = 0;
+
+                if (d.reglages) {
+                  S = fusion(settingsDefaut, d.reglages);
+                  Store.set(K.settings, S);
+                }
+
+                const listeRapports = Array.isArray(d.rapports)
+                  ? d.rapports
+                  : (Array.isArray(d) ? d : null);
+
+                if (listeRapports && listeRapports.length) {
+                  for (const rep of listeRapports) {
+                    if (rep && (rep.id || rep.numero)) {
+                      if (typeof RapportDB !== 'undefined') {
+                        await RapportDB.sauverRapport(rep);
+                        await RapportDB.restaurerPhotos(rep);
+                      }
+                      nbImportes++;
+                      nbPhotosTotal += (rep.evenements || []).reduce((acc, e) => acc + ((e.photos || []).filter(p => p && p.dataUrl).length), 0);
+                      nbPhotosTotal += (rep.photosLibres || []).filter(p => p && p.dataUrl).length;
+                      if (rep.pieces) nbPhotosTotal += rep.pieces.filter(p => p && p.photo).length;
+                    }
+                  }
+                  const existants = Store.get(K.rapports, []);
+                  listeRapports.forEach(rep => {
+                    const idx = existants.findIndex(x => x.id === rep.id);
+                    if (idx >= 0) existants[idx] = rep; else existants.unshift(rep);
+                  });
+                  Store.set(K.rapports, existants);
+                }
+
+                const rapActif = d.rapport || (!listeRapports && (d.id || d.numero || d.evenements) ? d : null);
+                if (rapActif) {
+                  if (typeof RapportDB !== 'undefined') {
+                    await RapportDB.sauverRapport(rapActif);
+                    await RapportDB.restaurerPhotos(rapActif);
+                  }
+                  R = fusion(nouvelleIntervention(), rapActif);
+                  Store.set(K.rapport, R);
+                  if (typeof RapportDB !== 'undefined') {
+                    await RapportDB.sauverRapport(R);
+                  }
+                  nbImportes = Math.max(nbImportes, 1);
+                  const phR = (R.evenements || []).reduce((acc, e) => acc + ((e.photos || []).filter(p => p && p.dataUrl).length), 0)
+                    + (R.photosLibres || []).filter(p => p && p.dataUrl).length;
+                  if (!listeRapports) nbPhotosTotal = phR;
+                } else if (listeRapports && listeRapports.length) {
+                  const premier = listeRapports[0];
+                  if (typeof RapportDB !== 'undefined') {
+                    await RapportDB.restaurerPhotos(premier);
+                  }
+                  R = fusion(nouvelleIntervention(), premier);
+                  Store.set(K.rapport, R);
+                  if (typeof RapportDB !== 'undefined') {
+                    await RapportDB.sauverRapport(R);
+                  }
+                }
+
+                Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
+                rendreTout();
+                const msg = nbPhotosTotal > 0
+                  ? `Sauvegarde importée (${nbImportes} intervention(s), ${nbPhotosTotal} photo(s) rétablie(s))`
+                  : `Sauvegarde importée (${nbImportes} intervention(s))`;
+                toast(msg, 3500);
+              } catch (err) {
+                console.error(err);
+                toast('Fichier invalide : impossible de lire la sauvegarde');
+              }
             };
             r.readAsText(f);
           };
@@ -11058,35 +11521,72 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     });
   }
 
-  function feuilleHistorique() {
-    const liste = Store.get(K.rapports, []);
+  async function feuilleHistorique() {
+    let liste = [];
+    if (typeof RapportDB !== 'undefined' && RapportDB.disponible()) {
+      try { liste = await RapportDB.tousLesRapports(); } catch (e) { liste = []; }
+    }
+    if (!liste || !liste.length) {
+      liste = Store.get(K.rapports, []);
+    }
+    if (R && R.id) {
+      const idx = liste.findIndex(x => x.id === R.id);
+      if (idx >= 0) liste[idx] = R; else liste.unshift(R);
+    }
+    liste.sort((a, b) => ((b.maj || b.cree || b.date || '') > (a.maj || a.cree || a.date || '') ? 1 : -1));
+
+    const compterPhotos = (r) => {
+      const evPh = (r.evenements || []).reduce((a, e) => a + ((e.photos || []).filter(p => p && (p.dataUrl || p.id)).length), 0);
+      const libPh = (r.photosLibres || []).filter(p => p && (p.dataUrl || p.id)).length;
+      const pcPh = (r.pieces || []).filter(p => p && p.photo).length;
+      return evPh + libPh + pcPh;
+    };
+
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Rapports enregistrés</h3>
       <p class="sub">${liste.length} rapport(s) sur ce téléphone.</p>
-      ${liste.map(r => `<div class="menu-item" style="flex-direction:column;align-items:stretch;gap:6px">
+      ${liste.map(r => {
+        const nbPh = compterPhotos(r);
+        return `<div class="menu-item" style="flex-direction:column;align-items:stretch;gap:6px">
         <div style="display:flex;justify-content:space-between;gap:8px">
           <strong>${esc(r.numero || '—')} — ${esc((r.client && r.client.nom) || 'client ?')}</strong>
           <span class="pill">${esc(r.statut || 'brouillon')}</span></div>
-        <div class="small">${esc(Report.frDate(r.date))} • ${esc((r.machine && r.machine.designation) || '')} • ${(r.evenements || []).length} évènement(s)</div>
+        <div class="small">${esc(Report.frDate(r.date))} • ${esc((r.machine && r.machine.designation) || '')} • ${(r.evenements || []).length} évènement(s)${nbPh ? ' • ' + nbPh + ' photo(s)' : ''}</div>
         <div class="btnrow"><button class="btn sm grey" data-ouvrir="${r.id}">Rouvrir</button>
-          <button class="btn sm danger" data-suppr="${r.id}">Supprimer</button></div></div>`).join('') || '<p class="small">Aucun rapport enregistré.</p>'}
+          <button class="btn sm danger" data-suppr="${r.id}">Supprimer</button></div></div>`;
+      }).join('') || '<p class="small">Aucun rapport enregistré.</p>'}
       <button class="btn grey wide" data-a="fermer">Fermer</button></div>`, (panneau) => {
-      panneau.addEventListener('click', (e) => {
+      panneau.addEventListener('click', async (e) => {
         const sup = e.target.closest('[data-suppr]');
         const ouv = e.target.closest('[data-ouvrir]');
         if (sup) {
           if (!confirm('Supprimer définitivement ce rapport ?')) return;
-          Store.set(K.rapports, Store.get(K.rapports, []).filter(x => x.id !== sup.dataset.suppr));
-          e.target.closest('.sheet').remove(); feuilleHistorique();
+          const id = sup.dataset.suppr;
+          if (typeof RapportDB !== 'undefined') await RapportDB.supprimerRapport(id);
+          Store.set(K.rapports, Store.get(K.rapports, []).filter(x => x.id !== id));
+          e.target.closest('.sheet').remove();
+          feuilleHistorique();
         } else if (ouv) {
-          const r = Store.get(K.rapports, []).find(x => x.id === ouv.dataset.ouvrir);
-          if (!r || !confirm('Rouvrir ce rapport ? Le rapport en cours sera conservé au préalable.')) return;
+          const id = ouv.dataset.ouvrir;
+          if (!confirm('Rouvrir ce rapport ? Le rapport en cours sera conservé au préalable.')) return;
           sauver(true);
-          R = fusion(nouvelleIntervention(), r);
-          Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
-          Store.set(K.rapport, R);
-          e.target.closest('.sheet').remove(); rendreTout();
-          toast('Rapport ' + R.numero + ' chargé');
+          let r = null;
+          if (typeof RapportDB !== 'undefined' && RapportDB.disponible()) {
+            r = await RapportDB.getRapport(id);
+          }
+          if (!r) {
+            r = Store.get(K.rapports, []).find(x => x.id === id);
+          }
+          if (r) {
+            if (typeof RapportDB !== 'undefined') await RapportDB.restaurerPhotos(r);
+            R = fusion(nouvelleIntervention(), r);
+            Cache.pdf = Cache.docx = null; Cache.clePdf = Cache.cleDocx = Cache.cleTrad = '';
+            Store.set(K.rapport, R);
+            if (typeof RapportDB !== 'undefined') await RapportDB.sauverRapport(R);
+          }
+          e.target.closest('.sheet').remove();
+          rendreTout();
+          toast('Rapport ' + R.numero + ' chargé avec ses photos');
         }
       });
     });
@@ -11107,7 +11607,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       <p class="small"><strong>Client étranger :</strong> dans <em>Client &amp; machine</em>, cochez « Traduire le rapport dans la langue du client » et choisissez la langue (anglais, allemand, néerlandais, espagnol, italien, portugais). Le mail part alors avec <strong>deux rapports</strong> : le français et la version traduite. La langue est retenue pour ce client. Un appui sur « Préparer la langue sur ce téléphone » (au bureau, en Wi-Fi) rend la traduction disponible même hors connexion.</p>
       <p class="small">Un évènement reste modifiable à tout moment : appuyez dessus pour reprendre l'assistant.</p>
       <p class="small"><strong>Installation :</strong> dans Chrome, menu ⋮ → « Ajouter à l'écran d'accueil ». L'application fonctionne ensuite hors connexion.</p>
-      <p class="small"><strong>Version de l'application :</strong> <span id="versionAppli">${self.SAV_VERSION || 'non versionnée'} (${self.SAV_DATE || '24/09/2026'})</span> — si l'application ne se met pas à jour, ce numéro (au support) dit quelle version tourne sur ce téléphone.</p>
+      <p class="small"><strong>Version de l'application :</strong> <span id="versionAppli">${self.SAV_VERSION || 'non versionnée'} (${self.SAV_DATE || '25/09/2026'})</span> — si l'application ne se met pas à jour, ce numéro (au support) dit quelle version tourne sur ce téléphone.</p>
       <button class="btn grey wide" data-a="fermer">Fermer</button></div>`);
   }
 
@@ -11429,7 +11929,12 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
             };
             r.onerror = reject; r.readAsDataURL(f);
           });
-          R.photosLibres.push({ dataUrl: dataUrl, legende: '', annotations: [] });
+          const pid = uid('phl');
+          const photoItem = { id: pid, dataUrl: dataUrl, legende: '', annotations: [] };
+          R.photosLibres.push(photoItem);
+          if (typeof RapportDB !== 'undefined') {
+            RapportDB.sauverPhoto(pid, dataUrl, 'photosLibres', (typeof R !== 'undefined' && R && R.id) || '');
+          }
         }
         planifier(); e.target.closest('.sheet').remove(); feuillePhotosLibres();
       });
@@ -11856,6 +12361,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
 
   window.APP = {
     get rapport() { return R; }, get reglages() { return S; },
+    sauver: sauver, planifier: planifier,
     pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
     destinatairesMail: destinatairesMail, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
@@ -11865,5 +12371,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="2df30388bc";window.SAV_DATE="25/09/2026";</script></body>
+<script>window.SAV_VERSION="958cecd5fe";window.SAV_DATE="25/09/2026";</script></body>
 </html>
