@@ -1662,6 +1662,169 @@
     ].join('\n');
   }
 
+  /* --- Modèles multilingues pour e-mails dédiés Client & SAV --- */
+  const OBJET_CLIENT = {
+    en: 'Service report #{{numero}} — {{client}} — {{date}}',
+    de: 'Servicebericht Nr. {{numero}} — {{client}} — {{date}}',
+    nl: 'Serviceverslag nr. {{numero}} — {{client}} — {{date}}',
+    es: 'Informe de intervención n.º {{numero}} — {{client}} — {{date}}',
+    it: 'Rapporto di intervento n. {{numero}} — {{client}} — {{date}}',
+    pt: 'Relatório de intervenção n.º {{numero}} — {{client}} — {{date}}'
+  };
+
+  const CORPS_CLIENT = {
+    en: [
+      'Hello,',
+      '',
+      'Please find attached the service report #{{numero}} of {{date}}, regarding {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Time spent on site: {{duree}}.',
+      '',
+      'Both the official French report and the English version are attached to this message, including full details of completed work, technical measurements, spare parts, and signatures.',
+      '',
+      'We remain at your disposal for any further information.',
+      '',
+      'Best regards,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n'),
+    de: [
+      'Guten Tag,',
+      '',
+      'anbei erhalten Sie den Servicebericht Nr. {{numero}} vom {{date}} betreffend {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Arbeitszeit vor Ort: {{duree}}.',
+      '',
+      'Der offizielle französische Bericht sowie die deutsche Fassung sind dieser Nachricht beigefügt, einschließlich aller Einzelheiten zu den durchgeführten Arbeiten, technischen Messungen, Ersatzteilen und Unterschriften.',
+      '',
+      'Für weitere Auskünfte stehen wir Ihnen gerne zur Verfügung.',
+      '',
+      'Mit freundlichen Grüßen,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n'),
+    nl: [
+      'Geachte,',
+      '',
+      'In bijlage vindt u het serviceverslag nr. {{numero}} van {{date}}, betreffende {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Tijd doorgebracht op locatie: {{duree}}.',
+      '',
+      'Zowel het officiële Franse rapport als de Nederlandse versie zijn bijgevoegd, inclusief alle details van de uitgevoerde werkzaamheden, technische metingen, reserveonderdelen en handtekeningen.',
+      '',
+      'Wij blijven graag tot uw beschikking voor verdere inlichtingen.',
+      '',
+      'Met vriendelijke groet,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n'),
+    es: [
+      'Estimado/a cliente,',
+      '',
+      'Adjunto encontrará el informe de intervención n.º {{numero}} del {{date}}, relativo a {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Tiempo en las instalaciones: {{duree}}.',
+      '',
+      'Se adjuntan a este mensaje tanto el informe oficial en francés como la versión en español, con el detalle de los trabajos realizados, mediciones técnicas, piezas y firmas.',
+      '',
+      'Quedamos a su entera disposición para cualquier información adicional.',
+      '',
+      'Atentamente,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n'),
+    it: [
+      'Gentile cliente,',
+      '',
+      'In allegato inviamo il rapporto di intervento n. {{numero}} del {{date}}, relativo a {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Tempo trascorso in loco: {{duree}}.',
+      '',
+      'Al presente messaggio sono allegati sia il rapporto ufficiale in francese sia la versione in italiano, con il dettaglio dei lavori eseguiti, misurazioni tecniche, ricambi e firme.',
+      '',
+      'Restiamo a sua completa disposizione per ogni ulteriore informazione.',
+      '',
+      'Cordiali saluti,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n'),
+    pt: [
+      'Estimado(a) cliente,',
+      '',
+      'Em anexo enviamos o relatório de intervenção n.º {{numero}} de {{date}}, referente a {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Tempo passado no local: {{duree}}.',
+      '',
+      'Encontram-se em anexo a esta mensagem o relatório oficial em francês e a versão em português, com o detalhe dos trabalhos executados, medições técnicas, peças e assinaturas.',
+      '',
+      'Permanecemos à sua inteira disposição para qualquer informação adicional.',
+      '',
+      'Com os melhores cumprimentos,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n')
+  };
+
+  function objetMailClient(i, s, langue) {
+    if (!langue || langue === 'fr') return objetMail(i, s);
+    const tpl = OBJET_CLIENT[langue] || objetMail(i, s);
+    return appliquer(tpl, variables(i, s));
+  }
+
+  function corpsMailClient(i, s, langue) {
+    if (!langue || langue === 'fr') return corpsMail(i, s);
+    const tpl = CORPS_CLIENT[langue] || defaultCorpsMail();
+    const vars = variables(i, s);
+    let corps = appliquer(tpl, vars);
+    corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
+    return corps;
+  }
+
+  function objetMailSAV(i, s, langueClient) {
+    const nomLangue = (langueClient && langueClient !== 'fr' && global.I18N) ? global.I18N.nom(langueClient) : null;
+    const base = (s && s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}';
+    const tag = nomLangue ? ' [FR + ' + nomLangue + ']' : '';
+    return appliquer(base + tag, variables(i, s));
+  }
+
+  function corpsMailSAV(i, s, langueClient) {
+    const vars = variables(i, s);
+    const tr = (i && i.trajet && typeof calculerTrajet === 'function')
+      ? calculerTrajet(i.trajet, (typeof dureeTotale === 'function' ? dureeTotale(i) : 0))
+      : null;
+    let infoTrajet = '';
+    if (tr && (tr.totalRoute.minutes > 0 || tr.totalGeneral.minutes > 0)) {
+      infoTrajet = '\nDéplacement aller : ' + tr.aller.texte + ' | Déplacement retour : ' + tr.retour.texte + ' (' + (tr.retour.estime ? 'estimé' : 'réel') + ') | Total déplacement : ' + tr.totalRoute.texte + '\nTotal général intervention : ' + tr.totalGeneral.texte + '.';
+    }
+    const nomLangue = (langueClient && langueClient !== 'fr' && global.I18N) ? global.I18N.nom(langueClient) : null;
+    const mentionBilingue = nomLangue
+      ? '\n\nNote transmission bilingue : Les 2 rapports sont joints au présent message (rapport officiel de référence en français + version traduite en ' + nomLangue + ' transmise au client).'
+      : '';
+    const tpl = [
+      'Bonjour l\'équipe SAV,',
+      '',
+      'Veuillez trouver ci-joint le compte rendu d\'intervention N° {{numero}} du {{date}}, concernant {{client}} ({{lieu}}) — {{machine}}.',
+      '',
+      'Temps passé sur site : {{duree}}.' + infoTrajet + mentionBilingue,
+      '',
+      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.',
+      '',
+      'Cordialement,',
+      '{{technicien}}',
+      '{{societe}}'
+    ].join('\n');
+    let corps = appliquer(tpl, vars);
+    corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
+    return corps;
+  }
+
+  function corpsMailBilingue(i, s, langueClient) {
+    if (!langueClient || langueClient === 'fr') return corpsMail(i, s);
+    const corpsCl = corpsMailClient(i, s, langueClient);
+    const corpsSv = corpsMailSAV(i, s, langueClient);
+    return corpsCl + '\n\n__________________________________________________\n[Version française pour le SAV BFR]\n\n' + corpsSv;
+  }
+
   global.Report = {
     /* opts : { langue: 'en', suffixe: true } pour la version traduite. */
     genererPDF: function (i, s, opts) { return new RapportPDF(i, s, opts).generer(); },
@@ -1678,6 +1841,9 @@
     dureeDecimale: dureeDecimale, calculerTrajet: calculerTrajet, frDate: frDate, heureFr: heureFr, valeur: valeur, slug: slug,
     listeMachines: listeMachines, listeTechniciens: listeTechniciens,
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
+    objetMailClient: objetMailClient, corpsMailClient: corpsMailClient,
+    objetMailSAV: objetMailSAV, corpsMailSAV: corpsMailSAV,
+    corpsMailBilingue: corpsMailBilingue,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
 })(window);
