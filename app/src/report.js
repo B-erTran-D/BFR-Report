@@ -1613,6 +1613,7 @@
       })(),
       serie: valeur(i.machine && i.machine.serie),
       technicien: nomTechnicien(i, reglages) || 'Technicien SAV',
+      fonction: valeur(t.fonction || (i.technicien && i.technicien.fonction) || (reglages && reglages.technicien && reglages.technicien.fonction) || 'Technicien SAV'),
       societe: valeur(reglages && reglages.societe && reglages.societe.nom) || 'BFR SYSTEMS',
       debut: heureFr(i.chrono && i.chrono.debut), fin: heureFr(i.chrono && i.chrono.fin),
       duree: formatDuree(e.duree) || '—',
@@ -1631,20 +1632,27 @@
   function appliquer(tpl, vars) {
     return String(tpl || '').replace(/\{\{(\w+)\}\}/g, function (m, k) { return vars[k] !== undefined ? vars[k] : m; });
   }
-  function objetMail(i, s) {
-    return appliquer((s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}', variables(i, s));
+  function objetMail(i, s, langueClient) {
+    const nomLangue = (langueClient && langueClient !== 'fr' && global.I18N) ? global.I18N.nom(langueClient) : null;
+    const base = (s && s.mail && s.mail.objet) || 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}';
+    if (nomLangue) {
+      const objCl = (typeof objetMailClient === 'function') ? objetMailClient(i, s, langueClient) : null;
+      if (objCl) {
+        return objCl + ' [FR + ' + nomLangue + ']';
+      }
+      return appliquer(base + ' [FR + ' + nomLangue + ']', variables(i, s));
+    }
+    return appliquer(base, variables(i, s));
   }
   function corpsMail(i, s, langue) {
     let tpl = (s && s.mail && s.mail.corps) || '';
-    if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1 || tpl.indexOf('Cordialement') !== -1 || tpl.indexOf('{{technicien}}') !== -1) {
+    if (!tpl || tpl.indexOf('pointsCles') !== -1 || tpl.indexOf('Points clés') !== -1 || tpl.indexOf('{{actions}}') !== -1 || tpl.indexOf('Travaux réalisés') !== -1 || tpl.indexOf('nbEvenements') !== -1 || tpl.indexOf('Synthèse :') !== -1 || tpl.indexOf('Cordialement') !== -1 || tpl.indexOf('{{technicien}}') !== -1 || tpl.indexOf('Restant à votre entière disposition') !== -1) {
       tpl = defaultCorpsMail();
     }
     const vars = variables(i, s);
     let corps = appliquer(tpl, vars);
     // Nettoyer les parenthèses vides si le lieu n'est pas renseigné (ex: "CLIENT () — MACHINE" -> "CLIENT — MACHINE")
     corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
-    /* Rapport envoyé en deux langues : on le dit au client, dans sa langue,
-       à la fin du message (le corps du mail reste en français pour le SAV). */
     const phrase = (langue && langue !== 'fr' && global.I18N) ? global.I18N.phraseTraduction(langue) : null;
     return phrase ? corps + '\n\n' + phrase : corps;
   }
@@ -1656,10 +1664,30 @@
       '',
       'Temps passé sur site : {{duree}}.',
       '',
-      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.',
-      '',
-      'Restant à votre entière disposition pour tout renseignement complémentaire.'
+      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.'
     ].join('\n');
+  }
+
+  /* --- Dictionnaire des fonctions techniques (traductions professionnelles) --- */
+  const DICT_FCT_SAV = {
+    'technicien sav': {
+      en: 'Field Service Technician', de: 'Servicetechniker', nl: 'Servicetechnicus',
+      es: 'Técnico de Servicio', it: 'Tecnico di assistenza', pt: 'Técnico de assistência'
+    },
+    'technicien': {
+      en: 'Service Technician', de: 'Techniker', nl: 'Technicus',
+      es: 'Técnico', it: 'Tecnico', pt: 'Técnico'
+    },
+    'responsable sav': {
+      en: 'Service Manager', de: 'Kundendienstleiter', nl: 'Servicemanager',
+      es: 'Responsable de Servicio', it: 'Responsabile assistenza', pt: 'Responsável de assistência'
+    }
+  };
+  function traduireFonction(f, langue) {
+    if (!f || !langue || langue === 'fr') return f || '';
+    const fBas = f.trim().toLowerCase();
+    if (DICT_FCT_SAV[fBas] && DICT_FCT_SAV[fBas][langue]) return DICT_FCT_SAV[fBas][langue];
+    return f;
   }
 
   /* --- Modèles multilingues pour e-mails dédiés Client & SAV --- */
@@ -1685,8 +1713,7 @@
       'We remain at your disposal for any further information.',
       '',
       'Best regards,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n'),
     de: [
       'Guten Tag,',
@@ -1700,8 +1727,7 @@
       'Für weitere Auskünfte stehen wir Ihnen gerne zur Verfügung.',
       '',
       'Mit freundlichen Grüßen,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n'),
     nl: [
       'Geachte,',
@@ -1715,8 +1741,7 @@
       'Wij blijven graag tot uw beschikking voor verdere inlichtingen.',
       '',
       'Met vriendelijke groet,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n'),
     es: [
       'Estimado/a cliente,',
@@ -1730,8 +1755,7 @@
       'Quedamos a su entera disposición para cualquier información adicional.',
       '',
       'Atentamente,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n'),
     it: [
       'Gentile cliente,',
@@ -1745,8 +1769,7 @@
       'Restiamo a sua completa disposizione per ogni ulteriore informazione.',
       '',
       'Cordiali saluti,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n'),
     pt: [
       'Estimado(a) cliente,',
@@ -1760,8 +1783,7 @@
       'Permanecemos à sua inteira disposição para qualquer informação adicional.',
       '',
       'Com os melhores cumprimentos,',
-      '{{technicien}}',
-      '{{societe}}'
+      '{{signatureClient}}'
     ].join('\n')
   };
 
@@ -1775,6 +1797,9 @@
     if (!langue || langue === 'fr') return corpsMail(i, s);
     const tpl = CORPS_CLIENT[langue] || defaultCorpsMail();
     const vars = variables(i, s);
+    const fctTraduite = traduireFonction(vars.fonction, langue);
+    const sigLignes = [vars.technicien, fctTraduite, vars.societe].filter(Boolean);
+    vars.signatureClient = sigLignes.join('\n');
     let corps = appliquer(tpl, vars);
     corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
     return corps;
@@ -1801,17 +1826,13 @@
       ? '\n\nNote transmission bilingue : Les 2 rapports sont joints au présent message (rapport officiel de référence en français + version traduite en ' + nomLangue + ' transmise au client).'
       : '';
     const tpl = [
-      'Bonjour l\'équipe SAV,',
+      'Bonjour,',
       '',
       'Veuillez trouver ci-joint le compte rendu d\'intervention N° {{numero}} du {{date}}, concernant {{client}} ({{lieu}}) — {{machine}}.',
       '',
       'Temps passé sur site : {{duree}}.' + infoTrajet + mentionBilingue,
       '',
-      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.',
-      '',
-      'Cordialement,',
-      '{{technicien}}',
-      '{{societe}}'
+      'Le rapport complet avec le détail des travaux, relevés techniques, pièces et signatures est joint au présent message.'
     ].join('\n');
     let corps = appliquer(tpl, vars);
     corps = corps.replace(/\s*\(\s*\)\s*/g, ' ').replace(/\s+—\s*\./g, '.').replace(/[ \t]{2,}/g, ' ');
@@ -1822,7 +1843,7 @@
     if (!langueClient || langueClient === 'fr') return corpsMail(i, s);
     const corpsCl = corpsMailClient(i, s, langueClient);
     const corpsSv = corpsMailSAV(i, s, langueClient);
-    return corpsCl + '\n\n__________________________________________________\n[Version française pour le SAV BFR]\n\n' + corpsSv;
+    return corpsCl + '\n\n__________________________________________________\n[Version française / Information SAV BFR]\n\n' + corpsSv;
   }
 
   global.Report = {

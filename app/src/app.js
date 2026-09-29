@@ -2449,110 +2449,19 @@
     const langueMail = t ? t.code : null;
     const nomLangue = (t && typeof I18N !== 'undefined' && I18N.natif) ? I18N.natif(t.code) : (t ? t.code.toUpperCase() : '');
 
-    // États d'envoi pour le rapport bilingue
-    let envoiClientFait = false;
-    let envoiSAVFait = false;
+    // Objet et corps final (unifié : bilingue si traduit, 100% français sinon)
+    const objetFinal = t ? Report.objetMail(R, S, t.code) : Report.objetMail(R, S);
+    const corpsFinal = t ? Report.corpsMailBilingue(R, S, t.code) : Report.corpsMail(R, S, null);
+    const mailtoUrl = urlMailto(dests, objetFinal, corpsFinal);
 
-    // Destinataires séparés
-    const destsCl = destinatairesClient();
-    const destsSv = destinatairesSAV();
+    const html = `<div class="panel">
+      <div class="grab"></div><h3>Envoyer le compte rendu ${t ? 'bilingue' : ''}</h3>
+      <p class="sub">${t ? 'Les 2 rapports PDF (FR + ' + esc(nomLangue) + ') sont prêts pour transmission :' : 'Le rapport PDF est prêt pour transmission :'}</p>
 
-    // URLs et textes
-    const objetGeneral = Report.objetMail(R, S);
-    const corpsGeneral = Report.corpsMail(R, S, langueMail);
-    const mailtoUrl = urlMailto(dests, objetGeneral, corpsGeneral);
-
-    const objetClient = (t && Report.objetMailClient) ? Report.objetMailClient(R, S, t.code) : objetGeneral;
-    const corpsClient = (t && Report.corpsMailClient) ? Report.corpsMailClient(R, S, t.code) : corpsGeneral;
-    const mailtoClientUrl = urlMailto(destsCl, objetClient, corpsClient);
-
-    const objetSAV = (t && Report.objetMailSAV) ? Report.objetMailSAV(R, S, t.code) : objetGeneral;
-    const corpsSAV = (t && Report.corpsMailSAV) ? Report.corpsMailSAV(R, S, t.code) : Report.corpsMail(R, S, null);
-    const mailtoSAVUrl = urlMailto(destsSv, objetSAV, corpsSAV);
-
-    const objetGroupe = objetSAV;
-    const corpsGroupe = (t && Report.corpsMailBilingue) ? Report.corpsMailBilingue(R, S, t.code) : corpsGeneral;
-    const mailtoGroupeUrl = urlMailto(dests, objetGroupe, corpsGroupe);
-
-    const html = t
-      ? `<div class="panel">
-      <div class="grab"></div><h3>Envoyer le compte rendu bilingue</h3>
-      <p class="sub">Les 2 rapports PDF sont prêts pour transmission :</p>
-
-      <div class="sticky-note" style="margin-bottom:12px;background:#f0fdf4;border:1.5px solid #86efac;border-left:4px solid #16a34a">
-        <strong style="color:#166534">✨ Version bilingue prête : Français + ${esc(nomLangue)}</strong><br>
-        <small style="color:#334155">Pour respecter la langue de chacun, l'envoi s'effectue en <strong>2 étapes simples</strong>. <strong>Les 2 fichiers PDF sont joints à chaque e-mail</strong>.</small>
-      </div>
-
-      <!-- ÉTAPE 1 : CLIENT -->
-      <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="pill" style="background:var(--bfr-primary);color:#fff;font-weight:700;font-size:11px;padding:2px 7px">Étape 1</span>
-            <strong style="color:var(--bfr-secondary);font-size:13.5px">Envoyer au Client (${esc(nomLangue)})</strong>
-          </div>
-          <span id="badgeStatutClient" class="pill" style="font-size:10.5px;background:#e2e8f0;color:#64748b">À faire</span>
-        </div>
-        <div style="font-size:12px;color:#334155;margin-bottom:8px;line-height:1.4">
-          <strong>À :</strong> <span style="font-family:ui-monospace,monospace;color:#0f172a">${esc(destsCl.toStr || 'non renseigné')}</span>
-          ${destsCl.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(destsCl.toStr)}" style="padding:1px 6px;font-size:10.5px;min-height:22px;margin-left:4px" title="Copier l'e-mail client">Copier</button>` : ''}
-          <div style="color:#64748b;font-size:11.5px;margin-top:2px">📧 Message dans la langue du client + <strong>2 PDF attachés</strong> (FR &amp; ${esc(nomLangue)})</div>
-        </div>
-        <button class="btn wide" data-a="partager-client" style="background:var(--bfr-primary);color:#fff;font-size:13.5px;padding:9px">
-          ${(ICO.send && ICO.send(16)) || ''} <span id="labelBtnClient">Envoyer au Client (${esc(nomLangue)})</span>
-        </button>
-        <div style="text-align:center;margin-top:5px">
-          <a href="${esc(mailtoClientUrl)}" data-a="mailto-client" class="small" style="color:var(--bfr-primary);font-size:11px;text-decoration:underline">Repli direct : ouvrir messagerie client (sans PJ)</a>
-        </div>
-      </div>
-
-      <!-- ÉTAPE 2 : SAV -->
-      <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="pill" style="background:var(--bfr-secondary);color:#fff;font-weight:700;font-size:11px;padding:2px 7px">Étape 2</span>
-            <strong style="color:var(--bfr-secondary);font-size:13.5px">Envoyer au SAV BFR (Français)</strong>
-          </div>
-          <span id="badgeStatutSAV" class="pill" style="font-size:10.5px;background:#e2e8f0;color:#64748b">À faire</span>
-        </div>
-        <div style="font-size:12px;color:#334155;margin-bottom:8px;line-height:1.4">
-          <div>
-            <strong>À :</strong> <span style="font-family:ui-monospace,monospace;color:#0f172a">${esc(destsSv.toStr || 'sav@bfrsystems.com')}</span>
-            ${destsSv.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(destsSv.toStr)}" style="padding:1px 6px;font-size:10.5px;min-height:22px;margin-left:4px" title="Copier l'e-mail SAV">Copier</button>` : ''}
-          </div>
-          ${destsSv.ccStr ? `<div style="margin-top:2px">
-            <strong>Cc :</strong> <span style="font-family:ui-monospace,monospace;color:#64748b">${esc(destsSv.ccStr)}</span>
-            <button type="button" class="btn sm ghost" data-copier-dest="${esc(destsSv.ccStr)}" style="padding:1px 6px;font-size:10.5px;min-height:22px;margin-left:4px" title="Copier les copies">Copier</button>
-          </div>` : ''}
-          <div style="color:#64748b;font-size:11.5px;margin-top:2px">📧 Message en français avec récapitulatif heures &amp; trajet + <strong>2 PDF attachés</strong></div>
-        </div>
-        <button class="btn wide" data-a="partager-sav" style="background:var(--bfr-secondary);color:#fff;font-size:13.5px;padding:9px">
-          ${(ICO.send && ICO.send(16)) || ''} <span id="labelBtnSAV">Envoyer au SAV BFR (Français)</span>
-        </button>
-        <div style="text-align:center;margin-top:5px">
-          <a href="${esc(mailtoSAVUrl)}" data-a="mailto-sav" class="small" style="color:var(--bfr-secondary);font-size:11px;text-decoration:underline">Repli direct : ouvrir messagerie SAV (sans PJ)</a>
-        </div>
-      </div>
-
-      <!-- ALTERNATIVE ENVOI UNIQUE -->
-      <button class="menu-item" data-a="partager-groupe" style="background:#fff;border:1.5px dashed #cbd5e1;margin-bottom:10px">
-        <span class="ico">${(ICO.send && ICO.send(18)) || ''}</span>
-        <span><strong>Option alternative : Envoi groupé unique (bilingue)</strong>
-        <small>Un seul e-mail commun (Client + SAV) avec texte dans les deux langues et 2 PDF</small></span>
-      </button>
-
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0">
-        <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (Français de référence)</span></button>
-        <button class="menu-item" data-a="dlt"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${esc(nomLangue)})</span></button>
-        <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (Français)</span></button>
-        ${(t && t.word) ? `<button class="menu-item" data-a="dlwt"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (${esc(nomLangue)})</span></button>` : ''}
-        <button class="menu-item" data-a="copier-client"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte e-mail Client (${esc(nomLangue)})</span></button>
-        <button class="menu-item" data-a="copier-sav"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte e-mail SAV (Français)</span></button>
-      </div>
-      <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`
-      : `<div class="panel">
-      <div class="grab"></div><h3>Envoyer le compte rendu</h3>
-      <p class="sub">Le rapport PDF est prêt pour transmission :</p>
+      ${t ? `<div class="sticky-note" style="margin-bottom:12px;background:#f0fdf4;border:1.5px solid #86efac;border-left:4px solid #16a34a">
+        <strong style="color:#166534">✨ Version bilingue prête : ${esc(nomLangue)} + Français</strong><br>
+        <small style="color:#334155">Un seul e-mail regroupe la version ${esc(nomLangue)} pour le client et la version française pour le SAV. <strong>Les 2 fichiers PDF sont joints</strong>.</small>
+      </div>` : ''}
 
       <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.5">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
@@ -2567,16 +2476,18 @@
 
       <button class="menu-item" data-a="partager" style="background:#e0f2fe;border:2px solid var(--bfr-primary)">
         <span class="ico">${(ICO.send && ICO.send(20)) || ''}</span>
-        <span><strong style="font-size:14.5px;color:var(--bfr-secondary)">Envoyer le rapport par e-mail (PDF joint)</strong>
-        <small>Outlook / Gmail — PDF attaché &amp; adresse client copiée dans le presse-papier</small></span>
+        <span><strong style="font-size:14.5px;color:var(--bfr-secondary)">Envoyer le rapport par e-mail (${t ? '2 PDF joints' : 'PDF joint'})</strong>
+        <small>Outlook / Gmail — ${t ? 'Version ' + esc(nomLangue) + ' + FR' : 'PDF attaché'} &amp; adresse client copiée</small></span>
       </button>
 
       <div style="text-align:center;margin:6px 0 10px 0">
         <a href="${esc(mailtoUrl)}" data-a="mailto" class="small" style="color:var(--bfr-primary);text-decoration:underline;font-size:11.5px">Repli direct : ouvrir l'application e-mail avec À et Cc pré-remplis (sans pièce jointe)</a>
       </div>
 
-      <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF</span></button>
-      <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word</span></button>
+      <button class="menu-item" data-a="dl"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${t ? 'Français de référence' : 'PDF'})</span></button>
+      ${t ? `<button class="menu-item" data-a="dlt"><span class="ico">${(ICO.download && ICO.download(18)) || ''}</span><span>Télécharger le PDF (${esc(nomLangue)})</span></button>` : ''}
+      <button class="menu-item" data-a="dlw"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (Français)</span></button>
+      ${(t && t.word) ? `<button class="menu-item" data-a="dlwt"><span class="ico">${(ICO.fileText && ICO.fileText(18)) || ''}</span><span>Télécharger la version Word (${esc(nomLangue)})</span></button>` : ''}
       <button class="menu-item" data-a="copier"><span class="ico">${(ICO.copy && ICO.copy(18)) || ''}</span><span>Copier le texte du message</span></button>
       <button class="btn grey wide" style="margin-top:10px" data-a="fermer">Fermer</button></div>`;
 
@@ -2595,149 +2506,63 @@
         const a = b.dataset.a;
         const fichiers = fichiersEnvoi(lots);
 
-        if (a === 'partager-client') {
-          if (destsCl.toStr) copier(destsCl.toStr);
-          let peutPartager = false;
-          if (navigator.canShare && fichiers.length) {
-            try { peutPartager = navigator.canShare({ files: fichiers }); } catch (_) { peutPartager = false; }
-          }
-          if (peutPartager) {
-            try {
-              toast('2 PDF attachés — Adresse client copiée', 3000);
-              await navigator.share({
-                files: fichiers,
-                title: objetClient,
-                text: corpsClient
-              });
-              envoiClientFait = true;
-              const badgeCl = $('#badgeStatutClient', panneau);
-              if (badgeCl) {
-                badgeCl.textContent = '✓ Envoyé';
-                badgeCl.style.background = '#dcfce7';
-                badgeCl.style.color = '#166534';
-              }
-              const labelBtn = $('#labelBtnClient', panneau);
-              if (labelBtn) labelBtn.textContent = 'Renvoyer au Client (' + nomLangue + ')';
-              if (envoiSAVFait) {
-                R.statut = 'transmis'; if (t) R.langueEnvoyee = t.code; planifier(); rendreTout();
-                toast('Transmission complète : Client et SAV notifiés !', 3500);
-              } else {
-                if (t) R.langueEnvoyee = t.code; planifier(); rendreTout();
-                toast('E-mail Client envoyé ! Pensez à l\'étape 2 (SAV BFR)', 3500);
-              }
-            } catch (err) {
-              if (err && err.name !== 'AbortError') {
-                console.warn('Erreur lors du partage client :', err);
-                toast('Ouverture de votre messagerie…');
-                window.location.href = mailtoClientUrl;
-              }
-            }
-          } else {
-            telecharger(lots.fr.pdf.blob, lots.fr.pdf.filename);
-            if (lots.trad && lots.trad.pdf) telecharger(lots.trad.pdf.blob, lots.trad.pdf.filename);
-            toast('2 PDF téléchargés — ouverture messagerie client…', 3200);
-            setTimeout(() => { window.location.href = mailtoClientUrl; }, 300);
-          }
-        } else if (a === 'partager-sav') {
-          if (destsSv.toStr) copier(destsSv.toStr);
-          let peutPartager = false;
-          if (navigator.canShare && fichiers.length) {
-            try { peutPartager = navigator.canShare({ files: fichiers }); } catch (_) { peutPartager = false; }
-          }
-          if (peutPartager) {
-            try {
-              toast('2 PDF attachés — Adresse SAV copiée', 3000);
-              await navigator.share({
-                files: fichiers,
-                title: objetSAV,
-                text: corpsSAV
-              });
-              envoiSAVFait = true;
-              const badgeSv = $('#badgeStatutSAV', panneau);
-              if (badgeSv) {
-                badgeSv.textContent = '✓ Envoyé';
-                badgeSv.style.background = '#dcfce7';
-                badgeSv.style.color = '#166534';
-              }
-              const labelBtn = $('#labelBtnSAV', panneau);
-              if (labelBtn) labelBtn.textContent = 'Renvoyer au SAV BFR';
-              R.statut = 'transmis'; if (t) R.langueEnvoyee = t.code; planifier(); rendreTout();
-              if (envoiClientFait) {
-                toast('Transmission complète : Client et SAV notifiés !', 3500);
-              } else {
-                toast('E-mail SAV envoyé avec les 2 PDF attachés !', 3000);
-              }
-            } catch (err) {
-              if (err && err.name !== 'AbortError') {
-                console.warn('Erreur lors du partage SAV :', err);
-                toast('Ouverture de votre messagerie…');
-                window.location.href = mailtoSAVUrl;
-              }
-            }
-          } else {
-            telecharger(lots.fr.pdf.blob, lots.fr.pdf.filename);
-            if (lots.trad && lots.trad.pdf) telecharger(lots.trad.pdf.blob, lots.trad.pdf.filename);
-            toast('2 PDF téléchargés — ouverture messagerie SAV…', 3200);
-            setTimeout(() => { window.location.href = mailtoSAVUrl; }, 300);
-          }
-        } else if (a === 'partager-groupe' || a === 'partager' || a === 'envoyer-mail') {
+        if (a === 'partager' || a === 'envoyer-mail' || a === 'partager-groupe' || a === 'partager-client' || a === 'partager-sav') {
           if (dests.toStr) copier(dests.toStr);
-          const obj = t ? objetGroupe : objetGeneral;
-          const txt = t ? corpsGroupe : corpsGeneral;
-          const uMailto = t ? mailtoGroupeUrl : mailtoUrl;
           let peutPartager = false;
           if (navigator.canShare && fichiers.length) {
             try { peutPartager = navigator.canShare({ files: fichiers }); } catch (_) { peutPartager = false; }
           }
           if (peutPartager) {
             try {
-              toast('PDF attaché(s) — Adresse client copiée', 3000);
+              toast((t ? '2 PDF attachés' : 'PDF attaché') + ' — Adresse client copiée', 3000);
               await navigator.share({
                 files: fichiers,
-                title: obj,
-                text: txt
+                title: objetFinal,
+                text: corpsFinal
               });
-              envoiClientFait = true; envoiSAVFait = true;
               R.statut = 'transmis'; if (langueMail) R.langueEnvoyee = langueMail;
               planifier(); rendreTout();
               toast('Rapport transmis avec succès');
             } catch (err) {
               if (err && err.name !== 'AbortError') {
-                console.warn('Erreur lors du partage groupé :', err);
+                console.warn('Erreur lors du partage :', err);
                 toast('Ouverture de votre messagerie…');
-                window.location.href = uMailto;
+                window.location.href = mailtoUrl;
               }
             }
           } else {
-            telecharger(res.blob, res.filename);
-            if (t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
-            toast('PDF téléchargé(s) — ouverture de votre messagerie…', 3200);
-            setTimeout(() => { window.location.href = uMailto; }, 300);
+            telecharger(lots.fr.pdf.blob, lots.fr.pdf.filename);
+            if (lots.trad && lots.trad.pdf) telecharger(lots.trad.pdf.blob, lots.trad.pdf.filename);
+            toast((t ? '2 PDF téléchargés' : 'PDF téléchargé') + ' — ouverture messagerie…', 3200);
+            setTimeout(() => { window.location.href = mailtoUrl; }, 300);
           }
-        } else if (a === 'mailto-client') {
+        } else if (a === 'copier') {
+          copier(corpsFinal);
+          toast('Texte du message copié');
+        } else if (a === 'copier-client') {
+          copier(t ? Report.corpsMailClient(R, S, t.code) : corpsFinal);
+          toast('Texte client copié');
+        } else if (a === 'copier-sav') {
+          copier(t ? Report.corpsMailSAV(R, S, t.code) : corpsFinal);
+          toast('Texte SAV copié');
+        } else if (a === 'mailto' || a === 'mailto-client' || a === 'mailto-sav') {
           telecharger(lots.fr.pdf.blob, lots.fr.pdf.filename);
-          if (t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
-          toast('2 PDF téléchargés : pensez à les attacher dans votre messagerie', 3400);
-          setTimeout(() => { window.location.href = mailtoClientUrl; }, 300);
-        } else if (a === 'mailto-sav') {
-          telecharger(lots.fr.pdf.blob, lots.fr.pdf.filename);
-          if (t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
-          toast('2 PDF téléchargés : pensez à les attacher dans votre messagerie', 3400);
-          setTimeout(() => { window.location.href = mailtoSAVUrl; }, 300);
-        } else if (a === 'mailto') {
-          telecharger(res.blob, res.filename);
-          toast('PDF téléchargé : pensez à l\'attacher dans votre messagerie', 3400);
+          if (lots.trad && lots.trad.pdf) telecharger(lots.trad.pdf.blob, lots.trad.pdf.filename);
+          toast((t ? '2 PDF téléchargés' : 'PDF téléchargé') + " : pensez à l'attacher dans votre messagerie", 3400);
           setTimeout(() => { window.location.href = mailtoUrl; }, 300);
-        } else if (a === 'dl') telecharger(res.blob, res.filename);
-        else if (a === 'dlt' && t) telecharger(t.pdf.blob, t.pdf.filename);
-        else if (a === 'dlw' && resWord) telecharger(resWord.blob, resWord.filename);
-        else if (a === 'dlwt' && t && t.word) telecharger(t.word.blob, t.word.filename);
-        else if (a === 'copier') copier(corpsGeneral);
-        else if (a === 'copier-client') copier(corpsClient);
-        else if (a === 'copier-sav') copier(corpsSAV);
+        } else if (a === 'dl') {
+          telecharger(res.blob, res.filename);
+        } else if (a === 'dlt') {
+          if (t && t.pdf) telecharger(t.pdf.blob, t.pdf.filename);
+        } else if (a === 'dlw') {
+          if (resWord) telecharger(resWord.blob, resWord.filename);
+        } else if (a === 'dlwt') {
+          if (t && t.word) telecharger(t.word.blob, t.word.filename);
+        }
       });
     });
   }
+
   function copier(txt) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt).then(() => toast('Copié'), () => toast('Copie impossible'));
