@@ -340,7 +340,7 @@
     },
     technicien: { prenom: '', nom: '', fonction: 'Technicien SAV', tel: '', email: '', signature: '' },
     mail: {
-      destinataireSAV: '', destinatairesCopie: '',
+      destinataireSAV: '', assistantSAV: '', destinatairesCopie: '',
       objet: 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}',
       corps: '', envoyerClient: true, envoyerSAV: true,
       messagePartage: 'Bonjour, veuillez trouver ci-joint le rapport d\'intervention N° {{numero}} du {{date}}. Cordialement.'
@@ -915,7 +915,7 @@
           <button class="btn ghost" data-a="apercu">${(ICO.eye && ICO.eye(18)) || ''} Aperçu PDF</button>
           <button class="btn grey" data-a="word">${(ICO.fileText && ICO.fileText(18)) || ''} Word</button>
         </div>
-        <p class="small" style="margin-top:8px">Destinataires : client <strong>${esc(R.client.email || 'non renseigné')}</strong> — SAV <strong>${esc(S.mail.destinataireSAV || 'non renseigné')}</strong></p>
+        <p class="small" style="margin-top:8px">Destinataires : client <strong>${esc(R.client.email || 'non renseigné')}</strong> — SAV <strong>${esc(S.mail.destinataireSAV || 'non renseigné')}</strong>${S.mail.assistantSAV ? ` — Assistant SAV (CC) <strong>${esc(S.mail.assistantSAV)}</strong>` : ''}</p>
       </div>`;
   }
 
@@ -2230,15 +2230,21 @@
       const cl = R.client.email.trim();
       if (cl && to.indexOf(cl) === -1) to.push(cl);
     }
-    if (S.mail.envoyerSAV !== false && S.mail.destinataireSAV) {
-      const sav = S.mail.destinataireSAV.trim();
-      if (sav && to.indexOf(sav) === -1) to.push(sav);
+    const savAdr = (S.mail && S.mail.destinataireSAV && S.mail.destinataireSAV.trim()) || '';
+    const envoiSAV = S.mail.envoyerSAV !== false && Boolean(savAdr);
+    if (envoiSAV && to.indexOf(savAdr) === -1) {
+      to.push(savAdr);
     }
 
-    // Ligne "Cc :" (Copies conformes : technicien systématiquement + adresses configurées)
+    // Ligne "Cc :" (Copies conformes : technicien systématiquement + assistant SAV dès qu'un mail est envoyé au responsable SAV + adresses configurées)
     if (S.technicien && S.technicien.email) {
       const tech = S.technicien.email.trim();
       if (tech && cc.indexOf(tech) === -1 && to.indexOf(tech) === -1) cc.push(tech);
+    }
+    // Assistant SAV systématiquement en copie à chaque fois qu'un mail est envoyé au responsable SAV
+    if (envoiSAV && S.mail && S.mail.assistantSAV) {
+      const ast = S.mail.assistantSAV.trim();
+      if (ast && cc.indexOf(ast) === -1 && to.indexOf(ast) === -1) cc.push(ast);
     }
     if (S.mail.destinatairesCopie) {
       S.mail.destinatairesCopie.split(/[;,]/).forEach(x => {
@@ -2277,6 +2283,10 @@
     if (S.technicien && S.technicien.email) {
       const tech = S.technicien.email.trim();
       if (tech && cc.indexOf(tech) === -1 && to.indexOf(tech) === -1) cc.push(tech);
+    }
+    if (S.mail && S.mail.assistantSAV) {
+      const ast = S.mail.assistantSAV.trim();
+      if (ast && cc.indexOf(ast) === -1 && to.indexOf(ast) === -1) cc.push(ast);
     }
     if (S.mail && S.mail.destinatairesCopie) {
       S.mail.destinatairesCopie.split(/[;,]/).forEach(x => {
@@ -2465,11 +2475,11 @@
 
       <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.5">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
-          <div><strong style="color:var(--bfr-secondary)">À (Client) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.toStr || 'aucun')}</span></div>
-          ${dests.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.toStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier l'adresse client">Copier</button>` : ''}
+          <div><strong style="color:var(--bfr-secondary)">À (Destinataires) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.toStr || 'aucun')}</span></div>
+          ${dests.toStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.toStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier les destinataires principaux">Copier</button>` : ''}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1">
-          <div><strong style="color:var(--bfr-secondary)">Cc (SAV / Tech) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.ccStr || 'aucune')}</span></div>
+          <div><strong style="color:var(--bfr-secondary)">Cc (Copies conformes) :</strong> <span style="font-family:ui-monospace,monospace;color:#1e293b">${esc(dests.ccStr || 'aucune')}</span></div>
           ${dests.ccStr ? `<button type="button" class="btn sm ghost" data-copier-dest="${esc(dests.ccStr)}" style="padding:2px 8px;font-size:11px;min-height:26px" title="Copier les adresses en copie">Copier</button>` : ''}
         </div>
       </div>
@@ -2654,8 +2664,8 @@
 
   /* ===================== Réglages ===================================== */
   function feuilleReglages() {
-    const f = (cle, label, type) => `<div class="field"><label>${esc(label)}</label>
-      <input type="${type || 'text'}" data-sk="${cle}" value="${esc(getPath(S, cle) || '')}"></div>`;
+    const f = (cle, label, type, ph) => `<div class="field"><label>${esc(label)}</label>
+      <input type="${type || 'text'}" data-sk="${cle}" value="${esc(getPath(S, cle) || '')}" ${ph ? `placeholder="${esc(ph)}"` : ''}></div>`;
     Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>Réglages</h3>
       <p class="sub">À renseigner une fois par technicien. Ces informations n'apparaissent que dans vos rapports.</p>
@@ -2738,10 +2748,12 @@
       </div>
 
       <div class="card"><h2>Envoi du rapport</h2>
-        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email')}
-        ${f('mail.destinatairesCopie', 'Copie systématique (CC)', 'email')}
+        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email', 'Ex. sav@bfrsystems.com')}
+        ${f('mail.assistantSAV', 'E-mail de l\'assistant SAV (en copie systématique)', 'email', 'Ex. assistant.sav@bfrsystems.com')}
+        <p class="small" style="margin-top:-6px;margin-bottom:10px;color:#64748b">L'assistant SAV recevra systématiquement tous les e-mails adressés au responsable SAV en copie conforme (Cc).</p>
+        ${f('mail.destinatairesCopie', 'Autres copies conformes (CC)', 'email', 'Ex. direction@bfrsystems.com, support@bfrsystems.com')}
         <div class="agreement"><input type="checkbox" id="chkClient" ${S.mail.envoyerClient ? 'checked' : ''}><label for="chkClient">Envoyer aussi au client</label></div>
-        <div class="agreement"><input type="checkbox" id="chkSAV" ${S.mail.envoyerSAV ? 'checked' : ''}><label for="chkSAV">Envoyer au responsable SAV</label></div>
+        <div class="agreement"><input type="checkbox" id="chkSAV" ${S.mail.envoyerSAV ? 'checked' : ''}><label for="chkSAV">Envoyer au responsable SAV (avec assistant SAV en copie)</label></div>
         ${f('mail.objet', 'Objet du mail')}
         <label style="font-size:12.5px;font-weight:600">Corps du mail</label>
         <textarea id="setCorps" rows="8" style="width:100%">${esc(S.mail.corps || Report.defaultCorpsMail())}</textarea>
@@ -2834,7 +2846,7 @@
         ['societe.lieuLettre', 'societe.siege1', 'societe.siege2',
          'societe.nom', 'societe.sigle', 'societe.sigleSuffixe', 'societe.adresse', 'societe.cpVille', 'societe.tel',
          'societe.email', 'societe.siteWeb', 'societe.siret', 'societe.tva',
-         'mail.destinataireSAV', 'mail.destinatairesCopie', 'mail.objet'
+         'mail.destinataireSAV', 'mail.assistantSAV', 'mail.destinatairesCopie', 'mail.objet'
         ].forEach(k => { const el = $('[data-sk="' + k + '"]', panneau); if (el) setPath(S, k, el.value.trim()); });
         const saisieCorps = ($('#setCorps', panneau).value || '').trim();
         S.mail.corps = (saisieCorps === Report.defaultCorpsMail().trim()) ? '' : saisieCorps;
@@ -3981,7 +3993,7 @@
     get rapport() { return R; }, get reglages() { return S; },
     sauver: sauver, planifier: planifier,
     pdf: pdf, docx: docx, rendreTout: rendreTout, toast: toast,
-    destinatairesMail: destinatairesMail, destinataires: destinataires,
+    destinatairesMail: destinatairesMail, destinatairesSAV: destinatairesSAV, destinatairesClient: destinatairesClient, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
     apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,
