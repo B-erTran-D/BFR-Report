@@ -306,7 +306,7 @@
         res = res.replace(motif, function (m) {
           const id = tags.length;
           tags.push(m);
-          return ' __BFR_' + id + '__ ';
+          return '\uE000' + id + '\uE001';
         });
       });
 
@@ -314,7 +314,7 @@
       res = res.replace(/\b([A-Z0-9]{2,}[-_][A-Z0-9-_]+)\b/g, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       return { texte: res, tags: tags };
@@ -327,10 +327,10 @@
       if (!texte) return '';
       let res = texte;
       (tags || []).forEach(function (val, idx) {
-        const reg = new RegExp('\\s*__BFR_' + idx + '__\\s*', 'g');
-        res = res.replace(reg, val);
+        const reg = new RegExp('\uE000' + idx + '\uE001', 'g');
+        res = res.replace(reg, function () { return val; });
       });
-      return res.replace(/\s{2,}/g, ' ').trim();
+      return res.replace(/[ \t]{2,}/g, ' ').trim();
     },
 
     /* -----------------------------------------------------------------------

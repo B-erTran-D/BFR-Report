@@ -340,7 +340,7 @@
     },
     technicien: { prenom: '', nom: '', fonction: 'Technicien SAV', tel: '', email: '', signature: '' },
     mail: {
-      destinataireSAV: '', assistantSAV: '', destinatairesCopie: '',
+      destinataireSAV: 's.peyaud@bfrsystems.com', assistantSAV: '', destinatairesCopie: '',
       objet: 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}',
       corps: '', envoyerClient: true, envoyerSAV: true,
       messagePartage: 'Bonjour, veuillez trouver ci-joint le rapport d\'intervention N° {{numero}} du {{date}}. Cordialement.'
@@ -378,6 +378,11 @@
     S.mail.corps.indexOf('{{technicien}}') !== -1
   )) {
     S.mail.corps = '';
+    Store.set(K.settings, S);
+  }
+  // Migration automatique de l'e-mail du responsable SAV vers s.peyaud@bfrsystems.com
+  if (S.mail && (!S.mail.destinataireSAV || S.mail.destinataireSAV === 'sav@bfrsystems.com')) {
+    S.mail.destinataireSAV = 's.peyaud@bfrsystems.com';
     Store.set(K.settings, S);
   }
   if (!S.canevas) S.canevas = Report.canevasDefaut();
@@ -2278,7 +2283,7 @@
   function destinatairesSAV() {
     const to = [];
     const cc = [];
-    const adrSAV = (S.mail && S.mail.destinataireSAV && S.mail.destinataireSAV.trim()) || 'sav@bfrsystems.com';
+    const adrSAV = (S.mail && S.mail.destinataireSAV && S.mail.destinataireSAV.trim()) || 's.peyaud@bfrsystems.com';
     if (adrSAV) to.push(adrSAV);
     if (S.technicien && S.technicien.email) {
       const tech = S.technicien.email.trim();
@@ -2748,7 +2753,7 @@
       </div>
 
       <div class="card"><h2>Envoi du rapport</h2>
-        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email', 'Ex. sav@bfrsystems.com')}
+        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email', 'Ex. s.peyaud@bfrsystems.com')}
         ${f('mail.assistantSAV', 'E-mail de l\'assistant SAV (en copie systématique)', 'email', 'Ex. assistant.sav@bfrsystems.com')}
         <p class="small" style="margin-top:-6px;margin-bottom:10px;color:#64748b">L'assistant SAV recevra systématiquement tous les e-mails adressés au responsable SAV en copie conforme (Cc).</p>
         ${f('mail.destinatairesCopie', 'Autres copies conformes (CC)', 'email', 'Ex. direction@bfrsystems.com, support@bfrsystems.com')}

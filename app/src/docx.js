@@ -138,6 +138,14 @@
     /* --- éléments de base --- */
     para(texte, opt) {
       opt = opt || {};
+      if (typeof texte === 'string' && texte.indexOf('\n') !== -1) {
+        const lignes = texte.split(/\r?\n/);
+        const self = this;
+        lignes.forEach(function (l, idx) {
+          self.para(l, Object.assign({}, opt, { apres: idx === lignes.length - 1 ? (opt.apres == null ? 100 : opt.apres) : 40 }));
+        });
+        return this;
+      }
       const langue = this.langue;
       const props = [];
       const align = { center: 'center', right: 'right', both: 'both' }[opt.align] || 'left';

@@ -3059,8 +3059,13 @@ ul.liste li { margin-bottom: 6px; }
        ----------------------------------------------------------------------- */
     corrigerTexte: function (texte, entites, opts) {
       opts = opts || {};
-      const estPhrase = opts.estPhrase !== false;
       if (!texte || typeof texte !== 'string') return '';
+      if (texte.indexOf('\n') !== -1) {
+        return texte.split(/\r?\n/).map(function (ligne) {
+          return CorrecteurFR.corrigerTexte(ligne, entites, opts);
+        }).join('\n');
+      }
+      const estPhrase = opts.estPhrase !== false;
       let res = texte.trim();
       if (!res) return '';
 
@@ -3075,7 +3080,7 @@ ul.liste li { margin-bottom: 6px; }
         res = res.replace(motif, function (m) {
           const id = tags.length;
           tags.push(m);
-          return ' __BFR_PROT_' + id + '__ ';
+          return '\uE000' + id + '\uE001';
         });
       });
 
@@ -3083,14 +3088,14 @@ ul.liste li { margin-bottom: 6px; }
       res = res.replace(/\b([A-Z0-9]{2,}[-_][A-Z0-9-_]+)\b/g, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_PROT_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       // Protéger nombres avec unités (ex: 12 mm, 0,18 mm, 81 °C, 1 450 tr/min, 15 h 00)
       res = res.replace(/\b(\d+[\d\s,\.]*\s*(?:mm|cm|m|km|g|kg|t|l|ml|bar|bars|°c|k|hz|khz|v|a|w|kw|tr\/min|rpm|h|min|s|ms|%))\b/gi, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_PROT_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       // 1. Rétablissement des apostrophes oubliées (ex: « d etancheite » -> « d'étanchéité »)
@@ -3213,11 +3218,11 @@ ul.liste li { margin-bottom: 6px; }
 
       // 8. Restauration des balises sanctuarisées
       tags.forEach(function (val, idx) {
-        const reg = new RegExp('\\s*__BFR_PROT_' + idx + '__\\s*', 'g');
-        res = res.replace(reg, val);
+        const reg = new RegExp('\uE000' + idx + '\uE001', 'g');
+        res = res.replace(reg, function () { return val; });
       });
 
-      return res.replace(/\s{2,}/g, ' ').trim();
+      return res.replace(/[ \t]{2,}/g, ' ').trim();
     },
 
     /* -----------------------------------------------------------------------
@@ -3605,7 +3610,7 @@ ul.liste li { margin-bottom: 6px; }
         res = res.replace(motif, function (m) {
           const id = tags.length;
           tags.push(m);
-          return ' __BFR_' + id + '__ ';
+          return '\uE000' + id + '\uE001';
         });
       });
 
@@ -3613,7 +3618,7 @@ ul.liste li { margin-bottom: 6px; }
       res = res.replace(/\b([A-Z0-9]{2,}[-_][A-Z0-9-_]+)\b/g, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       return { texte: res, tags: tags };
@@ -3626,10 +3631,10 @@ ul.liste li { margin-bottom: 6px; }
       if (!texte) return '';
       let res = texte;
       (tags || []).forEach(function (val, idx) {
-        const reg = new RegExp('\\s*__BFR_' + idx + '__\\s*', 'g');
-        res = res.replace(reg, val);
+        const reg = new RegExp('\uE000' + idx + '\uE001', 'g');
+        res = res.replace(reg, function () { return val; });
       });
-      return res.replace(/\s{2,}/g, ' ').trim();
+      return res.replace(/[ \t]{2,}/g, ' ').trim();
     },
 
     /* -----------------------------------------------------------------------
@@ -5168,6 +5173,14 @@ ul.liste li { margin-bottom: 6px; }
     /* --- éléments de base --- */
     para(texte, opt) {
       opt = opt || {};
+      if (typeof texte === 'string' && texte.indexOf('\n') !== -1) {
+        const lignes = texte.split(/\r?\n/);
+        const self = this;
+        lignes.forEach(function (l, idx) {
+          self.para(l, Object.assign({}, opt, { apres: idx === lignes.length - 1 ? (opt.apres == null ? 100 : opt.apres) : 40 }));
+        });
+        return this;
+      }
       const langue = this.langue;
       const props = [];
       const align = { center: 'center', right: 'right', both: 'both' }[opt.align] || 'left';
@@ -9155,7 +9168,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     },
     technicien: { prenom: '', nom: '', fonction: 'Technicien SAV', tel: '', email: '', signature: '' },
     mail: {
-      destinataireSAV: '', assistantSAV: '', destinatairesCopie: '',
+      destinataireSAV: 's.peyaud@bfrsystems.com', assistantSAV: '', destinatairesCopie: '',
       objet: 'Rapport d\'intervention N° {{numero}} — {{client}} — {{date}}',
       corps: '', envoyerClient: true, envoyerSAV: true,
       messagePartage: 'Bonjour, veuillez trouver ci-joint le rapport d\'intervention N° {{numero}} du {{date}}. Cordialement.'
@@ -9193,6 +9206,11 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     S.mail.corps.indexOf('{{technicien}}') !== -1
   )) {
     S.mail.corps = '';
+    Store.set(K.settings, S);
+  }
+  // Migration automatique de l'e-mail du responsable SAV vers s.peyaud@bfrsystems.com
+  if (S.mail && (!S.mail.destinataireSAV || S.mail.destinataireSAV === 'sav@bfrsystems.com')) {
+    S.mail.destinataireSAV = 's.peyaud@bfrsystems.com';
     Store.set(K.settings, S);
   }
   if (!S.canevas) S.canevas = Report.canevasDefaut();
@@ -11093,7 +11111,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   function destinatairesSAV() {
     const to = [];
     const cc = [];
-    const adrSAV = (S.mail && S.mail.destinataireSAV && S.mail.destinataireSAV.trim()) || 'sav@bfrsystems.com';
+    const adrSAV = (S.mail && S.mail.destinataireSAV && S.mail.destinataireSAV.trim()) || 's.peyaud@bfrsystems.com';
     if (adrSAV) to.push(adrSAV);
     if (S.technicien && S.technicien.email) {
       const tech = S.technicien.email.trim();
@@ -11563,7 +11581,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       </div>
 
       <div class="card"><h2>Envoi du rapport</h2>
-        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email', 'Ex. sav@bfrsystems.com')}
+        ${f('mail.destinataireSAV', 'E-mail du responsable SAV', 'email', 'Ex. s.peyaud@bfrsystems.com')}
         ${f('mail.assistantSAV', 'E-mail de l\'assistant SAV (en copie systématique)', 'email', 'Ex. assistant.sav@bfrsystems.com')}
         <p class="small" style="margin-top:-6px;margin-bottom:10px;color:#64748b">L'assistant SAV recevra systématiquement tous les e-mails adressés au responsable SAV en copie conforme (Cc).</p>
         ${f('mail.destinatairesCopie', 'Autres copies conformes (CC)', 'email', 'Ex. direction@bfrsystems.com, support@bfrsystems.com')}
@@ -12816,5 +12834,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="edb46aea52";window.SAV_DATE="29/09/2026";</script></body>
+<script>window.SAV_VERSION="fea6f13ee2";window.SAV_DATE="30/09/2026";</script></body>
 </html>

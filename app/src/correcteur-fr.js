@@ -170,8 +170,13 @@
        ----------------------------------------------------------------------- */
     corrigerTexte: function (texte, entites, opts) {
       opts = opts || {};
-      const estPhrase = opts.estPhrase !== false;
       if (!texte || typeof texte !== 'string') return '';
+      if (texte.indexOf('\n') !== -1) {
+        return texte.split(/\r?\n/).map(function (ligne) {
+          return CorrecteurFR.corrigerTexte(ligne, entites, opts);
+        }).join('\n');
+      }
+      const estPhrase = opts.estPhrase !== false;
       let res = texte.trim();
       if (!res) return '';
 
@@ -186,7 +191,7 @@
         res = res.replace(motif, function (m) {
           const id = tags.length;
           tags.push(m);
-          return ' __BFR_PROT_' + id + '__ ';
+          return '\uE000' + id + '\uE001';
         });
       });
 
@@ -194,14 +199,14 @@
       res = res.replace(/\b([A-Z0-9]{2,}[-_][A-Z0-9-_]+)\b/g, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_PROT_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       // Protéger nombres avec unités (ex: 12 mm, 0,18 mm, 81 °C, 1 450 tr/min, 15 h 00)
       res = res.replace(/\b(\d+[\d\s,\.]*\s*(?:mm|cm|m|km|g|kg|t|l|ml|bar|bars|°c|k|hz|khz|v|a|w|kw|tr\/min|rpm|h|min|s|ms|%))\b/gi, function (m) {
         const id = tags.length;
         tags.push(m);
-        return ' __BFR_PROT_' + id + '__ ';
+        return '\uE000' + id + '\uE001';
       });
 
       // 1. Rétablissement des apostrophes oubliées (ex: « d etancheite » -> « d'étanchéité »)
@@ -324,11 +329,11 @@
 
       // 8. Restauration des balises sanctuarisées
       tags.forEach(function (val, idx) {
-        const reg = new RegExp('\\s*__BFR_PROT_' + idx + '__\\s*', 'g');
-        res = res.replace(reg, val);
+        const reg = new RegExp('\uE000' + idx + '\uE001', 'g');
+        res = res.replace(reg, function () { return val; });
       });
 
-      return res.replace(/\s{2,}/g, ' ').trim();
+      return res.replace(/[ \t]{2,}/g, ' ').trim();
     },
 
     /* -----------------------------------------------------------------------
