@@ -108,14 +108,18 @@
       const cle = norm(client.nom);
       const avant = memo[cle] || {};
       const apres = {
-        nom: joli(client.nom), ville: client.lieu || client.ville || avant.ville || '',
-        adresse: client.adresse || avant.adresse || '', contact: client.contact || avant.contact || '',
-        fonction: client.fonction || avant.fonction || '', tel: client.tel || avant.tel || '',
-        email: client.email || avant.email || '', logo: client.logo || avant.logo || '',
-        numeroClient: client.numeroClient || avant.numeroClient || '',
+        nom: joli(client.nom),
+        ville: client.lieu !== undefined ? client.lieu : (client.ville !== undefined ? client.ville : (avant.ville || '')),
+        adresse: client.adresse !== undefined ? client.adresse : (avant.adresse || ''),
+        contact: client.contact !== undefined ? client.contact : (avant.contact || ''),
+        fonction: client.fonction !== undefined ? client.fonction : (avant.fonction || ''),
+        tel: client.tel !== undefined ? client.tel : (avant.tel || ''),
+        email: client.email !== undefined ? client.email : (avant.email || ''),
+        logo: client.logo !== undefined ? client.logo : (avant.logo || ''),
+        numeroClient: client.numeroClient !== undefined ? client.numeroClient : (avant.numeroClient || ''),
         /* Langue retenue pour ce client : le rapport bilingue est reproposé
            à l'intervention suivante (le technicien garde la main). */
-        langue: client.langue || avant.langue || '',
+        langue: client.langue !== undefined ? client.langue : (avant.langue || ''),
         maj: new Date().toISOString()
       };
       memo[cle] = apres;

@@ -1457,8 +1457,10 @@
         ${f('client.lieu', "Lieu d'intervention", { list: 'dlLieux', ph: "Ex. Atelier 2 — ligne 4" })}
         <div class="filebtn" style="margin-top:8px"><input type="file" id="logoClient" accept="image/*">
           <label for="logoClient">${(ICO.image && ICO.image(16)) || ''} ${R.client.logo ? 'Changer le logo du client' : 'Ajouter le logo du client (facultatif)'}</label></div>
-        ${R.client.logo ? '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">'
-                        : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>'}
+        <div id="zoneApercuLogoClient">
+          ${R.client.logo ? '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">'
+                          : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>'}
+        </div>
       </div>
       <div class="card" id="cardMachines">
         <h2>${(R.machines && R.machines.length > 1) ? 'Machines visitées' : 'Machine'}</h2>
@@ -1710,24 +1712,24 @@
           </button>`).join('');
       }
 
-      /* Choix d'un client : on remplit tout ce que la liste connaît, sans
-         écraser ce que le technicien a déjà saisi (sauf le nom). */
+      /* Choix d'un client : réinitialisation propre et complète avec les données
+         du client sélectionné (évite de conserver les coordonnées de l'ancien client). */
       function choisirClient(c) {
         R.client.nom = c.nom;
         R.client.reference = c.reference || '';
-        if (c.adresse) R.client.adresse = c.adresse;
-        if (c.ville) R.client.lieu = c.ville;
-        if (c.contact) R.client.contact = c.contact;
-        if (c.fonction) R.client.fonction = c.fonction;
-        if (c.tel) R.client.tel = c.tel;
-        if (c.email) R.client.email = c.email;
-        if (c.logo) R.client.logo = c.logo;
-        if (c.numeroClient) R.client.numeroClient = c.numeroClient;
-        R.client.noteContacts = c.autresContacts || R.client.noteContacts || '';
+        R.client.adresse = c.adresse || '';
+        R.client.lieu = c.ville || '';
+        R.client.contact = c.contact || '';
+        R.client.fonction = c.fonction || '';
+        R.client.tel = c.tel || '';
+        R.client.email = c.email || '';
+        R.client.logo = c.logo || '';
+        R.client.numeroClient = c.numeroClient || '';
+        R.client.noteContacts = c.autresContacts || '';
+        R.client.langue = c.langue || '';
         /* Langue déjà utilisée chez ce client : proposée d'office (l'option
            reste à cocher par le technicien, elle n'est jamais activée seule). */
         if (c.langue) {
-          R.client.langue = c.langue;
           R.langue.code = c.langue;
           const sel = $('#langCode', panneau);
           if (sel) sel.value = c.langue;
@@ -1737,7 +1739,16 @@
         planifier();
         champ.value = c.nom;
         $$('[data-fk]', panneau).forEach(el => { el.value = getPath(R, el.dataset.fk) || ''; });
-        const img = $('.card img', panneau);
+        const zoneLogo = $('#zoneApercuLogoClient', panneau);
+        if (zoneLogo) {
+          zoneLogo.innerHTML = c.logo
+            ? `<img src="${c.logo}" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">`
+            : '<p class="small">Sans logo, la place reste vide dans le compte rendu.</p>';
+        }
+        const lblLogo = $('label[for="logoClient"]', panneau);
+        if (lblLogo) {
+          lblLogo.innerHTML = ((ICO.image && ICO.image(16)) || '') + ' ' + (c.logo ? 'Changer le logo du client' : 'Ajouter le logo du client (facultatif)');
+        }
         fermerSuggestions();
         rendreEntete(); rendreTout();
         const manque = [];
@@ -1765,6 +1776,14 @@
         if (!ev.target.files[0]) return;
         try {
           R.client.logo = await compresserImage(ev.target.files[0], 520, 0.92);
+          const zoneLogo = $('#zoneApercuLogoClient', panneau);
+          if (zoneLogo) {
+            zoneLogo.innerHTML = '<img src="' + R.client.logo + '" style="max-height:52px;margin-top:8px;background:#fff;border:1px solid var(--bord);border-radius:6px">';
+          }
+          const lblLogo = $('label[for="logoClient"]', panneau);
+          if (lblLogo) {
+            lblLogo.innerHTML = ((ICO.image && ICO.image(16)) || '') + ' Changer le logo du client';
+          }
           planifier(); toast('Logo du client enregistré');
         } catch (err) { toast('Image illisible'); }
       });
