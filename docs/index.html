@@ -7912,6 +7912,13 @@ ul.liste li { margin-bottom: 6px; }
         sz || 18, cls
       );
     },
+    users: function (sz, cls) {
+      return duo(
+        '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        sz || 18, cls
+      );
+    },
     folder: function (sz, cls) {
       return duo(
         '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
@@ -10281,9 +10288,12 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         <div class="field"><label>Client</label>
           <input type="text" id="cliRecherche" autocomplete="off" value="${esc(R.client.nom || '')}"
                  placeholder="${nbClients ? 'Tapez 3 lettres (ex. ENT, CFR, LAC…)' : 'Tapez 3 lettres du nom du client'}">
-          <p class="small">${nbClients
-            ? 'Liste BFR : ' + nbClients + " client(s) — les correspondances s'affichent dès la 3<sup>e</sup> lettre."
-            : 'Aucune liste clients dans cette version : importez-la une fois dans Menu → Réglages → <em>Liste clients</em>.'}</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <p class="small" style="margin:0">${nbClients
+              ? 'Liste BFR : ' + nbClients + " client(s) — suggestions dès la 3<sup>e</sup> lettre."
+              : 'Aucune liste clients dans cette version : importez-la dans Menu → Réglages.'}</p>
+            <button type="button" class="btn ghost sm" data-a="vers-annuaire" style="font-size:11px;padding:2px 8px;flex-shrink:0">${(ICO.users && ICO.users(12)) || ''} Annuaire complet</button>
+          </div>
           <div class="suggestions" id="cliSug" hidden></div>
         </div>
         <div class="grid2">${f('client.contact', 'Contact sur site (nom)', { ph: 'Ex. M. Rivière' })}${f('client.fonction', 'Fonction', { ph: 'Ex. Responsable maintenance' })}</div>
@@ -10525,6 +10535,11 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       /* Toute correction saisie ici (téléphone, e-mail, contact, logo) est
          mémorisée pour les prochaines interventions chez ce client. */
       panneau.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-a="vers-annuaire"]')) {
+          panneau.closest('.sheet').remove();
+          feuilleAnnuaireClients();
+          return;
+        }
         if (ev.target.closest('[data-a="ok"], [data-a="fermer"]')) Clients.retenir(R.client);
       });
 
@@ -11587,7 +11602,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         <p class="small">Vide = adresses du modèle : 1, rue du Jariel, 77120 Coulommiers — 50 allée des érables, 01150 Blyes.</p>
       </div>
 
-      <div class="card"><h2>Liste clients</h2>
+      <div class="card"><h2>Liste clients & Annuaire</h2>
         <p class="small">${Clients.base().length
           ? `La liste du classeur « COORDONNÉES CLIENTS » est embarquée dans l'application
         (${Clients.base().length} client(s)) : tapez 3 lettres dans un rapport pour voir les correspondances.`
@@ -11595,6 +11610,9 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         (export CSV du classeur ou JSON) — elle sera conservée dans ce téléphone et restera disponible hors connexion.`}
         Les téléphones, e-mails, logos et contacts saisis sur le terrain sont mémorisés sur ce téléphone
         (${Object.keys(Clients.memo()).length} fiche(s) enrichie(s)) et proposés la prochaine fois.</p>
+        <div style="margin:10px 0">
+          <button class="btn" type="button" data-a="ouvrir-annuaire" style="width:100%">${(ICO.users && ICO.users(16)) || ''} Ouvrir l'annuaire & gérer les fiches clients</button>
+        </div>
         <div class="filebtn"><input type="file" id="clientsImport" accept=".csv,.json,text/csv,application/json">
           <label for="clientsImport">${(ICO.download && ICO.download(16)) || ''} Mettre à jour la liste (export CSV du classeur ou JSON)</label></div>
         <p class="small">Le fichier remplace la liste précédente ; il est conservé dans le téléphone et reste
@@ -11686,6 +11704,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           return;
         }
         if (e.target.closest('[data-a="identite"]')) { e.target.closest('.sheet').remove(); feuilleIdentite(); return; }
+        if (e.target.closest('[data-a="ouvrir-annuaire"]')) { e.target.closest('.sheet').remove(); feuilleAnnuaireClients(); return; }
         if (e.target.closest('[data-a="clients-export"]')) {
           const contenu = JSON.stringify({ clients: Clients.liste() }, null, 1);
           telecharger(new Blob([contenu], { type: 'application/json' }), 'clients-bfr-' + todayISO() + '.json');
@@ -11846,6 +11865,313 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     }, 400);
   }
 
+  /* ===================== Annuaire clients ============================= */
+  function feuilleAnnuaireClients(clientNomInitial) {
+    function normTxt(t) {
+      return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '');
+    }
+
+    let clientEdite = clientNomInitial ? (Clients.parNom(clientNomInitial) || { nom: clientNomInitial, isNouveau: true }) : null;
+    let modeEdition = !!clientEdite;
+    let recherche = '';
+    let logoTemp = clientEdite ? (clientEdite.logo || '') : '';
+
+    Ouvrir.ouvrir(null, `<div class="panel" style="max-height:90vh;display:flex;flex-direction:column">
+      <div id="annuaireCorps" style="display:flex;flex-direction:column;min-height:0;flex:1"></div>
+    </div>`, (pan) => {
+      const zoneCorps = $('#annuaireCorps', pan);
+
+      function afficherListe() {
+        modeEdition = false;
+        clientEdite = null;
+        const tousClients = Clients.liste();
+        const memo = Clients.memo();
+        const q = normTxt(recherche);
+        let filtres = tousClients;
+        if (q.length >= 2) {
+          filtres = tousClients.filter(c => {
+            return normTxt(c.nom).indexOf(q) !== -1 ||
+                   normTxt(c.ville).indexOf(q) !== -1 ||
+                   normTxt(c.contact).indexOf(q) !== -1 ||
+                   normTxt(c.email).indexOf(q) !== -1;
+          });
+        }
+        // Tri : fiches enrichies ou récentes d'abord, puis ordre alphabétique
+        filtres.sort((a, b) => {
+          const aMemo = !!memo[normTxt(a.nom)];
+          const bMemo = !!memo[normTxt(b.nom)];
+          if (aMemo && !bMemo) return -1;
+          if (!aMemo && bMemo) return 1;
+          return String(a.nom || '').localeCompare(String(b.nom || ''), 'fr');
+        });
+
+        const nbTotal = tousClients.length;
+        const nbMemo = Object.keys(memo).length;
+        const afficherMax = 50;
+        const clientsVisibles = filtres.slice(0, afficherMax);
+
+        zoneCorps.innerHTML = `
+          <div class="grab"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <h3 style="margin:0">${(ICO.users && ICO.users(20)) || ''} Annuaire clients</h3>
+            <button type="button" class="btn sm" data-a="nouveau-client">${(ICO.plus && ICO.plus(14)) || ''} Nouveau client</button>
+          </div>
+          <p class="sub" style="margin-bottom:8px">Consultez ou enrichissez les coordonnées clients. Les modifications sont conservées sur ce téléphone <strong>sans modifier votre intervention en cours</strong>.</p>
+
+          <div style="margin-bottom:8px">
+            <input type="search" id="inputRechercheAnnuaire" placeholder="Rechercher par nom, ville, contact, e-mail..." value="${esc(recherche)}" style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--bord,#cbd5e1);border-radius:8px">
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:#64748b;margin-bottom:8px">
+            <span>${filtres.length} client(s) trouvé(s) ${filtres.length > afficherMax ? '(50 premiers)' : ''}</span>
+            <span>${nbMemo} fiche(s) personnalisée(s)</span>
+          </div>
+
+          <div id="listeCartesClients" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px">
+            ${clientsVisibles.length ? clientsVisibles.map(c => {
+              const estEnrichi = !!memo[normTxt(c.nom)];
+              return `
+                <div class="card" data-client-nom="${esc(c.nom)}" style="margin:0;padding:10px 12px;cursor:pointer;border:1px solid ${estEnrichi ? 'var(--bleu,#06baf2)' : 'var(--bord,#e2e8f0)'};border-radius:8px;background:#fff;transition:background 0.15s">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                    <div style="min-width:0;flex:1">
+                      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <strong style="font-size:13.5px;color:var(--bleu-fonce,#332e72)">${esc(c.nom)}</strong>
+                        ${estEnrichi ? `<span style="font-size:10px;font-weight:600;background:#e0f2fe;color:#0284c7;padding:1px 6px;border-radius:4px">Fiche enrichie</span>` : ''}
+                      </div>
+                      ${c.ville || c.adresse ? `<div style="font-size:12px;color:#64748b;margin-top:2px">${esc([c.ville, c.adresse].filter(Boolean).join(' — '))}</div>` : ''}
+                      <div style="display:flex;gap:12px;margin-top:4px;font-size:11.5px;color:#475569;flex-wrap:wrap">
+                        ${c.contact ? `<span>${(ICO.user && ICO.user(12)) || ''} ${esc(c.contact)}${c.fonction ? ' (' + esc(c.fonction) + ')' : ''}</span>` : ''}
+                        ${c.tel ? `<span>📞 ${esc(c.tel)}</span>` : ''}
+                        ${c.email ? `<span>✉ ${esc(c.email)}</span>` : ''}
+                      </div>
+                    </div>
+                    <button type="button" class="btn sm grey" data-client-nom="${esc(c.nom)}" style="padding:4px 10px;font-size:11.5px;flex-shrink:0">Modifier</button>
+                  </div>
+                </div>`;
+            }).join('') : `
+              <div style="text-align:center;padding:24px 12px;color:#64748b">
+                <p>Aucun client trouvé pour « ${esc(recherche)} »</p>
+                <button type="button" class="btn sm" data-a="creer-recherche" style="margin-top:8px">${(ICO.plus && ICO.plus(14)) || ''} Créer la fiche « ${esc(recherche)} »</button>
+              </div>`}
+          </div>
+
+          <div class="btnrow" style="margin-top:10px">
+            <button type="button" class="btn grey wide" data-a="fermer-annuaire">Fermer</button>
+          </div>
+        `;
+
+        const inp = $('#inputRechercheAnnuaire', zoneCorps);
+        if (inp) {
+          inp.addEventListener('input', () => {
+            recherche = inp.value;
+            afficherListe();
+            const reInp = $('#inputRechercheAnnuaire', zoneCorps);
+            if (reInp) { reInp.focus(); reInp.selectionStart = reInp.selectionEnd = reInp.value.length; }
+          });
+        }
+      }
+
+      function afficherFormulaire(client, isNouveau) {
+        modeEdition = true;
+        client = client || { nom: '', adresse: '', ville: '', contact: '', fonction: '', tel: '', email: '', logo: '', langue: '', numeroClient: '', autresContacts: '' };
+        logoTemp = client.logo || '';
+        const memo = Clients.memo();
+        const estDansMemo = !!memo[normTxt(client.nom)];
+        const estClientActif = normTxt(R.client.nom) && normTxt(R.client.nom) === normTxt(client.nom);
+
+        const fAnnuaire = (id, label, type, val, ph) => `
+          <div class="field" style="margin-bottom:8px">
+            <label style="font-size:12px;font-weight:600;margin-bottom:3px;display:block">${esc(label)}</label>
+            <input type="${type || 'text'}" id="${id}" value="${esc(val || '')}" placeholder="${esc(ph || '')}" style="width:100%">
+          </div>`;
+
+        zoneCorps.innerHTML = `
+          <div class="grab"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <h3 style="margin:0">${isNouveau ? 'Nouveau client' : 'Fiche client'}</h3>
+            <button type="button" class="btn ghost sm" data-a="retour-liste">← Annuaire</button>
+          </div>
+
+          <div class="sticky-note" style="margin:6px 0 10px 0;background:#f0f9ff;border-left:4px solid var(--bleu,#06baf2);padding:6px 10px;font-size:11.5px;color:#0369a1">
+            ${estClientActif
+              ? `Ce client correspond à votre <strong>intervention en cours</strong> : l'enregistrement mettra à jour l'annuaire ET votre rapport.`
+              : `Modifications enregistrées dans l'annuaire durable du téléphone. Votre intervention en cours (<strong>${esc(R.numero || 'N°')} — ${esc(R.client.nom || 'Sans client')}</strong>) ne sera pas modifiée.`}
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding-right:2px">
+            ${fAnnuaire('annNom', 'Nom de la société / client *', 'text', client.nom, 'Ex. CLIENT EXEMPLE 1')}
+            <div class="grid2">
+              ${fAnnuaire('annContact', 'Contact sur site (nom)', 'text', client.contact, 'Ex. M. Rivière')}
+              ${fAnnuaire('annFonction', 'Fonction du contact', 'text', client.fonction, 'Ex. Responsable maintenance')}
+            </div>
+            <div class="grid2">
+              ${fAnnuaire('annTel', 'Téléphone ({numero_client})', 'tel', client.tel || client.numeroClient, 'Ex. 04 78 55 44 33')}
+              ${fAnnuaire('annEmail', 'E-mail du client', 'email', client.email, 'Ex. contact@client.fr')}
+            </div>
+            ${fAnnuaire('annAdresse', 'Adresse du client', 'text', client.adresse, 'Rue, code postal, ville')}
+            ${fAnnuaire('annVille', 'Ville / Lieu habituel', 'text', client.ville || client.lieu, 'Ex. Blyes')}
+
+            <div class="field" style="margin-bottom:8px">
+              <label style="font-size:12px;font-weight:600;margin-bottom:3px;display:block">Langue habituelle de correspondance</label>
+              <select id="annLangue" style="width:100%;padding:8px;border:1px solid var(--bord,#cbd5e1);border-radius:6px">
+                <option value="" ${!client.langue ? 'selected' : ''}>Par défaut (Français)</option>
+                <option value="en" ${client.langue === 'en' ? 'selected' : ''}>Anglais (English)</option>
+                <option value="de" ${client.langue === 'de' ? 'selected' : ''}>Allemand (Deutsch)</option>
+                <option value="nl" ${client.langue === 'nl' ? 'selected' : ''}>Néerlandais (Nederlands)</option>
+                <option value="es" ${client.langue === 'es' ? 'selected' : ''}>Espagnol (Español)</option>
+                <option value="it" ${client.langue === 'it' ? 'selected' : ''}>Italien (Italiano)</option>
+                <option value="pt" ${client.langue === 'pt' ? 'selected' : ''}>Portugais (Português)</option>
+              </select>
+            </div>
+
+            <div class="field" style="margin-bottom:8px">
+              <label style="font-size:12px;font-weight:600;margin-bottom:3px;display:block">Logo du client (facultatif)</label>
+              <div class="filebtn"><input type="file" id="annLogoInput" accept="image/*">
+                <label for="annLogoInput">${(ICO.image && ICO.image(16)) || ''} ${logoTemp ? 'Changer le logo' : 'Ajouter un logo'}</label></div>
+              <div id="annApercuLogo" style="margin-top:6px">
+                ${logoTemp ? `<img src="${logoTemp}" style="max-height:48px;background:#fff;border:1px solid var(--bord);border-radius:6px">
+                  <button type="button" class="btn sm danger" data-a="supprimer-logo-annuaire" style="margin-left:8px;padding:2px 8px;font-size:11px">Retirer</button>`
+                           : '<span class="small" style="color:#64748b">Sans logo</span>'}
+              </div>
+            </div>
+
+            <div class="field" style="margin-bottom:8px">
+              <label style="font-size:12px;font-weight:600;margin-bottom:3px;display:block">Autres contacts / Notes internes</label>
+              <input type="text" id="annNotes" value="${esc(client.noteContacts || client.autresContacts || '')}" placeholder="Ex. Chef d'équipe poste matin : 06..." style="width:100%">
+            </div>
+          </div>
+
+          <div class="btnrow" style="margin-top:10px">
+            <button type="button" class="btn grey" data-a="retour-liste">Annuler</button>
+            <button type="button" class="btn" data-a="enregistrer-client">Enregistrer dans l'annuaire</button>
+          </div>
+
+          ${estDansMemo ? `
+            <div style="text-align:right;margin-top:8px">
+              <button type="button" class="btn ghost danger sm" data-a="reinitialiser-fiche" style="font-size:11px">Réinitialiser les personnalisations locales de ce client</button>
+            </div>` : ''}
+        `;
+
+        const inpLogo = $('#annLogoInput', zoneCorps);
+        if (inpLogo) {
+          inpLogo.addEventListener('change', async (ev) => {
+            if (!ev.target.files[0]) return;
+            try {
+              logoTemp = await compresserImage(ev.target.files[0], 520, 0.92);
+              const apercu = $('#annApercuLogo', zoneCorps);
+              if (apercu) {
+                apercu.innerHTML = `<img src="${logoTemp}" style="max-height:48px;background:#fff;border:1px solid var(--bord);border-radius:6px">
+                  <button type="button" class="btn sm danger" data-a="supprimer-logo-annuaire" style="margin-left:8px;padding:2px 8px;font-size:11px">Retirer</button>`;
+              }
+            } catch (err) { toast('Image illisible'); }
+          });
+        }
+      }
+
+      // Gestion des clics dans l'annuaire
+      zoneCorps.addEventListener('click', (ev) => {
+        const btnFermer = ev.target.closest('[data-a="fermer-annuaire"]');
+        if (btnFermer) { pan.closest('.sheet').remove(); return; }
+
+        const btnRetour = ev.target.closest('[data-a="retour-liste"]');
+        if (btnRetour) { afficherListe(); return; }
+
+        const btnNouveau = ev.target.closest('[data-a="nouveau-client"]');
+        if (btnNouveau) { afficherFormulaire(null, true); return; }
+
+        const btnCreerRech = ev.target.closest('[data-a="creer-recherche"]');
+        if (btnCreerRech) { afficherFormulaire({ nom: recherche.trim() }, true); return; }
+
+        const carteClient = ev.target.closest('[data-client-nom]');
+        if (carteClient) {
+          const nom = carteClient.dataset.clientNom;
+          const c = Clients.parNom(nom);
+          if (c) afficherFormulaire(c, false);
+          return;
+        }
+
+        const btnSupprLogo = ev.target.closest('[data-a="supprimer-logo-annuaire"]');
+        if (btnSupprLogo) {
+          logoTemp = '';
+          const apercu = $('#annApercuLogo', zoneCorps);
+          if (apercu) apercu.innerHTML = '<span class="small" style="color:#64748b">Sans logo</span>';
+          return;
+        }
+
+        const btnResetFiche = ev.target.closest('[data-a="reinitialiser-fiche"]');
+        if (btnResetFiche) {
+          const nom = ($('#annNom', zoneCorps).value || '').trim();
+          if (confirm('Supprimer les données locales enregistrées pour « ' + nom + ' » et revenir aux données d\'origine ?')) {
+            Clients.oublier(nom);
+            toast('Fiche ' + nom + ' réinitialisée');
+            afficherListe();
+          }
+          return;
+        }
+
+        const btnSave = ev.target.closest('[data-a="enregistrer-client"]');
+        if (btnSave) {
+          const nom = ($('#annNom', zoneCorps).value || '').trim();
+          if (!nom) { toast('Veuillez saisir un nom de client'); $('#annNom', zoneCorps).focus(); return; }
+
+          const adresse = ($('#annAdresse', zoneCorps).value || '').trim();
+          const ville = ($('#annVille', zoneCorps).value || '').trim();
+          const contact = ($('#annContact', zoneCorps).value || '').trim();
+          const fonction = ($('#annFonction', zoneCorps).value || '').trim();
+          const tel = ($('#annTel', zoneCorps).value || '').trim();
+          const email = ($('#annEmail', zoneCorps).value || '').trim();
+          const langue = ($('#annLangue', zoneCorps).value || '').trim();
+          const notes = ($('#annNotes', zoneCorps).value || '').trim();
+
+          const donnees = {
+            nom: nom,
+            adresse: adresse,
+            lieu: ville,
+            ville: ville,
+            contact: contact,
+            fonction: fonction,
+            tel: tel,
+            email: email,
+            logo: logoTemp || '',
+            langue: langue,
+            numeroClient: tel,
+            autresContacts: notes
+          };
+
+          Clients.retenir(donnees);
+
+          // Vérifier si le client édité est le client de l'intervention active
+          const estActif = normTxt(R.client.nom) && normTxt(R.client.nom) === normTxt(nom);
+          if (estActif) {
+            R.client.adresse = adresse;
+            R.client.lieu = ville;
+            R.client.contact = contact;
+            R.client.fonction = fonction;
+            R.client.tel = tel;
+            R.client.email = email;
+            R.client.logo = logoTemp || '';
+            R.client.numeroClient = tel;
+            R.client.noteContacts = notes;
+            if (langue) R.client.langue = langue;
+            planifier(); rendreEntete(); rendreTout();
+            toast('Fiche « ' + nom + ' » enregistrée (intervention en cours actualisée)');
+          } else {
+            toast('Fiche « ' + nom + ' » enregistrée dans l\'annuaire');
+          }
+
+          afficherListe();
+        }
+      });
+
+      // Initialisation
+      if (modeEdition && clientEdite) {
+        afficherFormulaire(clientEdite, !!clientEdite.isNouveau);
+      } else {
+        afficherListe();
+      }
+    });
+  }
+
   /* ===================== Menu ========================================= */
   function feuilleMenu() {
     const liste = Store.get(K.rapports, []);
@@ -11857,6 +12183,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       <button class="menu-item" data-a="signer"><span class="ico">${(ICO.signature && ICO.signature(18)) || ''}</span><span>Faire signer le client<small>${R.signatureClient && R.signatureClient.dataUrl ? 'Signé par ' + esc(R.signatureClient.nom || 'le client') : 'Signature tactile sur écran'}</small></span></button>
       <button class="menu-item" data-a="soumettre"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Soumettre le rapport<small>Transmission PDF par e-mail</small></span></button>
       <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
+      <button class="menu-item" data-a="annuaire"><span class="ico">${(ICO.users && ICO.users(18)) || (ICO.user && ICO.user(18)) || ''}</span><span>Annuaire clients<small>Consulter, modifier ou ajouter un client hors intervention</small></span></button>
       <button class="menu-item" data-a="icones"><span class="ico">${(ICO.palette && ICO.palette(18)) || (ICO.gear && ICO.gear(18)) || ''}</span><span>Icône de l'application<small>Changer l'icône sur l'écran d'accueil Android</small></span></button>
       <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
       <button class="menu-item" data-a="actualiser"><span class="ico">${(ICO.clock && ICO.clock(18)) || ''}</span><span>Actualiser l'application<small>Vider le cache et forcer la dernière version</small></span></button>
@@ -11876,6 +12203,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         if (a === 'signer') signerClient();
         else if (a === 'soumettre') soumettre();
         else if (a === 'identite') feuilleIdentite();
+        else if (a === 'annuaire') feuilleAnnuaireClients();
         else if (a === 'icones') feuilleIcones();
         else if (a === 'reglages') feuilleReglages();
         else if (a === 'actualiser') actualiserApp();
@@ -12856,9 +13184,10 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
     apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,
-    feuilleTrajet: feuilleTrajet
+    feuilleTrajet: feuilleTrajet, feuilleAnnuaireClients: feuilleAnnuaireClients,
+    feuilleClient: feuilleClient, feuilleReglages: feuilleReglages
   };
 })();
 </script>
-<script>window.SAV_VERSION="07b0227943";window.SAV_DATE="05/10/2026";</script></body>
+<script>window.SAV_VERSION="4079d26e1b";window.SAV_DATE="05/10/2026";</script></body>
 </html>
