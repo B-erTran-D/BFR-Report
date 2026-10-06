@@ -93,6 +93,45 @@
     return [];
   }
 
+  function infoMachinePiece(p, intervention) {
+    if (!p) return { id: '', serie: '', designation: '', libelle: '—', court: '—' };
+    const ms = (intervention && (intervention.machines || [])) || [];
+    let m = null;
+    if (p.machineId) {
+      m = ms.find(x => x && x.id === p.machineId);
+    }
+    if (!m && p.machineSerie) {
+      m = ms.find(x => x && x.serie === p.machineSerie);
+    }
+    if (!m && p.machineNom) {
+      m = ms.find(x => x && (x.designation === p.machineNom || x.modele === p.machineNom));
+    }
+    if (!m && intervention && intervention.machine) {
+      if (p.machineSerie && intervention.machine.serie === p.machineSerie) {
+        m = intervention.machine;
+      } else if (p.machineNom && (intervention.machine.designation === p.machineNom || intervention.machine.modele === p.machineNom)) {
+        m = intervention.machine;
+      }
+    }
+    const serie = ((m && m.serie) ? m.serie : (p.machineSerie || '')).trim();
+    const nom = ((m && (m.designation || m.modele)) ? (m.designation || m.modele) : (p.machineNom || '')).trim();
+    const id = (m && m.id) || p.machineId || '';
+
+    let libelle = '—';
+    let court = '—';
+    if (serie && nom) {
+      libelle = 'N° de série : ' + serie + ' — ' + nom;
+      court = 'N° ' + serie + ' (' + nom + ')';
+    } else if (serie) {
+      libelle = 'N° de série : ' + serie;
+      court = 'N° ' + serie;
+    } else if (nom) {
+      libelle = nom;
+      court = nom;
+    }
+    return { id: id, serie: serie, designation: nom, libelle: libelle, court: court };
+  }
+
   function listeTechniciens(i, s) {
     if (i && Array.isArray(i.techniciens) && i.techniciens.length > 0) {
       const valides = i.techniciens.filter(t => t && valeur(t.nom));
@@ -735,11 +774,13 @@
       const p = this.pdf, C = this.C;
       if (!pcs || !pcs.length) return;
       const avecPhotos = pcs.some(it => it && it.photo);
-      const colPhotoW = avecPhotos ? 46 : 0;
-      const colDenomW = avecPhotos ? (this.CW - colPhotoW) * 0.52 : (this.CW * 0.54);
-      const colRefW = avecPhotos ? (this.CW - colPhotoW) * 0.32 : (this.CW * 0.30);
-      const colQteW = avecPhotos ? (this.CW - colPhotoW) * 0.16 : (this.CW * 0.16);
-      const hLigne = avecPhotos ? 46 : 20;
+      const colPhotoW = avecPhotos ? 44 : 0;
+      const remW = this.CW - colPhotoW;
+      const colDenomW = avecPhotos ? Math.round(remW * 0.35) : Math.round(this.CW * 0.36);
+      const colRefW = avecPhotos ? Math.round(remW * 0.22) : Math.round(this.CW * 0.22);
+      const colMachW = avecPhotos ? Math.round(remW * 0.30) : Math.round(this.CW * 0.28);
+      const colQteW = remW - (colDenomW + colRefW + colMachW);
+      const hLigne = avecPhotos ? 46 : 22;
       const hEntete = 20;
 
       this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
@@ -759,6 +800,9 @@
         p.text(this.L('Référence'), curX + 7, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu });
         p.line(curX + colRefW, y, curX + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
         curX += colRefW;
+        p.text(this.L('Machine (N° série)'), curX + 7, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu });
+        p.line(curX + colMachW, y, curX + colMachW, y + hEntete, { color: C.bordFort, width: 0.6 });
+        curX += colMachW;
         p.text(this.L('Quantité'), curX + colQteW / 2, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu, align: 'center' });
         y += hEntete;
       };
@@ -810,7 +854,8 @@
         const denom = valeur(item.denomination || item.designation) || '—';
         const ref = valeur(item.reference) || '—';
         const qte = String(valeur(item.quantite) || 1);
-        const textY = avecPhotos ? (y + hLigne / 2 + 3.5) : (y + 13.5);
+        const machInfo = infoMachinePiece(item, this.i);
+        const textY = avecPhotos ? (y + hLigne / 2 + 3.5) : (y + 14.5);
 
         p.text(Pdf.trunc(denom, colDenomW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, color: C.texte });
         p.line(rowX + colDenomW, y, rowX + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
@@ -819,6 +864,21 @@
         p.text(Pdf.trunc(ref, colRefW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, font: 'F2', color: C.texte });
         p.line(rowX + colRefW, y, rowX + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
         rowX += colRefW;
+
+        if (avecPhotos) {
+          if (machInfo.serie) {
+            p.text(Pdf.trunc('N° ' + machInfo.serie, colMachW - 14, 9.4, false), rowX + 7, y + 18, { size: 9.4, font: 'F2', color: C.bleu });
+            if (machInfo.designation) {
+              p.text(Pdf.trunc(machInfo.designation, colMachW - 14, 8.5, false), rowX + 7, y + 31, { size: 8.5, color: C.texte });
+            }
+          } else {
+            p.text(Pdf.trunc(machInfo.designation || '—', colMachW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, color: machInfo.designation ? C.texte : C.gris });
+          }
+        } else {
+          p.text(Pdf.trunc(machInfo.libelle || '—', colMachW - 14, 9.2, false), rowX + 7, textY, { size: 9.2, color: (machInfo.libelle && machInfo.libelle !== '—') ? C.texte : C.gris });
+        }
+        p.line(rowX + colMachW, y, rowX + colMachW, y + hLigne, { color: C.bord, width: 0.4 });
+        rowX += colMachW;
 
         p.text(qte, rowX + colQteW / 2, textY, { size: 9.4, font: 'F2', color: C.texte, align: 'center' });
 
@@ -1471,28 +1531,33 @@
             { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
           ] : [
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
           ];
           const lignesTab = pcs.map(p => {
+            const machInfo = infoMachinePiece(p, i);
             if (avecPhotos) {
               return [
                 p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
                 { texte: p.denomination || p.designation || '—' },
                 { texte: p.reference || '—' },
+                { texte: machInfo.libelle || '—' },
                 { texte: String(p.quantite || 1), align: 'center' }
               ];
             }
             return [
               { texte: p.denomination || p.designation || '—' },
               { texte: p.reference || '—' },
+              { texte: machInfo.libelle || '—' },
               { texte: String(p.quantite || 1), align: 'center' }
             ];
           });
-          d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
+          d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [14, 32, 22, 22, 10] : [36, 24, 28, 12] });
           d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 9.5, couleur: '64748B', apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
@@ -1513,28 +1578,33 @@
                 { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
               ] : [
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
               ];
               const lignesTab = pcs.map(p => {
+                const machInfo = infoMachinePiece(p, i);
                 if (avecPhotos) {
                   return [
                     p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
                     { texte: p.denomination || p.designation || '—' },
                     { texte: p.reference || '—' },
+                    { texte: machInfo.libelle || '—' },
                     { texte: String(p.quantite || 1), align: 'center' }
                   ];
                 }
                 return [
                   { texte: p.denomination || p.designation || '—' },
                   { texte: p.reference || '—' },
+                  { texte: machInfo.libelle || '—' },
                   { texte: String(p.quantite || 1), align: 'center' }
                 ];
               });
-              d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
+              d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [14, 32, 22, 22, 10] : [36, 24, 28, 12] });
               d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 9.5, couleur: '64748B', apres: 120 });
               piecesRendues = true;
               dernierTypeEtaitEvenement = false;
@@ -1905,6 +1975,7 @@
     objetMailClient: objetMailClient, corpsMailClient: corpsMailClient,
     objetMailSAV: objetMailSAV, corpsMailSAV: corpsMailSAV,
     corpsMailBilingue: corpsMailBilingue, texteSMSArrivee: texteSMSArrivee,
+    infoMachinePiece: infoMachinePiece,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
 })(window);

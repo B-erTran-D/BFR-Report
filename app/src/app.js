@@ -948,12 +948,17 @@
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;width:48px;text-align:center">Photo</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Dénomination</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Référence</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Machine (N° série)</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:center">Qté</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:right">Action</th>
           </tr>
         </thead>
         <tbody>
-          ${pcs.map((p, idx) => `
+          ${pcs.map((p, idx) => {
+            const mInfo = (typeof Report !== 'undefined' && Report.infoMachinePiece)
+              ? Report.infoMachinePiece(p, R)
+              : { serie: p.machineSerie || '', designation: p.machineNom || '' };
+            return `
             <tr style="border-bottom:1px solid var(--bord);background:${idx % 2 === 1 ? '#fcfdff' : '#fff'}">
               <td style="padding:6px 8px;text-align:center;vertical-align:middle">
                 ${p.photo
@@ -964,13 +969,17 @@
               </td>
               <td style="padding:7px 9px;vertical-align:middle"><strong>${esc(p.denomination || '—')}</strong></td>
               <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569;vertical-align:middle">${esc(p.reference || '—')}</td>
+              <td style="padding:7px 9px;vertical-align:middle">
+                ${mInfo.serie ? `<div style="font-weight:600;color:var(--bleu,#0369a1);font-size:12.5px"><span style="font-size:10.5px;font-weight:normal;color:#64748b">N°</span> ${esc(mInfo.serie)}</div>` : ''}
+                ${mInfo.designation ? `<div style="font-size:11.5px;color:#334155">${esc(mInfo.designation)}</div>` : (!mInfo.serie ? '<span style="color:#94a3b8;font-size:11.5px">—</span>' : '')}
+              </td>
               <td style="padding:7px 9px;text-align:center;vertical-align:middle"><strong>${esc(p.quantite || 1)}</strong></td>
               <td style="padding:7px 9px;text-align:right;white-space:nowrap;vertical-align:middle">
                 <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">${(ICO.pen && ICO.pen(12)) || ''}</button>
                 <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">${(ICO.trash && ICO.trash(12)) || ''}</button>
               </td>
             </tr>
-          `).join('')}
+          `;}).join('')}
         </tbody>
       </table>
     </div>`;
@@ -1018,8 +1027,40 @@
 
   function feuillePiece(pieceExistante) {
     const edit = !!pieceExistante;
-    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1, photo: null };
+    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1, photo: null, machineId: '', machineSerie: '', machineNom: '' };
     let photoEnCours = p.photo || null;
+
+    synchroniserEntites();
+    const machinesDispos = (R.machines || []).filter(m => m && (m.serie || m.designation || m.modele));
+    const listeM = (machinesDispos.length > 0) ? machinesDispos : (R.machines || []);
+
+    let selId = p.machineId || '';
+    if (!selId && p.machineSerie) {
+      const trouv = listeM.find(m => m && m.serie === p.machineSerie);
+      if (trouv) selId = trouv.id;
+    }
+    if (!selId && !edit && listeM.length === 1 && (listeM[0].serie || listeM[0].designation || listeM[0].modele)) {
+      selId = listeM[0].id || '';
+    }
+
+    const optionsMachinesHtml = listeM.map((m, idx) => {
+      const numMach = idx + 1;
+      const serie = (m.serie || '').trim();
+      const nom = (m.designation || '').trim();
+      const mod = (m.modele || '').trim();
+      let lib = '';
+      if (serie && nom) {
+        lib = 'N° de série : ' + serie + ' — ' + nom + (mod ? ' (' + mod + ')' : '');
+      } else if (serie) {
+        lib = 'N° de série : ' + serie + (mod ? ' (' + mod + ')' : '');
+      } else if (nom) {
+        lib = nom + (mod ? ' (' + mod + ')' : '') + ' (Machine ' + numMach + ' - sans N° de série)';
+      } else {
+        lib = 'Machine ' + numMach;
+      }
+      const isSel = (selId && (m.id === selId || m.serie === selId));
+      return `<option value="${esc(m.id || ('m_' + idx))}"${isSel ? ' selected' : ''}>${esc(lib)}</option>`;
+    }).join('');
 
     function htmlZonePhoto(dataUrl) {
       if (dataUrl) {
@@ -1046,6 +1087,14 @@
     const panneau = Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>${edit ? 'Modifier la pièce' : 'Ajouter une pièce de rechange'}</h3>
       <p class="sub">Pièce neuve de remplacement utilisée ou laissée dans le stock du client.</p>
+
+      <div class="field"><label>Machine concernée</label>
+        <select id="pcMachine" style="width:100%;padding:9px 11px;border-radius:6px;border:1px solid var(--bord,#cbd5e1);background:#fff;font-size:0.95rem;color:#1e293b">
+          <option value="">— Non rattachée / Toute l'installation —</option>
+          ${optionsMachinesHtml}
+        </select>
+        <p class="hint" style="margin-top:4px;font-size:11.5px;color:#64748b">Identification BFR par N° de série en priorité.</p>
+      </div>
 
       <div class="field"><label>Dénomination / désignation</label>
         <input type="text" id="pcDenom" value="${esc(p.denomination || '')}" placeholder="Ex. Roulement SKF 6205, Courroie SPZ 1250, Vérin…"></div>
@@ -1128,14 +1177,39 @@
           toast('Veuillez renseigner au moins la dénomination ou la référence');
           return;
         }
+
+        const machEl = $('#pcMachine', pEl);
+        const machIdChoisi = (machEl ? machEl.value : '') || '';
+        let machSerieChoisie = '';
+        let machNomChoisi = '';
+        if (machIdChoisi) {
+          const mObj = (R.machines || []).find(m => m && (m.id === machIdChoisi || m.serie === machIdChoisi));
+          if (mObj) {
+            machSerieChoisie = (mObj.serie || '').trim();
+            machNomChoisi = (mObj.designation || mObj.modele || '').trim();
+          }
+        }
+
         if (edit) {
           p.denomination = denom;
           p.reference = ref;
           p.quantite = qte;
           p.photo = photoEnCours || null;
+          p.machineId = machIdChoisi;
+          p.machineSerie = machSerieChoisie;
+          p.machineNom = machNomChoisi;
         } else {
           if (!Array.isArray(R.pieces)) R.pieces = [];
-          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte, photo: photoEnCours || null });
+          R.pieces.push({
+            id: p.id,
+            denomination: denom,
+            reference: ref,
+            quantite: qte,
+            photo: photoEnCours || null,
+            machineId: machIdChoisi,
+            machineSerie: machSerieChoisie,
+            machineNom: machNomChoisi
+          });
         }
         if (photoEnCours && typeof RapportDB !== 'undefined') {
           RapportDB.sauverPhoto('pc_' + p.id, photoEnCours, 'piece', (typeof R !== 'undefined' && R && R.id) || '');

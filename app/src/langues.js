@@ -246,6 +246,14 @@
       en: 'Part number', de: 'Artikelnummer', nl: 'Referentie',
       es: 'Referencia', it: 'Codice', pt: 'Referência'
     },
+    'Machine (N° série)': {
+      en: 'Machine (Serial No.)', de: 'Maschine (Serien-Nr.)', nl: 'Machine (Serienr.)',
+      es: 'Máquina (N.º serie)', it: 'Macchina (N. serie)', pt: 'Máquina (N.º de série)'
+    },
+    'Machine (N° de série)': {
+      en: 'Machine (Serial No.)', de: 'Maschine (Serien-Nr.)', nl: 'Machine (Serienr.)',
+      es: 'Máquina (N.º serie)', it: 'Macchina (N. serie)', pt: 'Máquina (N.º de série)'
+    },
     'Quantité': {
       en: 'Quantity', de: 'Menge', nl: 'Aantal',
       es: 'Cantidad', it: 'Quantità', pt: 'Quantidade'
@@ -432,6 +440,7 @@
     'mécanique', 'électrique', 'automatisme', 'sécurité', 'urgent', 'priorité haute',
     'basse', 'informatif', 'catégorie', 'nombre', 'photos', 'date', 'client', 'technicien',
     'machine', 'modèle', 'lieu', 'intervention', 'pièces de rechange', 'dénomination', 'quantité',
+    'machine (n° série)', 'machine (n° de série)',
     'machines visitées', 'machine concernée', 'techniciens sur site', 'technicien(s) sur site',
     'relevé des journées d\'intervention', 'journées d\'intervention', 'total cumulé', 'activité / travaux'
   ];

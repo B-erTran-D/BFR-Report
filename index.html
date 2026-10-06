@@ -2460,6 +2460,14 @@ ul.liste li { margin-bottom: 6px; }
       en: 'Part number', de: 'Artikelnummer', nl: 'Referentie',
       es: 'Referencia', it: 'Codice', pt: 'Referência'
     },
+    'Machine (N° série)': {
+      en: 'Machine (Serial No.)', de: 'Maschine (Serien-Nr.)', nl: 'Machine (Serienr.)',
+      es: 'Máquina (N.º serie)', it: 'Macchina (N. serie)', pt: 'Máquina (N.º de série)'
+    },
+    'Machine (N° de série)': {
+      en: 'Machine (Serial No.)', de: 'Maschine (Serien-Nr.)', nl: 'Machine (Serienr.)',
+      es: 'Máquina (N.º serie)', it: 'Macchina (N. serie)', pt: 'Máquina (N.º de série)'
+    },
     'Quantité': {
       en: 'Quantity', de: 'Menge', nl: 'Aantal',
       es: 'Cantidad', it: 'Quantità', pt: 'Quantidade'
@@ -2646,6 +2654,7 @@ ul.liste li { margin-bottom: 6px; }
     'mécanique', 'électrique', 'automatisme', 'sécurité', 'urgent', 'priorité haute',
     'basse', 'informatif', 'catégorie', 'nombre', 'photos', 'date', 'client', 'technicien',
     'machine', 'modèle', 'lieu', 'intervention', 'pièces de rechange', 'dénomination', 'quantité',
+    'machine (n° série)', 'machine (n° de série)',
     'machines visitées', 'machine concernée', 'techniciens sur site', 'technicien(s) sur site',
     'relevé des journées d\'intervention', 'journées d\'intervention', 'total cumulé', 'activité / travaux'
   ];
@@ -5647,6 +5656,45 @@ ul.liste li { margin-bottom: 6px; }
     return [];
   }
 
+  function infoMachinePiece(p, intervention) {
+    if (!p) return { id: '', serie: '', designation: '', libelle: '—', court: '—' };
+    const ms = (intervention && (intervention.machines || [])) || [];
+    let m = null;
+    if (p.machineId) {
+      m = ms.find(x => x && x.id === p.machineId);
+    }
+    if (!m && p.machineSerie) {
+      m = ms.find(x => x && x.serie === p.machineSerie);
+    }
+    if (!m && p.machineNom) {
+      m = ms.find(x => x && (x.designation === p.machineNom || x.modele === p.machineNom));
+    }
+    if (!m && intervention && intervention.machine) {
+      if (p.machineSerie && intervention.machine.serie === p.machineSerie) {
+        m = intervention.machine;
+      } else if (p.machineNom && (intervention.machine.designation === p.machineNom || intervention.machine.modele === p.machineNom)) {
+        m = intervention.machine;
+      }
+    }
+    const serie = ((m && m.serie) ? m.serie : (p.machineSerie || '')).trim();
+    const nom = ((m && (m.designation || m.modele)) ? (m.designation || m.modele) : (p.machineNom || '')).trim();
+    const id = (m && m.id) || p.machineId || '';
+
+    let libelle = '—';
+    let court = '—';
+    if (serie && nom) {
+      libelle = 'N° de série : ' + serie + ' — ' + nom;
+      court = 'N° ' + serie + ' (' + nom + ')';
+    } else if (serie) {
+      libelle = 'N° de série : ' + serie;
+      court = 'N° ' + serie;
+    } else if (nom) {
+      libelle = nom;
+      court = nom;
+    }
+    return { id: id, serie: serie, designation: nom, libelle: libelle, court: court };
+  }
+
   function listeTechniciens(i, s) {
     if (i && Array.isArray(i.techniciens) && i.techniciens.length > 0) {
       const valides = i.techniciens.filter(t => t && valeur(t.nom));
@@ -6289,11 +6337,13 @@ ul.liste li { margin-bottom: 6px; }
       const p = this.pdf, C = this.C;
       if (!pcs || !pcs.length) return;
       const avecPhotos = pcs.some(it => it && it.photo);
-      const colPhotoW = avecPhotos ? 46 : 0;
-      const colDenomW = avecPhotos ? (this.CW - colPhotoW) * 0.52 : (this.CW * 0.54);
-      const colRefW = avecPhotos ? (this.CW - colPhotoW) * 0.32 : (this.CW * 0.30);
-      const colQteW = avecPhotos ? (this.CW - colPhotoW) * 0.16 : (this.CW * 0.16);
-      const hLigne = avecPhotos ? 46 : 20;
+      const colPhotoW = avecPhotos ? 44 : 0;
+      const remW = this.CW - colPhotoW;
+      const colDenomW = avecPhotos ? Math.round(remW * 0.35) : Math.round(this.CW * 0.36);
+      const colRefW = avecPhotos ? Math.round(remW * 0.22) : Math.round(this.CW * 0.22);
+      const colMachW = avecPhotos ? Math.round(remW * 0.30) : Math.round(this.CW * 0.28);
+      const colQteW = remW - (colDenomW + colRefW + colMachW);
+      const hLigne = avecPhotos ? 46 : 22;
       const hEntete = 20;
 
       this.saut(hEntete + hLigne * Math.min(pcs.length, 3) + 24);
@@ -6313,6 +6363,9 @@ ul.liste li { margin-bottom: 6px; }
         p.text(this.L('Référence'), curX + 7, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu });
         p.line(curX + colRefW, y, curX + colRefW, y + hEntete, { color: C.bordFort, width: 0.6 });
         curX += colRefW;
+        p.text(this.L('Machine (N° série)'), curX + 7, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu });
+        p.line(curX + colMachW, y, curX + colMachW, y + hEntete, { color: C.bordFort, width: 0.6 });
+        curX += colMachW;
         p.text(this.L('Quantité'), curX + colQteW / 2, y + 13.5, { size: 9.4, font: 'F2', color: C.bleu, align: 'center' });
         y += hEntete;
       };
@@ -6364,7 +6417,8 @@ ul.liste li { margin-bottom: 6px; }
         const denom = valeur(item.denomination || item.designation) || '—';
         const ref = valeur(item.reference) || '—';
         const qte = String(valeur(item.quantite) || 1);
-        const textY = avecPhotos ? (y + hLigne / 2 + 3.5) : (y + 13.5);
+        const machInfo = infoMachinePiece(item, this.i);
+        const textY = avecPhotos ? (y + hLigne / 2 + 3.5) : (y + 14.5);
 
         p.text(Pdf.trunc(denom, colDenomW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, color: C.texte });
         p.line(rowX + colDenomW, y, rowX + colDenomW, y + hLigne, { color: C.bord, width: 0.4 });
@@ -6373,6 +6427,21 @@ ul.liste li { margin-bottom: 6px; }
         p.text(Pdf.trunc(ref, colRefW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, font: 'F2', color: C.texte });
         p.line(rowX + colRefW, y, rowX + colRefW, y + hLigne, { color: C.bord, width: 0.4 });
         rowX += colRefW;
+
+        if (avecPhotos) {
+          if (machInfo.serie) {
+            p.text(Pdf.trunc('N° ' + machInfo.serie, colMachW - 14, 9.4, false), rowX + 7, y + 18, { size: 9.4, font: 'F2', color: C.bleu });
+            if (machInfo.designation) {
+              p.text(Pdf.trunc(machInfo.designation, colMachW - 14, 8.5, false), rowX + 7, y + 31, { size: 8.5, color: C.texte });
+            }
+          } else {
+            p.text(Pdf.trunc(machInfo.designation || '—', colMachW - 14, 9.4, false), rowX + 7, textY, { size: 9.4, color: machInfo.designation ? C.texte : C.gris });
+          }
+        } else {
+          p.text(Pdf.trunc(machInfo.libelle || '—', colMachW - 14, 9.2, false), rowX + 7, textY, { size: 9.2, color: (machInfo.libelle && machInfo.libelle !== '—') ? C.texte : C.gris });
+        }
+        p.line(rowX + colMachW, y, rowX + colMachW, y + hLigne, { color: C.bord, width: 0.4 });
+        rowX += colMachW;
 
         p.text(qte, rowX + colQteW / 2, textY, { size: 9.4, font: 'F2', color: C.texte, align: 'center' });
 
@@ -7025,28 +7094,33 @@ ul.liste li { margin-bottom: 6px; }
             { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
           ] : [
             { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+            { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
             { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
           ];
           const lignesTab = pcs.map(p => {
+            const machInfo = infoMachinePiece(p, i);
             if (avecPhotos) {
               return [
                 p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
                 { texte: p.denomination || p.designation || '—' },
                 { texte: p.reference || '—' },
+                { texte: machInfo.libelle || '—' },
                 { texte: String(p.quantite || 1), align: 'center' }
               ];
             }
             return [
               { texte: p.denomination || p.designation || '—' },
               { texte: p.reference || '—' },
+              { texte: machInfo.libelle || '—' },
               { texte: String(p.quantite || 1), align: 'center' }
             ];
           });
-          d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
+          d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [14, 32, 22, 22, 10] : [36, 24, 28, 12] });
           d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 9.5, couleur: '64748B', apres: 120 });
           dernierTypeEtaitEvenement = false;
         } else if (section.type === 'photos') {
@@ -7067,28 +7141,33 @@ ul.liste li { margin-bottom: 6px; }
                 { texte: this.L('Photo'), gras: true, align: 'center', fond: 'E8EFFA' },
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
               ] : [
                 { texte: this.L('Dénomination'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Référence'), gras: true, fond: 'E8EFFA' },
+                { texte: this.L('Machine (N° série)'), gras: true, fond: 'E8EFFA' },
                 { texte: this.L('Quantité'), gras: true, align: 'center', fond: 'E8EFFA' }
               ];
               const lignesTab = pcs.map(p => {
+                const machInfo = infoMachinePiece(p, i);
                 if (avecPhotos) {
                   return [
                     p.photo ? { image: p.photo, imageCm: 1.5, align: 'center' } : { texte: '—', align: 'center' },
                     { texte: p.denomination || p.designation || '—' },
                     { texte: p.reference || '—' },
+                    { texte: machInfo.libelle || '—' },
                     { texte: String(p.quantite || 1), align: 'center' }
                   ];
                 }
                 return [
                   { texte: p.denomination || p.designation || '—' },
                   { texte: p.reference || '—' },
+                  { texte: machInfo.libelle || '—' },
                   { texte: String(p.quantite || 1), align: 'center' }
                 ];
               });
-              d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [16, 44, 26, 14] : [55, 30, 15] });
+              d.tableau([enteteTab].concat(lignesTab), { largeurs: avecPhotos ? [14, 32, 22, 22, 10] : [36, 24, 28, 12] });
               d.para(this.L('La signature du client vaut pour acceptation du devis final et validation des pièces de rechange ci-dessus.'), { taille: 9.5, couleur: '64748B', apres: 120 });
               piecesRendues = true;
               dernierTypeEtaitEvenement = false;
@@ -7459,6 +7538,7 @@ ul.liste li { margin-bottom: 6px; }
     objetMailClient: objetMailClient, corpsMailClient: corpsMailClient,
     objetMailSAV: objetMailSAV, corpsMailSAV: corpsMailSAV,
     corpsMailBilingue: corpsMailBilingue, texteSMSArrivee: texteSMSArrivee,
+    infoMachinePiece: infoMachinePiece,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
 })(window);
@@ -8224,7 +8304,13 @@ ul.liste li { margin-bottom: 6px; }
             <option value="">— Non rattaché / Toute l'installation —</option>
             ${this.machines.map(m => {
               const sel = (ev.machineId && m.id === ev.machineId) || (ev.machineNom && m.designation === ev.machineNom);
-              const label = [m.designation || 'Machine', m.modele ? '(' + m.modele + ')' : ''].filter(Boolean).join(' ');
+              const serie = (m.serie || '').trim();
+              const nom = (m.designation || '').trim();
+              const mod = (m.modele || '').trim();
+              let label = '';
+              if (serie && nom) label = 'N° de série : ' + serie + ' — ' + nom + (mod ? ' (' + mod + ')' : '');
+              else if (serie) label = 'N° de série : ' + serie + (mod ? ' (' + mod + ')' : '');
+              else label = [nom || 'Machine', mod ? '(' + mod + ')' : ''].filter(Boolean).join(' ');
               return `<option value="${esc(m.id || m.designation)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
             }).join('')}
           </select>
@@ -9837,12 +9923,17 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;width:48px;text-align:center">Photo</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Dénomination</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Référence</th>
+            <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase">Machine (N° série)</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:center">Qté</th>
             <th style="padding:7px 9px;font-size:11.5px;text-transform:uppercase;text-align:right">Action</th>
           </tr>
         </thead>
         <tbody>
-          ${pcs.map((p, idx) => `
+          ${pcs.map((p, idx) => {
+            const mInfo = (typeof Report !== 'undefined' && Report.infoMachinePiece)
+              ? Report.infoMachinePiece(p, R)
+              : { serie: p.machineSerie || '', designation: p.machineNom || '' };
+            return `
             <tr style="border-bottom:1px solid var(--bord);background:${idx % 2 === 1 ? '#fcfdff' : '#fff'}">
               <td style="padding:6px 8px;text-align:center;vertical-align:middle">
                 ${p.photo
@@ -9853,13 +9944,17 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
               </td>
               <td style="padding:7px 9px;vertical-align:middle"><strong>${esc(p.denomination || '—')}</strong></td>
               <td style="padding:7px 9px;font-family:ui-monospace,monospace;color:#475569;vertical-align:middle">${esc(p.reference || '—')}</td>
+              <td style="padding:7px 9px;vertical-align:middle">
+                ${mInfo.serie ? `<div style="font-weight:600;color:var(--bleu,#0369a1);font-size:12.5px"><span style="font-size:10.5px;font-weight:normal;color:#64748b">N°</span> ${esc(mInfo.serie)}</div>` : ''}
+                ${mInfo.designation ? `<div style="font-size:11.5px;color:#334155">${esc(mInfo.designation)}</div>` : (!mInfo.serie ? '<span style="color:#94a3b8;font-size:11.5px">—</span>' : '')}
+              </td>
               <td style="padding:7px 9px;text-align:center;vertical-align:middle"><strong>${esc(p.quantite || 1)}</strong></td>
               <td style="padding:7px 9px;text-align:right;white-space:nowrap;vertical-align:middle">
                 <button type="button" class="btn sm grey" style="min-height:28px;padding:2px 7px;font-size:12px" data-a="editer-piece" data-id="${esc(p.id)}" title="Modifier">${(ICO.pen && ICO.pen(12)) || ''}</button>
                 <button type="button" class="btn sm danger" style="min-height:28px;padding:2px 7px;font-size:12px;margin-left:4px" data-a="supprimer-piece" data-id="${esc(p.id)}" title="Supprimer">${(ICO.trash && ICO.trash(12)) || ''}</button>
               </td>
             </tr>
-          `).join('')}
+          `;}).join('')}
         </tbody>
       </table>
     </div>`;
@@ -9907,8 +10002,40 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
 
   function feuillePiece(pieceExistante) {
     const edit = !!pieceExistante;
-    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1, photo: null };
+    const p = pieceExistante || { id: uid('p'), denomination: '', reference: '', quantite: 1, photo: null, machineId: '', machineSerie: '', machineNom: '' };
     let photoEnCours = p.photo || null;
+
+    synchroniserEntites();
+    const machinesDispos = (R.machines || []).filter(m => m && (m.serie || m.designation || m.modele));
+    const listeM = (machinesDispos.length > 0) ? machinesDispos : (R.machines || []);
+
+    let selId = p.machineId || '';
+    if (!selId && p.machineSerie) {
+      const trouv = listeM.find(m => m && m.serie === p.machineSerie);
+      if (trouv) selId = trouv.id;
+    }
+    if (!selId && !edit && listeM.length === 1 && (listeM[0].serie || listeM[0].designation || listeM[0].modele)) {
+      selId = listeM[0].id || '';
+    }
+
+    const optionsMachinesHtml = listeM.map((m, idx) => {
+      const numMach = idx + 1;
+      const serie = (m.serie || '').trim();
+      const nom = (m.designation || '').trim();
+      const mod = (m.modele || '').trim();
+      let lib = '';
+      if (serie && nom) {
+        lib = 'N° de série : ' + serie + ' — ' + nom + (mod ? ' (' + mod + ')' : '');
+      } else if (serie) {
+        lib = 'N° de série : ' + serie + (mod ? ' (' + mod + ')' : '');
+      } else if (nom) {
+        lib = nom + (mod ? ' (' + mod + ')' : '') + ' (Machine ' + numMach + ' - sans N° de série)';
+      } else {
+        lib = 'Machine ' + numMach;
+      }
+      const isSel = (selId && (m.id === selId || m.serie === selId));
+      return `<option value="${esc(m.id || ('m_' + idx))}"${isSel ? ' selected' : ''}>${esc(lib)}</option>`;
+    }).join('');
 
     function htmlZonePhoto(dataUrl) {
       if (dataUrl) {
@@ -9935,6 +10062,14 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     const panneau = Ouvrir.ouvrir(null, `<div class="panel">
       <div class="grab"></div><h3>${edit ? 'Modifier la pièce' : 'Ajouter une pièce de rechange'}</h3>
       <p class="sub">Pièce neuve de remplacement utilisée ou laissée dans le stock du client.</p>
+
+      <div class="field"><label>Machine concernée</label>
+        <select id="pcMachine" style="width:100%;padding:9px 11px;border-radius:6px;border:1px solid var(--bord,#cbd5e1);background:#fff;font-size:0.95rem;color:#1e293b">
+          <option value="">— Non rattachée / Toute l'installation —</option>
+          ${optionsMachinesHtml}
+        </select>
+        <p class="hint" style="margin-top:4px;font-size:11.5px;color:#64748b">Identification BFR par N° de série en priorité.</p>
+      </div>
 
       <div class="field"><label>Dénomination / désignation</label>
         <input type="text" id="pcDenom" value="${esc(p.denomination || '')}" placeholder="Ex. Roulement SKF 6205, Courroie SPZ 1250, Vérin…"></div>
@@ -10017,14 +10152,39 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           toast('Veuillez renseigner au moins la dénomination ou la référence');
           return;
         }
+
+        const machEl = $('#pcMachine', pEl);
+        const machIdChoisi = (machEl ? machEl.value : '') || '';
+        let machSerieChoisie = '';
+        let machNomChoisi = '';
+        if (machIdChoisi) {
+          const mObj = (R.machines || []).find(m => m && (m.id === machIdChoisi || m.serie === machIdChoisi));
+          if (mObj) {
+            machSerieChoisie = (mObj.serie || '').trim();
+            machNomChoisi = (mObj.designation || mObj.modele || '').trim();
+          }
+        }
+
         if (edit) {
           p.denomination = denom;
           p.reference = ref;
           p.quantite = qte;
           p.photo = photoEnCours || null;
+          p.machineId = machIdChoisi;
+          p.machineSerie = machSerieChoisie;
+          p.machineNom = machNomChoisi;
         } else {
           if (!Array.isArray(R.pieces)) R.pieces = [];
-          R.pieces.push({ id: p.id, denomination: denom, reference: ref, quantite: qte, photo: photoEnCours || null });
+          R.pieces.push({
+            id: p.id,
+            denomination: denom,
+            reference: ref,
+            quantite: qte,
+            photo: photoEnCours || null,
+            machineId: machIdChoisi,
+            machineSerie: machSerieChoisie,
+            machineNom: machNomChoisi
+          });
         }
         if (photoEnCours && typeof RapportDB !== 'undefined') {
           RapportDB.sauverPhoto('pc_' + p.id, photoEnCours, 'piece', (typeof R !== 'undefined' && R && R.id) || '');
@@ -13367,5 +13527,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="c17c7862c0";window.SAV_DATE="06/10/2026";</script></body>
+<script>window.SAV_VERSION="a05da0872a";window.SAV_DATE="06/10/2026";</script></body>
 </html>

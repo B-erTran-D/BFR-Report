@@ -207,7 +207,13 @@
             <option value="">— Non rattaché / Toute l'installation —</option>
             ${this.machines.map(m => {
               const sel = (ev.machineId && m.id === ev.machineId) || (ev.machineNom && m.designation === ev.machineNom);
-              const label = [m.designation || 'Machine', m.modele ? '(' + m.modele + ')' : ''].filter(Boolean).join(' ');
+              const serie = (m.serie || '').trim();
+              const nom = (m.designation || '').trim();
+              const mod = (m.modele || '').trim();
+              let label = '';
+              if (serie && nom) label = 'N° de série : ' + serie + ' — ' + nom + (mod ? ' (' + mod + ')' : '');
+              else if (serie) label = 'N° de série : ' + serie + (mod ? ' (' + mod + ')' : '');
+              else label = [nom || 'Machine', mod ? '(' + mod + ')' : ''].filter(Boolean).join(' ');
               return `<option value="${esc(m.id || m.designation)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
             }).join('')}
           </select>
