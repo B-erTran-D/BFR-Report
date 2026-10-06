@@ -1846,6 +1846,46 @@
     return corpsCl + '\n\n__________________________________________________\n[Version française / Information SAV BFR]\n\n' + corpsSv;
   }
 
+  /* ---------- SMS d'arrivée sur site pour le contact client ---------- */
+  function texteSMSArrivee(i, s, langue) {
+    const vars = variables(i, s);
+    const techNom = vars.technicien || 'Le technicien SAV';
+    const techTel = (s && s.technicien && s.technicien.tel) ? s.technicien.tel.trim() : '';
+    const contact = (i && i.client && i.client.contact) ? i.client.contact.trim() : '';
+    const site = (i && i.client && (i.client.lieu || i.client.nom)) ? (i.client.lieu || i.client.nom).trim() : '';
+    const mach = (i && i.machine && i.machine.designation) ? i.machine.designation.trim() : '';
+    const lang = (langue || (i && i.langue && i.langue.active && i.langue.code) || 'fr').toLowerCase();
+
+    if (lang === 'en') {
+      const salutation = contact ? ('Hello ' + contact + ',') : 'Hello,';
+      const precisionMach = mach ? (' for the service intervention on ' + mach) : ' for the service intervention';
+      const precisionSite = site ? (' at ' + site) : '';
+      const joignable = techTel ? ('\nYou can reach me at ' + techTel + '.') : '';
+      return `${salutation}\n${techNom} from BFR Systems.\nI have arrived on site${precisionSite}${precisionMach}.${joignable}\nSee you shortly.`;
+    }
+    if (lang === 'de') {
+      const salutation = contact ? ('Guten Tag ' + contact + ',') : 'Guten Tag,';
+      const precisionMach = mach ? (' an ' + mach) : '';
+      const precisionSite = site ? (' bei ' + site) : '';
+      const joignable = techTel ? ('\nSie erreichen mich unter ' + techTel + '.') : '';
+      return `${salutation}\n${techNom} von BFR Systems.\nIch bin vor Ort eingetroffen${precisionSite} für den SAV-Einsatz${precisionMach}.${joignable}\nBis gleich.`;
+    }
+    if (lang === 'nl') {
+      const salutation = contact ? ('Goedendag ' + contact + ',') : 'Goedendag,';
+      const precisionMach = mach ? (' aan ' + mach) : '';
+      const precisionSite = site ? (' bij ' + site) : '';
+      const joignable = techTel ? ('\nU kunt mij bereiken op ' + techTel + '.') : '';
+      return `${salutation}\n${techNom} van BFR Systems.\nIk ben ter plaatse aangekomen${precisionSite} voor de service-interventie${precisionMach}.${joignable}\nTot zo.`;
+    }
+
+    // Français par défaut
+    const salutation = contact ? ('Bonjour ' + contact + ',') : 'Bonjour,';
+    const precisionMach = mach ? (' sur votre équipement ' + mach) : '';
+    const precisionSite = site ? (' sur votre site (' + site + ')') : ' sur votre site';
+    const joignable = techTel ? ('\nJe reste joignable au ' + techTel + '.') : '';
+    return `${salutation}\n${techNom} de la société BFR Systems.\nJe suis bien arrivé${precisionSite} pour l'intervention SAV${precisionMach}.${joignable}\nÀ tout de suite.`;
+  }
+
   global.Report = {
     /* opts : { langue: 'en', suffixe: true } pour la version traduite. */
     genererPDF: function (i, s, opts) { return new RapportPDF(i, s, opts).generer(); },
@@ -1864,7 +1904,7 @@
     objetMail: objetMail, corpsMail: corpsMail, defaultCorpsMail: defaultCorpsMail, variables: variables,
     objetMailClient: objetMailClient, corpsMailClient: corpsMailClient,
     objetMailSAV: objetMailSAV, corpsMailSAV: corpsMailSAV,
-    corpsMailBilingue: corpsMailBilingue,
+    corpsMailBilingue: corpsMailBilingue, texteSMSArrivee: texteSMSArrivee,
     nomComplet: nomComplet, contactTech: contactTech, nomTechnicien: nomTechnicien
   };
 })(window);

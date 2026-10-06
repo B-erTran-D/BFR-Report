@@ -725,7 +725,7 @@
     if (!c.debut) {
       barre.innerHTML = `<button class="btn chrono-demarrer" data-a="chrono-demarrer" style="width:100%">
         ${(ICO.play && ICO.play(16)) || ''} Démarrer l'intervention</button>
-        <p class="chrono-note">L'heure de début est enregistrée automatiquement.</p>`;
+        <p class="chrono-note">L'heure de début est enregistrée automatiquement.${R.client && R.client.nom ? ' • <a href="#" data-a="sms-arrivee" style="color:var(--bleu,#06baf2);text-decoration:underline">Prévenir le contact par SMS</a>' : ''}</p>`;
     } else if (!c.fin) {
       barre.innerHTML = `<div class="chrono-encours">
         <div class="chrono-temps"><span class="chrono-label">${c.enPause ? 'En pause depuis' : 'Sur site depuis'}</span>
@@ -734,7 +734,7 @@
           <button class="btn sm grey" data-a="chrono-pause">${c.enPause ? (((ICO.play && ICO.play(14)) || '') + ' Reprendre') : (((ICO.pause && ICO.pause(14)) || '') + ' Pause')}</button>
           <button class="btn sm or" data-a="chrono-terminer">${(ICO.stop && ICO.stop(14)) || ''} Terminer</button>
         </div></div>
-        <p class="chrono-note">Début ${Report.heureFr(c.debut)}${(c.pauses || []).length ? ' — ' + c.pauses.length + ' pause(s) déduite(s)' : ''}</p>`;
+        <p class="chrono-note">Début ${Report.heureFr(c.debut)}${(c.pauses || []).length ? ' — ' + c.pauses.length + ' pause(s) déduite(s)' : ''}${R.client && R.client.nom ? ' • <a href="#" data-a="sms-arrivee" style="color:var(--bleu,#06baf2);text-decoration:underline">SMS d\'arrivée</a>' : ''}</p>`;
     } else {
       barre.innerHTML = `<div class="chrono-encours">
         <div class="chrono-temps"><span class="chrono-label">Temps sur site</span><strong>${Report.formatDuree(duree()) || '0 min'}</strong></div>
@@ -799,12 +799,17 @@
               <div><span>Client</span><strong>${esc(c.nom || '—')}</strong></div>
               <div><span>Lieu</span><strong>${esc(c.lieu || c.adresse || '—')}</strong></div>
               ${recapMachines}
-              <div><span>Contact</span><strong>${esc(c.contact || '—')}</strong></div>
+              <div><span>Contact</span><strong>${esc(c.contact || '—')}${c.tel ? ' · ' + esc(c.tel) : ''}</strong></div>
               ${recapTechs}
               <div><span>Objet</span><strong>${esc(R.objet || '—')}</strong></div>
               <div><span>Langue du rapport</span><strong>${R.langue.active && R.langue.code
                 ? 'français + ' + esc(I18N.natif(R.langue.code))
                 : 'français'}</strong></div>
+            </div>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--bord,#cbd5e1)">
+              <button type="button" class="btn sm" data-a="sms-arrivee" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;background:#f0f9ff;border:1.5px solid var(--bleu,#06baf2);color:#0284c7;font-weight:600;padding:7px 10px;font-size:12.5px">
+                ${(ICO.sms && ICO.sms(15)) || '💬'} Prévenir le contact par SMS (arrivée sur site)
+              </button>
             </div>`
           : `<p class="hint">Renseignez le client et la machine : ces informations se retrouvent dans le rapport.</p>
              <button class="btn wide" data-a="editer-client">Client & machine</button>`}
@@ -1456,6 +1461,11 @@
         </div>
         <div class="grid2">${f('client.contact', 'Contact sur site (nom)', { ph: 'Ex. M. Rivière' })}${f('client.fonction', 'Fonction', { ph: 'Ex. Responsable maintenance' })}</div>
         <div class="grid2">${f('client.tel', 'Téléphone du client', { type: 'tel', ph: 'Ex. 04 78 55 44 33' })}${f('client.email', 'E-mail du client', { type: 'email', ph: 'Ex. contact@client.fr' })}</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:-6px;margin-bottom:8px">
+          <button type="button" class="btn ghost sm" data-a="sms-arrivee" style="font-size:11.5px;padding:2px 8px;display:flex;align-items:center;gap:4px;color:#0284c7">
+            ${(ICO.sms && ICO.sms(13)) || '💬'} Prévenir le contact par SMS
+          </button>
+        </div>
         ${f('client.adresse', 'Adresse du client', { ph: 'Rue, code postal, ville' })}
         ${f('client.lieu', "Lieu d'intervention", { list: 'dlLieux', ph: "Ex. Atelier 2 — ligne 4" })}
         <div class="filebtn" style="margin-top:8px"><input type="file" id="logoClient" accept="image/*">
@@ -1696,6 +1706,10 @@
         if (ev.target.closest('[data-a="vers-annuaire"]')) {
           panneau.closest('.sheet').remove();
           feuilleAnnuaireClients();
+          return;
+        }
+        if (ev.target.closest('[data-a="sms-arrivee"]')) {
+          feuilleSMSArrivee();
           return;
         }
         if (ev.target.closest('[data-a="ok"], [data-a="fermer"]')) Clients.retenir(R.client);
@@ -3023,6 +3037,119 @@
     }, 400);
   }
 
+  /* ===================== SMS d'arrivée sur site ======================== */
+  function feuilleSMSArrivee() {
+    if (!R.client || !R.client.nom) {
+      toast('Veuillez d\'abord renseigner le client', 3000);
+      feuilleClient();
+      return;
+    }
+
+    const c = R.client;
+    let telClient = c.tel || c.numeroClient || '';
+    let texteSMS = Report.texteSMSArrivee(R, S, R.langue && R.langue.active ? R.langue.code : 'fr');
+
+    function genererUrlSMS(numero, corps) {
+      const cleanNum = String(numero || '').replace(/[^\d+]/g, '');
+      // Format standard URI RFC 5724 supporté par Android et iOS :
+      return 'sms:' + encodeURIComponent(cleanNum) + '?body=' + encodeURIComponent(corps);
+    }
+
+    const html = `<div class="panel">
+      <div class="grab"></div>
+      <h3>${(ICO.sms && ICO.sms(20)) || '💬'} Prévenir le contact par SMS</h3>
+      <p class="sub">Envoyez un SMS professionnel au contact sur site pour lui annoncer votre arrivée et le début de l'intervention.</p>
+
+      <div class="card" style="margin-bottom:10px">
+        <div class="field">
+          <label style="font-weight:600">Numéro de téléphone du contact</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="tel" id="smsNumeroDest" value="${esc(telClient)}" placeholder="Ex. 06 12 34 56 78" style="flex:1">
+          </div>
+          <p class="small" style="margin-top:4px;color:#64748b">Contact : <strong>${esc(c.contact || 'Non renseigné')}</strong> (${esc(c.nom || 'Client')})</p>
+        </div>
+
+        <div class="field" style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <label style="font-weight:600;margin:0">Message pré-rempli</label>
+            <button type="button" class="btn ghost sm" id="btnReinitSMS" style="padding:2px 8px;font-size:11px">Réinitialiser</button>
+          </div>
+          <textarea id="smsTexteMessage" rows="6" style="width:100%;font-size:13px;line-height:1.4;padding:8px">${esc(texteSMS)}</textarea>
+          <p class="small" style="color:#64748b;margin-top:4px">Vous pouvez ajuster le message (ex. préciser un point d'accueil ou de garde).</p>
+        </div>
+      </div>
+
+      <div class="btnrow" style="flex-direction:column;gap:8px">
+        <a id="btnLancerSMS" href="${esc(genererUrlSMS(telClient, texteSMS))}" class="btn wide" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;padding:11px;background:var(--bleu,#06baf2);color:#fff">
+          ${(ICO.sms && ICO.sms(18)) || '💬'} Ouvrir l'application SMS du téléphone
+        </a>
+        <div style="display:flex;gap:8px;width:100%">
+          <button type="button" class="btn sm grey" id="btnCopierSMS" style="flex:1">Copier le texte</button>
+          <button type="button" class="btn sm grey" data-a="fermer" style="flex:1">Fermer</button>
+        </div>
+      </div>
+    </div>`;
+
+    Ouvrir.ouvrir(null, html, (panneau) => {
+      const inpNum = $('#smsNumeroDest', panneau);
+      const txtMsg = $('#smsTexteMessage', panneau);
+      const btnLien = $('#btnLancerSMS', panneau);
+      const btnReinit = $('#btnReinitSMS', panneau);
+      const btnCopier = $('#btnCopierSMS', panneau);
+
+      function actualiserLien() {
+        const num = inpNum.value.trim();
+        const msg = txtMsg.value;
+        btnLien.href = genererUrlSMS(num, msg);
+        if (num && !c.tel) {
+          c.tel = num;
+          planifier();
+        }
+      }
+
+      inpNum.addEventListener('input', actualiserLien);
+      txtMsg.addEventListener('input', actualiserLien);
+
+      panneau.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-a="fermer"]')) {
+          const sh = panneau.closest('.sheet');
+          if (sh) sh.remove();
+          rendreTout();
+        }
+      });
+
+      btnLien.addEventListener('click', (e) => {
+        const num = inpNum.value.trim();
+        if (!num) {
+          e.preventDefault();
+          toast('Veuillez indiquer un numéro de téléphone');
+          inpNum.focus();
+          return;
+        }
+        setTimeout(() => {
+          const sh = panneau.closest('.sheet');
+          if (sh) sh.remove();
+        }, 1200);
+        toast('Ouverture de l\'application SMS...');
+      });
+
+      if (btnReinit) {
+        btnReinit.addEventListener('click', () => {
+          txtMsg.value = Report.texteSMSArrivee(R, S, R.langue && R.langue.active ? R.langue.code : 'fr');
+          actualiserLien();
+          toast('Message réinitialisé');
+        });
+      }
+
+      if (btnCopier) {
+        btnCopier.addEventListener('click', () => {
+          copier(txtMsg.value);
+          toast('Texte du SMS copié dans le presse-papier');
+        });
+      }
+    });
+  }
+
   /* ===================== Annuaire clients ============================= */
   function feuilleAnnuaireClients(clientNomInitial) {
     function normTxt(t) {
@@ -3342,6 +3469,7 @@
       <button class="menu-item" data-a="soumettre"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Soumettre le rapport<small>Transmission PDF par e-mail</small></span></button>
       <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
       <button class="menu-item" data-a="annuaire"><span class="ico">${(ICO.users && ICO.users(18)) || (ICO.user && ICO.user(18)) || ''}</span><span>Annuaire clients<small>Consulter, modifier ou ajouter un client hors intervention</small></span></button>
+      <button class="menu-item" data-a="sms-arrivee"><span class="ico">${(ICO.sms && ICO.sms(18)) || ''}</span><span>Prévenir le contact par SMS<small>Annoncer votre arrivée sur site au contact client</small></span></button>
       <button class="menu-item" data-a="icones"><span class="ico">${(ICO.palette && ICO.palette(18)) || (ICO.gear && ICO.gear(18)) || ''}</span><span>Icône de l'application<small>Changer l'icône sur l'écran d'accueil Android</small></span></button>
       <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
       <button class="menu-item" data-a="actualiser"><span class="ico">${(ICO.clock && ICO.clock(18)) || ''}</span><span>Actualiser l'application<small>Vider le cache et forcer la dernière version</small></span></button>
@@ -3362,6 +3490,7 @@
         else if (a === 'soumettre') soumettre();
         else if (a === 'identite') feuilleIdentite();
         else if (a === 'annuaire') feuilleAnnuaireClients();
+        else if (a === 'sms-arrivee') feuilleSMSArrivee();
         else if (a === 'icones') feuilleIcones();
         else if (a === 'reglages') feuilleReglages();
         else if (a === 'actualiser') actualiserApp();
@@ -3625,6 +3754,7 @@
       else if (a === 'cloturer-retour-reel') feuilleTrajet(true);
       else if (a === 'ajouter-ev') ajouterEvenement();
       else if (a === 'editer-client') feuilleClient();
+      else if (a === 'sms-arrivee') feuilleSMSArrivee();
       else if (a === 'ajouter-piece') feuillePiece();
       else if (a === 'voir-photo-pc') {
         const id = b.dataset.id;
@@ -4343,6 +4473,7 @@
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
     apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,
     feuilleTrajet: feuilleTrajet, feuilleAnnuaireClients: feuilleAnnuaireClients,
-    feuilleClient: feuilleClient, feuilleReglages: feuilleReglages
+    feuilleClient: feuilleClient, feuilleReglages: feuilleReglages,
+    feuilleSMSArrivee: feuilleSMSArrivee
   };
 })();
