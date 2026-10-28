@@ -8846,6 +8846,13 @@ ul.liste li { margin-bottom: 6px; }
         sz || 18, cls
       );
     },
+    phone: function (sz, cls) {
+      return duo(
+        '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+        '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+        sz || 18, cls
+      );
+    },
     help: function (sz, cls) {
       return duo(
         '<circle cx="12" cy="12" r="10"/>',
@@ -11655,7 +11662,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     if (!barre) return;
     const c = R.chrono;
     const icoPlay = (ICO.play && ICO.play(14)) || '', icoPen = (ICO.pen && ICO.pen(14)) || '';
-    const smsLien = (txt) => (R.client && R.client.nom ? ' • <a href="#" data-a="sms-arrivee" style="color:var(--bleu,#06baf2);text-decoration:underline">' + txt + '</a>' : '');
+    const smsLien = (txt) => (R.client && R.client.nom ? ' • <a href="#" data-a="sms-arrivee" style="color:var(--bleu,#06baf2);text-decoration:underline">' + (contactArriveeAppel() ? 'Appeler le contact' : txt) + '</a>' : '');
     const avertissementOubli = chronoOublie()
       ? `<div class="chrono-oubli">Chrono lancé le ${esc(Report.frDate(dateLocale(c.debut)))} à ${esc(heureCourte(c.debut))} et jamais arrêté.
           <button type="button" class="btn sm" data-a="chrono-oubli">Corriger</button></div>` : '';
@@ -11771,7 +11778,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
             </div>
             <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--bord,#cbd5e1)">
               <button type="button" class="btn sm" data-a="sms-arrivee" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;background:#f0f9ff;border:1.5px solid var(--bleu,#06baf2);color:#0284c7;font-weight:600;padding:7px 10px;font-size:12.5px">
-                ${(ICO.sms && ICO.sms(15)) || '💬'} Prévenir le contact par SMS (arrivée sur site)
+                ${icoContact(15)} ${contactArriveeAppel() ? 'Appeler le contact (arrivée sur site)' : 'Prévenir le contact par SMS (arrivée sur site)'}
               </button>
             </div>`
           : `<p class="hint">Renseignez le client et la machine : ces informations se retrouvent dans le rapport.</p>
@@ -12583,7 +12590,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         <div class="grid2">${f('client.tel', 'Téléphone du client', { type: 'tel', ph: 'Ex. 04 78 55 44 33' })}${f('client.email', 'E-mail du client', { type: 'email', ph: 'Ex. contact@client.fr' })}</div>
         <div style="display:flex;justify-content:flex-end;margin-top:-6px;margin-bottom:8px">
           <button type="button" class="btn ghost sm" data-a="sms-arrivee" style="font-size:11.5px;padding:2px 8px;display:flex;align-items:center;gap:4px;color:#0284c7">
-            ${(ICO.sms && ICO.sms(13)) || '💬'} Prévenir le contact par SMS
+            ${icoContact(13)} ${contactArriveeAppel() ? 'Appeler le contact' : 'Prévenir le contact par SMS'}
           </button>
         </div>
         ${f('client.adresse', 'Adresse du client', { ph: 'Rue, code postal, ville' })}
@@ -14487,6 +14494,34 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     }, 400);
   }
 
+  /* ===================== SMS / appel d'arrivée sur site ================
+     Un contact sur un fixe (numéro géographique : 01-05, ou +33 1-5…) ne reçoit
+     pas de SMS utile : on propose alors de lancer l'appel direct. Les mobiles
+     (06/07/08/09) restent sur le SMS d'arrivée. */
+  function nettoyerTel(numero) {
+    return String(numero || '').replace(/[^\d+]/g, '');
+  }
+
+  function estNumeroGeographique(numero) {
+    let n = nettoyerTel(numero);
+    if (/^\+33/.test(n)) n = n.slice(3);        // +33 1 40 00 00 00
+    else if (/^33\d/.test(n)) n = n.slice(2);   // 33 1 40 00 00 00 (sans +)
+    else if (/^0\d/.test(n)) n = n.slice(1);    // 01 40 00 00 00
+    if (!/^\d{9}$/.test(n)) return false;       // pas un numéro français : on ne juge pas
+    return /^[1-5]/.test(n);                    // 1-5 = fixe, 6-9 = mobile
+  }
+
+  /* Action d'arrivée sur site : « Appeler le contact » si le fixe, SMS sinon. */
+  function contactArriveeAppel() {
+    const c = R.client || {};
+    return estNumeroGeographique(c.tel || c.numeroClient || '');
+  }
+  function icoContact(sz) {
+    return contactArriveeAppel()
+      ? ((ICO.phone && ICO.phone(sz)) || '📞')
+      : ((ICO.sms && ICO.sms(sz)) || '💬');
+  }
+
   /* ===================== SMS d'arrivée sur site ======================== */
   function feuilleSMSArrivee() {
     if (!R.client || !R.client.nom) {
@@ -14498,17 +14533,23 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     const c = R.client;
     let telClient = c.tel || c.numeroClient || '';
     let texteSMS = Report.texteSMSArrivee(R, S, R.langue && R.langue.active ? R.langue.code : 'fr');
+    // Un fixe ne reçoit pas de SMS utile : on propose l'appel direct.
+    const faireAppel = estNumeroGeographique(telClient);
 
     function genererUrlSMS(numero, corps) {
-      const cleanNum = String(numero || '').replace(/[^\d+]/g, '');
       // Format standard URI RFC 5724 supporté par Android et iOS :
-      return 'sms:' + encodeURIComponent(cleanNum) + '?body=' + encodeURIComponent(corps);
+      return 'sms:' + encodeURIComponent(nettoyerTel(numero)) + '?body=' + encodeURIComponent(corps);
+    }
+    function genererUrlTel(numero) {
+      return 'tel:' + encodeURIComponent(nettoyerTel(numero));
     }
 
     const html = `<div class="panel">
       <div class="grab"></div>
-      <h3>${(ICO.sms && ICO.sms(20)) || '💬'} Prévenir le contact par SMS</h3>
-      <p class="sub">Envoyez un SMS professionnel au contact sur site pour lui annoncer votre arrivée et le début de l'intervention.</p>
+      <h3>${icoContact(20)} ${faireAppel ? 'Appeler le contact' : 'Prévenir le contact par SMS'}</h3>
+      <p class="sub">${faireAppel
+        ? 'Lancez un appel vers le contact sur site pour lui annoncer votre arrivée et le début de l\'intervention.'
+        : 'Envoyez un SMS professionnel au contact sur site pour lui annoncer votre arrivée et le début de l\'intervention.'}</p>
 
       <div class="card" style="margin-bottom:10px">
         <div class="field">
@@ -14519,6 +14560,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           <p class="small" style="margin-top:4px;color:#64748b">Contact : <strong>${esc(c.contact || 'Non renseigné')}</strong> (${esc(c.nom || 'Client')})</p>
         </div>
 
+        ${faireAppel ? '' : `
         <div class="field" style="margin-top:8px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <label style="font-weight:600;margin:0">Message pré-rempli</label>
@@ -14526,15 +14568,17 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           </div>
           <textarea id="smsTexteMessage" rows="6" style="width:100%;font-size:13px;line-height:1.4;padding:8px">${esc(texteSMS)}</textarea>
           <p class="small" style="color:#64748b;margin-top:4px">Vous pouvez ajuster le message (ex. préciser un point d'accueil ou de garde).</p>
-        </div>
+        </div>`}
       </div>
 
       <div class="btnrow" style="flex-direction:column;gap:8px">
-        <a id="btnLancerSMS" href="${esc(genererUrlSMS(telClient, texteSMS))}" class="btn wide" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;padding:11px;background:var(--bleu,#06baf2);color:#fff">
-          ${(ICO.sms && ICO.sms(18)) || '💬'} Ouvrir l'application SMS du téléphone
+        <a id="btnLancerSMS" href="${esc(faireAppel ? genererUrlTel(telClient) : genererUrlSMS(telClient, texteSMS))}" class="btn wide" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;padding:11px;background:var(--bleu,#06baf2);color:#fff">
+          ${icoContact(18)} ${faireAppel ? 'Appeler le contact' : 'Ouvrir l\'application SMS du téléphone'}
         </a>
         <div style="display:flex;gap:8px;width:100%">
-          <button type="button" class="btn sm grey" id="btnCopierSMS" style="flex:1">Copier le texte</button>
+          ${faireAppel
+            ? '<button type="button" class="btn sm grey" id="btnCopierNumero" style="flex:1">Copier le numéro</button>'
+            : '<button type="button" class="btn sm grey" id="btnCopierSMS" style="flex:1">Copier le texte</button>'}
           <button type="button" class="btn sm grey" data-a="fermer" style="flex:1">Fermer</button>
         </div>
       </div>
@@ -14546,11 +14590,20 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       const btnLien = $('#btnLancerSMS', panneau);
       const btnReinit = $('#btnReinitSMS', panneau);
       const btnCopier = $('#btnCopierSMS', panneau);
+      const btnCopierNum = $('#btnCopierNumero', panneau);
+
+      /* Le bouton bascule SMS / appel dès que le numéro saisi change de nature. */
+      function rendreBouton(num) {
+        const appel = estNumeroGeographique(num);
+        const icone = (appel ? (ICO.phone && ICO.phone(18)) : (ICO.sms && ICO.sms(18))) || (appel ? '📞' : '💬');
+        const txt = appel ? 'Appeler le contact' : 'Ouvrir l\'application SMS du téléphone';
+        btnLien.innerHTML = icone + ' ' + txt;
+        btnLien.href = appel ? genererUrlTel(num) : genererUrlSMS(num, txtMsg ? txtMsg.value : texteSMS);
+      }
 
       function actualiserLien() {
         const num = inpNum.value.trim();
-        const msg = txtMsg.value;
-        btnLien.href = genererUrlSMS(num, msg);
+        rendreBouton(num);
         if (num && !c.tel) {
           c.tel = num;
           planifier();
@@ -14558,7 +14611,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       }
 
       inpNum.addEventListener('input', actualiserLien);
-      txtMsg.addEventListener('input', actualiserLien);
+      if (txtMsg) txtMsg.addEventListener('input', actualiserLien);
 
       panneau.addEventListener('click', (ev) => {
         if (ev.target.closest('[data-a="fermer"]')) {
@@ -14580,10 +14633,10 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
           const sh = panneau.closest('.sheet');
           if (sh) sh.remove();
         }, 1200);
-        toast('Ouverture de l\'application SMS...');
+        toast(estNumeroGeographique(num) ? 'Ouverture du téléphone...' : 'Ouverture de l\'application SMS...');
       });
 
-      if (btnReinit) {
+      if (btnReinit && txtMsg) {
         btnReinit.addEventListener('click', () => {
           txtMsg.value = Report.texteSMSArrivee(R, S, R.langue && R.langue.active ? R.langue.code : 'fr');
           actualiserLien();
@@ -14595,6 +14648,13 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
         btnCopier.addEventListener('click', () => {
           copier(txtMsg.value);
           toast('Texte du SMS copié dans le presse-papier');
+        });
+      }
+
+      if (btnCopierNum) {
+        btnCopierNum.addEventListener('click', () => {
+          copier(nettoyerTel(inpNum.value.trim()));
+          toast('Numéro copié dans le presse-papier');
         });
       }
     });
@@ -14943,7 +15003,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
       <button class="menu-item" data-a="soumettre"><span class="ico">${(ICO.send && ICO.send(18)) || ''}</span><span>Soumettre le rapport<small>Transmission PDF par e-mail</small></span></button>
       <button class="menu-item" data-a="identite"><span class="ico">${(ICO.user && ICO.user(18)) || ''}</span><span>Mes informations<small>${esc(Report.nomComplet(S.technicien) || 'nom, téléphone, e-mail à renseigner')}</small></span></button>
       <button class="menu-item" data-a="annuaire"><span class="ico">${(ICO.users && ICO.users(18)) || (ICO.user && ICO.user(18)) || ''}</span><span>Annuaire clients<small>Consulter, modifier ou ajouter un client hors intervention</small></span></button>
-      <button class="menu-item" data-a="sms-arrivee"><span class="ico">${(ICO.sms && ICO.sms(18)) || ''}</span><span>Prévenir le contact par SMS<small>Annoncer votre arrivée sur site au contact client</small></span></button>
+      <button class="menu-item" data-a="sms-arrivee"><span class="ico">${icoContact(18)}</span><span>${contactArriveeAppel() ? 'Appeler le contact' : 'Prévenir le contact par SMS'}<small>Annoncer votre arrivée sur site au contact client</small></span></button>
       <button class="menu-item" data-a="icones"><span class="ico">${(ICO.palette && ICO.palette(18)) || (ICO.gear && ICO.gear(18)) || ''}</span><span>Icône de l'application<small>Changer l'icône sur l'écran d'accueil Android</small></span></button>
       <button class="menu-item" data-a="reglages"><span class="ico">${(ICO.gear && ICO.gear(18)) || ''}</span><span>Réglages<small>Société, envoi, canevas du rapport</small></span></button>
       <button class="menu-item" data-a="actualiser"><span class="ico">${(ICO.clock && ICO.clock(18)) || ''}</span><span>Actualiser l'application<small>Vider le cache et forcer la dernière version</small></span></button>
@@ -16013,6 +16073,7 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
     destinatairesMail: destinatairesMail, destinatairesSAV: destinatairesSAV, destinatairesClient: destinatairesClient, destinataires: destinataires,
     feuilleMenu: feuilleMenu, feuilleIcones: feuilleIcones, soumettre: soumettre,
     feuilleEnvoi: feuilleEnvoi, fichiersEnvoi: fichiersEnvoi, actualiserApp: actualiserApp,
+    estNumeroGeographique: estNumeroGeographique, nettoyerTel: nettoyerTel, contactArriveeAppel: contactArriveeAppel,
     apercuEvenement: apercuEvenement, feuillePiece: feuillePiece, afficherVisionneusePhoto: afficherVisionneusePhoto,
     feuilleTrajet: feuilleTrajet, feuilleAnnuaireClients: feuilleAnnuaireClients,
     feuilleClient: feuilleClient, feuilleReglages: feuilleReglages,
@@ -16020,5 +16081,5 @@ window.LOGO_BFR_TOPBAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAw
   };
 })();
 </script>
-<script>window.SAV_VERSION="1f6d0ef71b";window.SAV_DATE="16/10/2026";</script></body>
+<script>window.SAV_VERSION="0072228a79";window.SAV_DATE="28/10/2026";</script></body>
 </html>

@@ -1,3 +1,25 @@
+# SMS d'arrivée → appel pour un fixe — 28/10/2026
+
+## Contact d'arrivée sur site : le bouton suit la nature du numéro
+- **Numéro géographique (fixe : 01-05, ou +33 1-5…)** : la fenêtre « Prévenir le contact »
+  propose maintenant **« Appeler le contact »** (lien `tel:`, lance le téléphone) au lieu de
+  l'ouverture de l'application SMS. Le message pré-rempli est masqué (un appel n'a pas de texte).
+- **Mobile (06/07/08/09)** : inchangé — ouverture de l'application SMS avec le message pré-rempli.
+- Le bouton **bascule en direct** dès qu'on modifie le numéro dans la fenêtre.
+- Les points d'entrée affichent aussi le bon libellé : lien sous le chrono (« SMS d'arrivée » /
+  « Appeler le contact »), bouton dans la fiche client, item du menu ☰.
+- Nouvel icône « téléphone » dans la charte des icônes (`app/src/icons.js`).
+
+## Fichiers modifiés
+- `app/src/icons.js` — icône `phone`.
+- `app/src/app.js` — `estNumeroGeographique` / `nettoyerTel` / `contactArriveeAppel` / `icoContact` ;
+  fenêtre `feuilleSMSArrivee` adaptée (appel/SMS) ; libellés des points d'entrée ; exposés dans `window.APP`.
+- `tests/test_appli.py` — test `test_sms_ou_appel_arrivee` (classification des numéros, fixe → `tel:`,
+  mobile → `sms:`, bascule en direct, libellé du menu).
+- Reconstruit avec `python3 build.py --sans-liste` : `CR-Intervention-SAV.html`, `docs/`.
+
+---
+
 # Chrono sur plusieurs jours et annuaire — 16/10/2026
 
 ## Chrono : une journée par jour

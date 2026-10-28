@@ -893,9 +893,67 @@ async def test_chrono_plusieurs_jours(nav, adresse):
     return t
 
 
+async def test_sms_ou_appel_arrivee(nav, adresse):
+    """Numéro géographique (fixe) → « Appeler le contact » (tel:) ; mobile → SMS."""
+    t = await Telephone(nav, adresse).ouvrir()
+    pg = t.pg
+    await t.identite()
+
+    # 1. classification pure des numéros (fixes 01-05 et +33 1-5…, mobiles 06/07…)
+    for n in ['04 78 55 44 33', '01 40 00 00 00', '+33 1 40 00 00 00', '03 88 00 00 00', '05 61 00 00 00']:
+        verifier(await pg.evaluate('(n) => APP.estNumeroGeographique(n)', n),
+                 'numéro géographique mal reconnu : %s' % n)
+    for n in ['06 12 34 56 78', '07 88 00 00 00', '+33 6 12 34 56 78']:
+        verifier(not await pg.evaluate('(n) => APP.estNumeroGeographique(n)', n),
+                 'numéro mobile mal reconnu comme fixe : %s' % n)
+
+    async def client_tel(numero):
+        await t.fermer_feuilles()
+        await pg.click('[data-a="editer-client"] >> nth=0')
+        await pg.wait_for_timeout(400)
+        await pg.fill('#cliRecherche', 'ACME Industrie')
+        await pg.wait_for_timeout(300)
+        await pg.fill('.sheet.open [data-fk="client.tel"]', numero)
+        await pg.click('.sheet.open [data-a="ok"]')
+        await pg.wait_for_timeout(400)
+        await t.fermer_feuilles()
+
+    # 2. fixe → bouton « Appeler le contact » (tel:), message SMS masqué
+    await client_tel('04 78 55 44 33')
+    await t.menu('sms-arrivee')
+    await pg.wait_for_selector('#btnLancerSMS', timeout=5000)
+    verifier((await pg.get_attribute('#btnLancerSMS', 'href')).startswith('tel:'),
+             'un fixe doit ouvrir le téléphone (tel:)')
+    verifier('Appeler le contact' in await pg.inner_text('#btnLancerSMS'),
+             'le bouton doit proposer « Appeler le contact »')
+    verifier(not await pg.query_selector('#smsTexteMessage'),
+             'le message SMS doit être masqué pour un fixe')
+    await t.fermer_feuilles()
+    await pg.click('#btnMenu')
+    await pg.wait_for_timeout(300)
+    verifier('Appeler le contact' in await pg.inner_text('.sheet.open [data-a="sms-arrivee"]'),
+             'le menu doit proposer « Appeler le contact » pour un fixe')
+    await t.fermer_feuilles()
+
+    # 3. mobile → SMS, et bascule en direct si on tape un fixe
+    await client_tel('06 12 34 56 78')
+    await t.menu('sms-arrivee')
+    await pg.wait_for_selector('#smsTexteMessage', timeout=5000)
+    verifier((await pg.get_attribute('#btnLancerSMS', 'href')).startswith('sms:'),
+             'un mobile doit ouvrir le SMS (sms:)')
+    verifier("Ouvrir l'application SMS" in await pg.inner_text('#btnLancerSMS'),
+             'le bouton doit ouvrir l\'application SMS')
+    await pg.fill('#smsNumeroDest', '04 78 55 44 33')
+    await pg.wait_for_timeout(400)
+    verifier((await pg.get_attribute('#btnLancerSMS', 'href')).startswith('tel:'),
+             'le bouton doit basculer sur tel: dès qu\'un fixe est saisi')
+    await t.fermer()
+    return t
+
+
 TESTS = [test_identite_et_numeros, test_photos_conservees, test_rapport_pdf_et_word,
          test_historique_et_menage, test_reglages, test_sav_et_audit, test_dictee, test_import_clients,
-         test_annuaire, test_chrono_plusieurs_jours]
+         test_annuaire, test_chrono_plusieurs_jours, test_sms_ou_appel_arrivee]
 # BFR_TEST=nom_du_test : ne lancer qu'un seul test (ex. BFR_TEST=test_rapport_pdf_et_word)
 if os.environ.get('BFR_TEST'):
     TESTS = [f for f in TESTS if f.__name__ == os.environ['BFR_TEST']]
